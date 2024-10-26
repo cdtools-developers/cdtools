@@ -11,7 +11,7 @@ import torch as t
 __all__ = ['amplitude_mse', 'intensity_mse', 'poisson_nll']
 
 
-def amplitude_mse(intensities, sim_intensities, mask=None):
+def amplitude_mse(intensities, sim_intensities, mask=None, normalization=None):
     """ Returns the mean squared error of a simulated dataset's amplitudes
 
     Calculates the mean squared error between a given set of 
@@ -40,6 +40,8 @@ def amplitude_mse(intensities, sim_intensities, mask=None):
         A tensor of simulated detector intensities
     mask : torch.Tensor
         A mask with ones for pixels to include and zeros for pixels to exclude
+    normalization : bool
+        If True, the loss is normalized by the sum of the simulated intensities
 
     Returns
     -------
@@ -51,14 +53,23 @@ def amplitude_mse(intensities, sim_intensities, mask=None):
     # amplitudes instead of the intensities, but I want to be consistent
     # with all the errors working off of the same inputs
 
-    if mask is None:
-        return t.sum((t.sqrt(sim_intensities) -
-                      t.sqrt(intensities))**2)
-    else:
-        masked_intensities = intensities.masked_select(mask)
-        return t.sum((t.sqrt(sim_intensities.masked_select(mask)) -
-                      t.sqrt(masked_intensities))**2)
 
+    if mask is None:
+        if normalization is None:
+            return t.sum(t.square(t.sqrt(sim_intensities) - t.sqrt(intensities)))
+        else:
+            return t.sum(t.square(t.sqrt(sim_intensities) -
+                      t.sqrt(intensities)))/t.sum(intensities)
+    else:
+        if normalization is None:
+            masked_intensities = intensities.masked_select(mask)
+            return t.sum(t.square(t.sqrt(sim_intensities.masked_select(mask)) -
+                      t.sqrt(masked_intensities)))
+        else:
+            masked_intensities = intensities.masked_select(mask)
+            masked_sim_intensities = sim_intensities.masked_select(mask)
+            return t.sum(t.square(t.sqrt(masked_sim_intensities) -
+                      t.sqrt(masked_intensities)))/t.sum(masked_intensities)
 
     
 def intensity_mse(intensities, sim_intensities, mask=None):
@@ -249,3 +260,32 @@ def poisson_plus_fixed_nll(
                     / masked_intensities.shape[0]
 
         return nll
+    
+
+def total_variation_loss(image: t.Tensor) -> t.Tensor:
+    """ Returns the Total Variation (TV) loss of an image
+
+    Calculates the Total Variation loss for a given image. This function
+    computes the TV loss by summing the absolute differences between
+    neighboring pixels in the image.
+
+    It can accept image tensors of any shape.
+
+    Parameters
+    ----------
+    image : torch.Tensor
+        A tensor representing the image.
+
+    Returns
+    -------
+    tv_loss : torch.Tensor
+        A single value for the Total Variation loss.
+    """
+
+    # Calculate differences between neighboring pixels
+    loss_h = t.mean(t.abs(image[:-1, :] - image[1:, :]))
+    loss_w = t.mean(t.abs(image[:, :-1] - image[:, 1:]))
+
+    tv_loss = loss_h + loss_w
+
+    return tv_loss
