@@ -8,7 +8,7 @@ maximum likelihood metric for a system with Poisson statistics.
 
 import torch as t
 
-__all__ = ['amplitude_mse', 'intensity_mse', 'poisson_nll']
+__all__ = ['amplitude_mse', 'intensity_mse', 'poisson_nll', 'total_variation_loss']
 
 
 def amplitude_mse(intensities, sim_intensities, mask=None, normalization=None):
