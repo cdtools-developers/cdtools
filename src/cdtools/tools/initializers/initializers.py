@@ -57,7 +57,7 @@ def exit_wave_geometry(det_basis, det_shape, wavelength, distance, oversampling=
 
     # This method should work for a general parallelogram-shaped detector
     det_shape = det_basis * det_shape.to(t.float32)
-    pinv_basis = t.tensor(np.linalg.pinv(det_shape).transpose()).to(t.float32)
+    pinv_basis = t.tensor(np.linalg.pinv(det_shape).T).to(t.float32)
     real_space_basis = pinv_basis * wavelength * distance
 
     return real_space_basis
