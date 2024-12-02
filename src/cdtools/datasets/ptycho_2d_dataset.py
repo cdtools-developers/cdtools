@@ -3,6 +3,7 @@ import torch as t
 from copy import copy
 import h5py
 import pathlib
+from torch.nn.functional import interpolate as tinterpolate
 from cdtools.datasets import CDataset
 from cdtools.datasets.random_selection import random_selection
 from cdtools.tools import data as cdtdata
@@ -361,3 +362,66 @@ class Ptycho2DDataset(CDataset):
             self.background = t.nn.functional.pad(self.background, to_pad)
         
 
+    def downsample(self, scale):
+        """ Downsamples the data by a specified factor
+
+        Specifically, this will downsample...
+            self.patterns to a [L x M/scale x N/scale] tensor
+            self.mask to a [M/scale x N/scale] tensor
+            self.background to a [M/scale x N/scale] tensor
+
+        This will also increase self.detector_geometry['basis'] by a
+        factor of scale
+
+        NOTE: This method uses torch.nn.functional.interpolate. On
+        the PyTorch documentation, this operation may result in
+        nondeterministic gradients.
+
+        Parameters
+        ----------
+        scale : int
+            The factor to downsample the data by
+        """
+
+        # Grab the size of the image frames in dataset.patterns
+        _, num_rows, num_cols = self.patterns.size()
+
+        # Make sure that scale does not exceed the size of the patterns
+        # No... You may not make the images smaller than 1x1 pixels..
+        if scale >= num_rows or scale >= num_cols:
+            raise ValueError(
+                'Cannot downsample data by a factor larger than or equal to '
+                'the size of the pattern frames.')
+
+        # Change the detector_geometry basis by a factor of the
+        # downsampling scale
+        self.detector_geometry['basis'] *= scale
+
+        # Downsample patterns
+        # The "unsqueeze" is needed since tinterpolate is expecting an input of
+        #   [mini-batch x channels x height x width]
+        # Here, "mini-batch" is the translation while the unsqueeze is adding
+        # the channel dimension.
+        self.patterns = tinterpolate(self.patterns.unsqueeze(1),
+                                     scale_factor=(1 / scale, 1 / scale),
+                                     mode='bilinear',
+                                     align_corners=False).squeeze(1)
+
+        if self.mask is not None:
+            # Next, downsample the mask. But first convert it to uint8
+            # (can't interpolate bool). Also, the funky "[(None,)*2] does the
+            # same job as "_.unsqueeze(0).unsqueeze(0)"
+            temp_mask = tinterpolate(self.mask[(None,)*2].to(t.uint8),
+                                     scale_factor=(1 / scale, 1 / scale),
+                                     mode='bilinear',
+                                     align_corners=False).squeeze()
+            # Make the mask boolean again. The mask will be dilated such that
+            # any live pixels surrounding dead pixels will be set as dead
+            self.mask = temp_mask == 1
+
+        if self.background is not None:
+            # Downsample the background.
+            self.background = tinterpolate(self.background[(None,) * 2],
+                                           scale_factor=(1 / scale, 1 / scale),
+                                           mode='bilinear',
+                                           align_corners=False).squeeze()
