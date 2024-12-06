@@ -361,3 +361,40 @@ class Ptycho2DDataset(CDataset):
             self.background = t.nn.functional.pad(self.background, to_pad)
         
 
+    def downsample(self, factor=2):
+        """Downsamples all diffraction patterns by the specified factor
+
+        This is an easy way to shrink the amount of data you need to work with
+        if the speckle size is much larger than the detector pixel size.
+
+        The downsampling factor must be an integer. The size of the output
+        patterns are reduced by the specified factor, with each output pixel
+        equal to the sum of a <factor> x <factor> region of pixels in the
+        input pattern. This summation is done by pytorch.functional.avg_pool2d.
+        
+        Any mask and background data which is stored with the dataset is
+        downsampled with the data. The background is downsampled using the same
+        method as the data. The mask is expanded so that any output pixel
+        containing a masked pixel will be masked.
+        
+        Parameters
+        ----------
+        factor : int
+            Default 2, the factor to downsample by
+
+        """
+        self.patterns = t.nn.functional.avg_pool2d(
+            self.patterns.unsqueeze(0), factor, divisor_override=1)[0]
+        self.mask = t.logical_not(t.nn.functional.max_pool2d(
+            (1-self.mask.to(dtype=t.uint8)).unsqueeze(0).unsqueeze(0),
+            factor
+        )[0,0].to(dtype=t.bool))
+        
+        self.detector_geometry['basis'] = \
+            self.detector_geometry['basis'] * factor
+
+        if self.background is not None:
+            self.background = t.nn.functional.avg_pool2d(
+                self.background.unsqueeze(0).unsqueeze(0),
+                factor,
+                divisor_override=1)[0,0]

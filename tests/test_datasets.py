@@ -4,6 +4,7 @@ import numpy as np
 import torch as t
 import h5py
 import datetime
+from copy import deepcopy
 
 
 #
@@ -276,3 +277,66 @@ def test_Ptycho2DDataset_get_as(ptycho_cxi_1):
         assert t.allclose(pattern.to(device='cpu'),
                           t.tensor(expected['data'][3,:,:]))
 
+
+def test_Ptycho2DDataset_downsample(test_ptycho_cxis):
+    for cxi, expected in test_ptycho_cxis:
+        dataset = Ptycho2DDataset.from_cxi(cxi)
+
+        # First we test the case of downsampling by 2 against some explicit
+        # calculations
+        copied_dataset = deepcopy(dataset)
+        copied_dataset.downsample(2)
+
+        # May start failing if the test datasets are changed to include
+        # a dataset with any dimension not even. That's a problem with the
+        # test, not the code. Sorry! -Abe
+        assert t.allclose(
+            copied_dataset.patterns,
+            dataset.patterns[:,::2,::2] +
+            dataset.patterns[:,1::2,::2] +
+            dataset.patterns[:,::2,1::2] +
+            dataset.patterns[:,1::2,1::2]
+        )
+        
+        assert t.allclose(
+            copied_dataset.mask,
+            t.logical_and(
+                t.logical_and(dataset.mask[::2,::2],
+                              dataset.mask[1::2,::2]),
+                t.logical_and(dataset.mask[::2,1::2],
+                              dataset.mask[1::2,1::2]),
+            )
+        )
+
+
+        
+        if dataset.background is not None:
+            assert t.allclose(
+                copied_dataset.background,
+                dataset.background[::2,::2] +
+                dataset.background[1::2,::2] +
+                dataset.background[::2,1::2] +
+                dataset.background[1::2,1::2]
+        )
+
+        # And then we just test the shape for a few factors, and check that
+        # it doesn't fail on edge cases (e.g. factor=1)
+        for factor in [1, 2, 3]:
+            copied_dataset = deepcopy(dataset)
+            copied_dataset.downsample(factor=factor)
+
+            expected_pattern_shape = np.concatenate(
+                [[dataset.patterns.shape[0]],
+                 np.array(dataset.patterns.shape[-2:]) // factor]
+            )
+
+            assert np.allclose(expected_pattern_shape,
+                               np.array(copied_dataset.patterns.shape))
+            
+            assert np.allclose(np.array(dataset.mask.shape) // factor,
+                               np.array(copied_dataset.mask.shape))
+            
+            if dataset.background is not None:
+                assert np.allclose(np.array(dataset.background.shape) // factor,
+                                   np.array(copied_dataset.background.shape))
+        
