@@ -400,6 +400,29 @@ class Ptycho2DDataset(CDataset):
                 divisor_override=1)[0,0]
 
 
+    def remove_translations_mask(self, mask):
+        """Removes one or more translation positions, and their associated
+        properties, from the dataset using logical indexing.
+
+        This takes a mask (boolean torch tensor) with the same size as
+        self.translations.shape[0] (i.e., the number of individual
+        translated points). Patterns, translations, and intentities
+        associated with indices that are "True" will be removed.
+        
+        Parameters:
+        ----------
+        mask : torch.tensor(dtype=torch.bool)
+            The boolean mask indicating which indices are to be removed from
+            the dataset.
+        """
+        # Update patterns, translations, and intensities
+        self.patterns = self.patterns[~mask]
+        self.translations = self.translations[~mask]
+        
+        if hasattr(self, 'intensities') and self.intensities is not None:
+            self.intensities = self.intensities[~mask]
+    
+    
     def crop_translations(self, roi):
         """Shrinks the range of translation positions that are analyzed
         
@@ -441,9 +464,5 @@ class Ptycho2DDataset(CDataset):
                              '(i.e., patterns and translations will be empty).'
                              ' Please redefine the bounds of the roi.')
 
-        # Update patterns and translations
-        self.patterns = self.patterns[inside_roi]
-        self.translations = self.translations[inside_roi]
-        
-        if hasattr(self, 'intensities') and self.intensities is not None:
-            self.intensities = self.intensities[inside_roi]
+        # Remove translations outside the ROI
+        self.remove_translations_mask(~inside_roi)
