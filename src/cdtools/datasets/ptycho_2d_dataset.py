@@ -261,8 +261,19 @@ class Ptycho2DDataset(CDataset):
             cbar_title = 'Intensity'
 
         if plot_mean_pattern:
-            self.plot_mean_pattern(log_offset=log_offset)
-            
+            try:
+                self.plot_mean_pattern(log_offset=log_offset)
+            except:
+                # NOTE: This is meant to catch scipy.spatial._qhull.QhullError,
+                # which will be raised if all the translations in the dataset
+                # are colinear and the area of the scan is zero. I chose to
+                # catch all errors because I don't want to rely on a private
+                # submodule in another project. This is also just a function
+                # to view results, so in general if it fails, it will still
+                # be good to continue without plotting but still plot the
+                # rest of the information
+                pass
+                
         return plotting.plot_nanomap_with_images(self.translations.detach().cpu(), get_images, values=nanomap_values, nanomap_units=units, image_title='Diffraction Pattern', image_colorbar_title=cbar_title)
 
     def plot_mean_pattern(self, log_offset=1):

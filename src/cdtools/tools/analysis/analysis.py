@@ -1461,10 +1461,13 @@ def calc_spectral_info(dataset, nbins=50):
     
     """
 
-    scan_hull = spatial.ConvexHull(dataset.translations[:,:2].cpu().numpy())
-    
-    scan_area = scan_hull.volume
-
+    try:
+        scan_hull = spatial.ConvexHull(dataset.translations[:,:2].cpu().numpy())
+        scan_area = scan_hull.volume
+    except spatial._qhull.QhullError as e:
+        print('Likely, all translations were colinear. This estimate will fail in that case.')
+        raise
+        
     ewg = cdtools.tools.initializers.exit_wave_geometry
     obj_basis = ewg(
         dataset.detector_geometry['basis'],
