@@ -703,11 +703,14 @@ class CDIModel(t.nn.Module):
             A string with basic info on the latest iteration
         """
         if hasattr(self, 'latest_iteration_time'):
-            return 'Epoch ' + str(len(self.loss_history)) + \
-                  ' completed in %0.2f s with loss ' %\
-                  self.latest_iteration_time + str(self.loss_history[-1])
+            epoch = len(self.loss_history)
+            dt = self.latest_iteration_time
+            loss = self.loss_history[-1]
+            msg = f'Epoch {epoch:3d} completed in {dt:0.2f} s with loss {loss:.5e}'
         else:
-            return 'No reconstruction iterations performed yet!'
+            msg = 'No reconstruction iterations performed yet!'
+
+        return msg
 
     # By default, the plot_list is empty
     plot_list = []

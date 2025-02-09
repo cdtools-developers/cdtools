@@ -6,7 +6,7 @@ import numpy as np
 def test_intensity():
     wavefields = t.rand((5,10,10)) + 1j * t.rand((5,10,10))
     epsilon=1e-6
-    np_result = np.abs(t.as_tensor(wavefields))**2 + epsilon
+    np_result = np.abs(wavefields.numpy())**2 + epsilon
     assert t.allclose(measurements.intensity(wavefields,epsilon=epsilon),
                       t.as_tensor(np_result))
 

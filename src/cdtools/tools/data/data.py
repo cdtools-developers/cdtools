@@ -134,18 +134,18 @@ def get_sample_info(cxi_file):
             metadata[attr] = np.float32(s1[attr][()])
 
     if 'unit_cell' in s1:
-        metadata['unit_cell'] = np.array(s1['unit_cell']).astype(np.float32)
+        metadata['unit_cell'] = s1['unit_cell'][()].astype(np.float32)
 
 
     if 'geometry_1/orientation' in s1:
-        orient = np.array(s1['geometry_1/orientation']).astype(np.float32)
+        orient = s1['geometry_1/orientation'][()].astype(np.float32)
         xvec = orient[:3] / np.linalg.norm(orient[:3])
         yvec = orient[3:] / np.linalg.norm(orient[3:])
         metadata['orientation'] = np.array([xvec,yvec,
                                             np.cross(xvec,yvec)])
 
     if 'geometry_1/surface_normal' in s1:
-        snorm = np.array(s1['geometry_1/surface_normal']).astype(np.float32)
+        snorm = s1['geometry_1/surface_normal'][()].astype(np.float32)
         xvec = np.cross(np.array([0.,1.,0.]), snorm)
         xvec /= np.linalg.norm(xvec)
         yvec = np.cross(snorm, xvec)
@@ -218,7 +218,7 @@ def get_detector_geometry(cxi_file):
     d1 = i1['detector_1']
 
     if 'detector_1/basis_vectors' in i1:
-        basis_vectors = np.array(d1['basis_vectors'])
+        basis_vectors = d1['basis_vectors'][()]
         if basis_vectors.shape == (2,3):
             basis_vectors = basis_vectors.T
     else:
@@ -244,11 +244,11 @@ def get_detector_geometry(cxi_file):
                                   [-x_pixel_size,0,0]]).transpose()
 
     try:
-        distance = np.float32(d1['distance'])
+        distance = np.float32(d1['distance'][()])
     except:
         distance = None
     try:
-        corner_position = np.array(d1['corner_position'])
+        corner_position = d1['corner_position'][()]
     except:
         corner_position = None
 
@@ -292,7 +292,7 @@ def get_mask(cxi_file):
 
     i1 = cxi_file['entry_1/instrument_1']
     if 'detector_1/mask' in i1:
-        mask = np.array(i1['detector_1/mask']).astype(np.uint32)
+        mask = i1['detector_1/mask'][()].astype(np.uint32)
         mask_on = np.equal(mask,np.uint32(0))
         mask_has_signal = np.equal(mask,np.uint32(0x00001000))
         return np.logical_or(mask_on,mask_has_signal).astype(bool)
@@ -324,7 +324,7 @@ def get_dark(cxi_file):
 
     i1 = cxi_file['entry_1/instrument_1']
     if 'detector_1/data_dark' in i1:
-        darks = np.array(i1['detector_1/data_dark'])
+        darks = i1['detector_1/data_dark'][()]
         dims = tuple(range(len(darks.shape) - 2))
         darks = np.nanmean(darks,axis=dims)
     else:
@@ -426,7 +426,7 @@ def get_shot_to_shot_info(cxi_file, field_name):
     else:
         raise KeyError('Data is not defined within cxi file')
 
-    return np.array(cxi_file[pull_from]).astype(np.float32)
+    return cxi_file[pull_from][()].astype(np.float32)
 
 
 def get_ptycho_translations(cxi_file):
@@ -485,9 +485,9 @@ def add_entry_info(cxi_file, metadata):
     # included in case the cxi spec becomes more permissive
     for key, value in metadata.items():
         if isinstance(value,(str,bytes)):
-            cxi_file['entry_1'][key] = np.string_(value)
+            cxi_file['entry_1'][key] = np.bytes_(value)
         elif isinstance(value, datetime.datetime):
-            cxi_file['entry_1'][key] = np.string_(value.isoformat())
+            cxi_file['entry_1'][key] = np.bytes_(value.isoformat())
         elif isinstance(value, numbers.Number):
             cxi_file['entry_1'][key] = value
         elif isinstance(value, (np.ndarray,list,tuple)):
@@ -525,9 +525,9 @@ def add_sample_info(cxi_file, metadata):
         if key == 'orientation':
             continue # this is a special case
         if isinstance(value,(str,bytes)):
-            s1[key] = np.string_(value)
+            s1[key] = np.bytes_(value)
         elif isinstance(value, datetime.datetime):
-            s1[key] = np.string_(value.isoformat())
+            s1[key] = np.bytes_(value.isoformat())
         elif isinstance(value, numbers.Number):
             s1[key] = value
         elif isinstance(value, (np.ndarray,list,tuple)):
@@ -701,7 +701,7 @@ def add_data(cxi_file, data, axes=None, compression='gzip',
             axes_str = ':'.join(axes)
         else:
             axes_str = str(axes)
-        det1['data'].attrs['axes'] = np.string_(axes_str)
+        det1['data'].attrs['axes'] = np.bytes_(axes_str)
 
         
 def add_shot_to_shot_info(cxi_file, data, field_name):
@@ -851,11 +851,12 @@ def h5_to_nested_dict(h5_file):
     for key in h5_file.keys():
         value = h5_file[key]
         if isinstance(value, h5py.Dataset):
-            arr = np.array(value)
+            arr = value[()]
             if arr.dtype == object:
                 d[key] = arr.ravel()[0].decode('utf-8')
             elif arr.ndim == 0:
-                d[key] = arr.ravel()[0]
+                # TODO is this needed with arr = value[()]?
+                d[key] = arr.ravel()[0] 
             else:
                 d[key] = arr
             

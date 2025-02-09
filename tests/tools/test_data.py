@@ -182,11 +182,11 @@ def test_add_detector(tmp_path):
         # Check this directly since we want to make sure it saved
         # the pixel sizes
         d1 = f['entry_1/instrument_1/detector_1']
-        read_basis = np.array(d1['basis_vectors'])
-        read_x_pix = np.float32(d1['x_pixel_size'])
-        read_y_pix = np.float32(d1['y_pixel_size'])
-        read_distance = np.float32(d1['distance'])
-        read_corner = np.array(d1['corner_position'])
+        read_basis = d1['basis_vectors'][()]
+        read_x_pix = d1['x_pixel_size'][()]
+        read_y_pix = d1['y_pixel_size'][()]
+        read_distance = d1['distance'][()]
+        read_corner = d1['corner_position'][()]
 
     assert np.isclose(distance, read_distance)
     assert np.allclose(basis, read_basis)
@@ -232,8 +232,8 @@ def test_add_data(tmp_path):
     with h5py.File(tmp_path / 'test_add_data.cxi','r') as f:
         # Check this directly since we want to make sure it saved
         # it in all the places it should have
-        read_data_1 = np.array(f['entry_1/data_1/data'])
-        read_data_2 = np.array(f['entry_1/instrument_1/detector_1/data'])
+        read_data_1 = f['entry_1/data_1/data'][()]
+        read_data_2 = f['entry_1/instrument_1/detector_1/data'][()]
         read_axes = str(f['entry_1/instrument_1/detector_1/data'].attrs['axes'].decode())
     
     assert np.allclose(fake_data, read_data_1)
@@ -261,9 +261,10 @@ def test_add_shot_to_shot_info(tmp_path):
     with h5py.File(tmp_path / 'test_add_shot_to_shot_info.cxi') as f:
         # Check this directly since we want to make sure it saved
         # it in all the places it should have
-        read_analyzer_1 = np.array(f['entry_1/data_1/analyzer_angle'])
-        read_analyzer_2 = np.array(f['entry_1/instrument_1/detector_1/analyzer_angle'])
-        read_analyzer_3 = np.array(f['entry_1/sample_1/geometry_1/analyzer_angle'])
+        read_analyzer_1 = f['entry_1/data_1/analyzer_angle'][()]
+        read_analyzer_2 = \
+                       f['entry_1/instrument_1/detector_1/analyzer_angle'][()]
+        read_analyzer_3 = f['entry_1/sample_1/geometry_1/analyzer_angle'][()]
 
     assert np.allclose(analyzer, read_analyzer_1)
     assert np.allclose(analyzer, read_analyzer_2)
@@ -280,9 +281,10 @@ def test_add_ptycho_translations(tmp_path):
     with h5py.File(tmp_path / 'test_add_ptycho_translations.cxi','r') as f:
         # Check this directly since we want to make sure it saved
         # it in all the places it should have
-        read_translations_1 = np.array(f['entry_1/data_1/translation'])
-        read_translations_2 = np.array(f['entry_1/instrument_1/detector_1/translation'])
-        read_translations_3 = np.array(f['entry_1/sample_1/geometry_1/translation'])
+        read_translations_1 = f['entry_1/data_1/translation'][()]
+        read_translations_2 = \
+                       f['entry_1/instrument_1/detector_1/translation'][()]
+        read_translations_3 = f['entry_1/sample_1/geometry_1/translation'][()]
 
     assert np.allclose(-translations, read_translations_1)
     assert np.allclose(-translations, read_translations_2)

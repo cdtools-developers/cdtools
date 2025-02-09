@@ -4,7 +4,9 @@ import numpy as np
 import torch as t
 import h5py
 import datetime
-
+from copy import deepcopy
+import pytest
+import itertools
 
 #
 # We start by testing the CDataset base class
@@ -276,3 +278,135 @@ def test_Ptycho2DDataset_get_as(ptycho_cxi_1):
         assert t.allclose(pattern.to(device='cpu'),
                           t.tensor(expected['data'][3,:,:]))
 
+
+def test_Ptycho2DDataset_downsample(test_ptycho_cxis):
+    for cxi, expected in test_ptycho_cxis:
+        dataset = Ptycho2DDataset.from_cxi(cxi)
+
+        # First we test the case of downsampling by 2 against some explicit
+        # calculations
+        copied_dataset = deepcopy(dataset)
+        copied_dataset.downsample(2)
+
+        # May start failing if the test datasets are changed to include
+        # a dataset with any dimension not even. That's a problem with the
+        # test, not the code. Sorry! -Abe
+        assert t.allclose(
+            copied_dataset.patterns,
+            dataset.patterns[:,::2,::2] +
+            dataset.patterns[:,1::2,::2] +
+            dataset.patterns[:,::2,1::2] +
+            dataset.patterns[:,1::2,1::2]
+        )
+        
+        assert t.allclose(
+            copied_dataset.mask,
+            t.logical_and(
+                t.logical_and(dataset.mask[::2,::2],
+                              dataset.mask[1::2,::2]),
+                t.logical_and(dataset.mask[::2,1::2],
+                              dataset.mask[1::2,1::2]),
+            )
+        )
+
+
+        
+        if dataset.background is not None:
+            assert t.allclose(
+                copied_dataset.background,
+                dataset.background[::2,::2] +
+                dataset.background[1::2,::2] +
+                dataset.background[::2,1::2] +
+                dataset.background[1::2,1::2]
+        )
+
+        # And then we just test the shape for a few factors, and check that
+        # it doesn't fail on edge cases (e.g. factor=1)
+        for factor in [1, 2, 3]:
+            copied_dataset = deepcopy(dataset)
+            copied_dataset.downsample(factor=factor)
+
+            expected_pattern_shape = np.concatenate(
+                [[dataset.patterns.shape[0]],
+                 np.array(dataset.patterns.shape[-2:]) // factor]
+            )
+
+            assert np.allclose(expected_pattern_shape,
+                               np.array(copied_dataset.patterns.shape))
+            
+            assert np.allclose(np.array(dataset.mask.shape) // factor,
+                               np.array(copied_dataset.mask.shape))
+            
+            if dataset.background is not None:
+                assert np.allclose(np.array(dataset.background.shape) // factor,
+                                   np.array(copied_dataset.background.shape))
+        
+
+def test_Ptycho2DDataset_crop_translations(ptycho_cxi_1):
+    # Grab dataset
+    cxi, expected = ptycho_cxi_1
+    dataset = Ptycho2DDataset.from_cxi(cxi)
+    copied_dataset = deepcopy(dataset)
+
+    # Test 1: Complain when the the bounds of an ROI are correctly defined,
+    #   but it does not contain any sample positions inside of it. The 
+    #   translations in ptycho_cxi_1 ranges from 0m to -300m in both x and y 
+    #   (it looks like a line scan). We select an ROI at (0, -300) which should 
+    #   not contain any translation positions.
+    with pytest.raises(ValueError) as excinfo:
+        copied_dataset.crop_translations(roi=(0,-5,-295,-300))
+    assert('(i.e., patterns and translations will be empty)') in str(excinfo.value)
+
+    # Test 2: Draw an ROI that's centered in the middle of the x/y translation range
+    #   and make sure that the first and last x/y elements in dataset.translate
+    #   contain x_left, x_right, y_top, and y_bottom
+
+    #   Make tuples that will store the x and y positions. This will be used for
+    #   making permutations of the x/y positions in the ROI later.
+    x_left, y_top = dataset.translations[10,:2]
+    x_right, y_bottom = dataset.translations[-11,:2]
+
+    x_permutations = ((x_left, x_right), (x_right, x_left))
+    y_permutations = ((y_top, y_bottom), (y_bottom, y_top))
+    roi_permutations = tuple((x1, x2, y1, y2) for (x1, x2), (y1, y2) in
+                              itertools.product(x_permutations, y_permutations))
+
+    #   Get the dataset
+    copied_dataset.crop_translations(roi=roi_permutations[0])
+
+    #   Execute the actual test
+    assert (copied_dataset.translations[0,0] in x_permutations[0]) and \
+        (copied_dataset.translations[-1,0] in x_permutations[0])
+    
+    assert (copied_dataset.translations[0,1] in y_permutations[0]) and \
+        (copied_dataset.translations[-1,1] in y_permutations[0])
+
+    # Test 3: Check if the shape of dataset.patterns and dataset.translate is correct
+    #   (designed to be 20 fewer rows here)
+    #   In the future, this should include a check for dataset.intensities once
+    #   an appropriate cxi file is set up for conftest.
+    expected_patterns_shape = np.concatenate([[dataset.patterns.shape[0] - 20], 
+                                            dataset.patterns.shape[-2:]])
+    
+    expected_translations_shape = np.concatenate([[dataset.translations.shape[0] - 20], 
+                                                dataset.translations.shape[-1:]])
+
+    assert np.allclose(np.array(copied_dataset.patterns.shape), expected_patterns_shape)
+        
+    assert np.allclose(np.array(copied_dataset.translations.shape), expected_translations_shape)
+
+    # Test 4: Make sure that we always get the same result no matter what order we
+    #   define the left/right and bottom/top values in roi, provided that roi[:2] 
+    #   and roi[2:] correspond with the x and y coordinates, respectively.
+
+    #   Check each permutation
+    for roi in roi_permutations:
+        # Copy the dataset again; dataset will be modified each time crop_translation
+        # is successfully executed.
+        copied_dataset = deepcopy(dataset)
+        copied_dataset.crop_translations(roi=roi)
+
+        # Check if the contents of dataset.patterns and dataset.translate is correct
+        assert t.allclose(copied_dataset.patterns, dataset.patterns[10:-10,:])
+
+        assert t.allclose(copied_dataset.translations, dataset.translations[10:-10,:])

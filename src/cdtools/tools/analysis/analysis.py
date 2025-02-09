@@ -352,8 +352,7 @@ def synthesize_reconstructions(probes, objects, use_probe=False, obj_slice=None,
         else:
             shift = ip.find_shift(synth_obj[obj_slice],obj[obj_slice], resolution=50)
 
-
-        obj = ip.sinc_subpixel_shift(obj,np.array(shift))
+        obj = ip.sinc_subpixel_shift(obj, shift)
 
         if len(probe.shape) == 3:
             probe = t.stack([ip.sinc_subpixel_shift(p,tuple(shift))

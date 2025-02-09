@@ -77,28 +77,28 @@ def ptycho_cxi_1():
     expected['entry metadata'] = {}
     e1e = expected['entry metadata']
     e1e['start_time'] = datetime.datetime.now()
-    e1f['start_time'] = np.string_(e1e['start_time'].isoformat())
+    e1f['start_time'] = np.bytes_(e1e['start_time'].isoformat())
     e1e['end_time'] = datetime.datetime.now()
-    e1f['end_time'] = np.string_(e1e['end_time'].isoformat())
+    e1f['end_time'] = np.bytes_(e1e['end_time'].isoformat())
     e1e['experiment_identifier'] = 'Fake Experiment 1'
-    e1f['experiment_identifier'] = np.string_(e1e['experiment_identifier'])
+    e1f['experiment_identifier'] = np.bytes_(e1e['experiment_identifier'])
     e1e['experiment_description'] = 'A fully defined ptychography experiment to test the data loading'
-    e1f['experiment_description'] = np.string_(e1e['experiment_description'])
+    e1f['experiment_description'] = np.bytes_(e1e['experiment_description'])
     e1e['program_name'] = 'cdtools'
-    e1f['program_name'] = np.string_(e1e['program_name'])
+    e1f['program_name'] = np.bytes_(e1e['program_name'])
     e1e['title'] = 'The one experiment we did'
-    e1f['title'] = np.string_(e1e['title'])
+    e1f['title'] = np.bytes_(e1e['title'])
 
     # Set up the sample info
     s1f = e1f.create_group('sample_1')
     expected['sample info'] = {}
     s1e = expected['sample info']
     s1e['name'] = 'Fake Sample'
-    s1f['name'] = np.string_(s1e['name'])
+    s1f['name'] = np.bytes_(s1e['name'])
     s1e['description'] = 'A sample that isn\'t real'
-    s1f['description'] = np.string_(s1e['description'])
+    s1f['description'] = np.bytes_(s1e['description'])
     s1e['unit_cell_group'] = 'P1'
-    s1f['unit_cell_group'] = np.string_(s1e['unit_cell_group'])
+    s1f['unit_cell_group'] = np.bytes_(s1e['unit_cell_group'])
     s1e['concentration'] = np.float32(np.random.rand())
     s1f['concentration'] = s1e['concentration']
     s1e['mass'] = np.float32(np.random.rand())
@@ -151,7 +151,7 @@ def ptycho_cxi_1():
     d1f.create_dataset('data',data=data)
     data1f['data'] = h5py.SoftLink('/entry_1/instrument_1/detector_1/data')
 
-    d1f['data'].attrs['axes'] = np.string_('translation:y:x')
+    d1f['data'].attrs['axes'] = np.bytes_('translation:y:x')
     expected['axes'] = ['translation','y','x']
 
     g1f = s1f.create_group('geometry_1')
@@ -196,7 +196,7 @@ def ptycho_cxi_2():
     expected['entry metadata'] = {}
     e1e = expected['entry metadata']
     e1e['title'] = 'The one experiment we did'
-    e1f['title'] = np.string_(e1e['title'])
+    e1f['title'] = np.bytes_(e1e['title'])
 
     # Set up the sample info
     s1f = e1f.create_group('sample_1')
@@ -277,9 +277,9 @@ def ptycho_cxi_3():
     expected['entry metadata'] = {}
     e1e = expected['entry metadata']
     e1e['start_time'] = datetime.datetime.now()
-    e1f['start_time'] = np.string_(e1e['start_time'].isoformat())
+    e1f['start_time'] = np.bytes_(e1e['start_time'].isoformat())
     e1e['end_time'] = datetime.datetime.now()
-    e1f['end_time'] = np.string_(e1e['end_time'].isoformat())
+    e1f['end_time'] = np.bytes_(e1e['end_time'].isoformat())
 
     # Set up the sample info
     expected['sample info'] = None
@@ -314,7 +314,7 @@ def ptycho_cxi_3():
     expected['data'] = data
     data1f.create_dataset('data',data=data)
 
-    data1f['data'].attrs['axes'] = np.string_('translation:y:x')
+    data1f['data'].attrs['axes'] = np.bytes_('translation:y:x')
     expected['axes'] = ['translation','y','x']
 
     translations = np.arange(300).reshape((100,3)).astype(np.float32)

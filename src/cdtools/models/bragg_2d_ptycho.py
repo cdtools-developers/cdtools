@@ -79,6 +79,7 @@ class Bragg2DPtycho(CDIModel):
             lens=False,
             units='um',
             dtype=t.float32,
+            obj_view_crop=0,
     ):
 
         # We need the detector geometry
@@ -147,6 +148,19 @@ class Bragg2DPtycho(CDIModel):
         self.probe = t.nn.Parameter(probe_guess / self.probe_norm)
         self.obj = t.nn.Parameter(obj_guess)
 
+        # NOTE: I think it makes sense to protect against obj_view_crop
+        # being zero or below, because there is nothing else to show outside
+        # the object array. No reason to throw an error if, e.g., the user
+        # asks for a big padding which goes outside of the actual object array.
+        # Just show the full array.
+
+        if obj_view_crop > 0:
+            self.obj_view_slice = np.s_[obj_view_crop:-obj_view_crop,
+                                        obj_view_crop:-obj_view_crop]
+        else:
+            self.obj_view_slice = np.s_[:,:]
+
+
         if probe_support is None:
             probe_support = t.ones_like(self.probe[0], dtype=t.bool)
         self.register_buffer('probe_support',
@@ -155,8 +169,8 @@ class Bragg2DPtycho(CDIModel):
 
         if background is None:
             raise NotImplementedError('Issues with this due to probe fourier padding')
-            background = 1e-6 * t.ones(self.probe[0].shape,
-                                       dtype=t.float32)
+            shape = [s//oversampling for s in self.probe[0]]
+            background = 1e-6 * t.ones(shape, dtype=t.float32)
 
         self.background = t.nn.Parameter(background)
 
@@ -190,10 +204,11 @@ class Bragg2DPtycho(CDIModel):
                 tools.propagators.generate_high_NA_k_intensity_map(
                     self.obj_basis,
                     self.get_detector_geometry()['basis'] / oversampling,
-                    self.background.shape,
+                    [oversampling * d for d in self.background.shape],
                     self.get_detector_geometry()['distance'],
                     self.wavelength,dtype=t.float32,
                     lens=lens)
+
             self.register_buffer('k_map',
                                  t.as_tensor(k_map, dtype=dtype))
             self.register_buffer('intensity_map',
@@ -241,6 +256,7 @@ class Bragg2DPtycho(CDIModel):
             correct_tilt=True,
             lens=False,
             obj_padding=200,
+            obj_view_crop=None,
             units='um',
     ):
         wavelength = dataset.wavelength
@@ -311,7 +327,7 @@ class Bragg2DPtycho(CDIModel):
 
 
         obj_size, min_translation = tools.initializers.calc_object_setup(
-            det_shape,
+            [s * oversampling for s in det_shape],
             pix_translations,
             padding=obj_padding,
         )
@@ -353,9 +369,22 @@ class Bragg2DPtycho(CDIModel):
         probe_stack = [0.01 * probe_max * t.rand(probe.shape,dtype=probe.dtype) for i in range(n_modes - 1)]
         probe = t.stack([probe,] + probe_stack)
 
-
         obj = t.exp(1j*(randomize_ang * (t.rand(obj_size)-0.5)))
-                              
+
+        pfc = (probe_fourier_crop if probe_fourier_crop else [0,0])
+        if obj_view_crop is None:
+            obj_view_crop = min(
+                probe.shape[-2] // 2 + pfc[0],
+                probe.shape[-1] // 2 + pfc[1]
+            )
+        if obj_view_crop < 0:
+            obj_view_crop += min(
+                probe.shape[-2] // 2 + pfc[0],
+                probe.shape[-1] // 2 + pfc[1]
+            )
+
+        obj_view_crop += obj_padding
+        
         det_geo = dataset.detector_geometry
 
         translation_offsets = 0 * (t.rand((len(dataset),2)) - 0.5)
@@ -401,6 +430,7 @@ class Bragg2DPtycho(CDIModel):
                    propagate_probe=propagate_probe,
                    correct_tilt=correct_tilt,
                    lens=lens,
+                   obj_view_crop=obj_view_crop,
                    units=units,
                    )
                    
@@ -473,11 +503,13 @@ class Bragg2DPtycho(CDIModel):
 
     
     def measurement(self, wavefields):
-        return tools.measurements.quadratic_background(wavefields,
-                            self.background,
-                            measurement=tools.measurements.incoherent_sum,
-                            saturation=self.saturation,
-                            oversampling=self.oversampling)
+        return tools.measurements.quadratic_background(
+            wavefields,
+            self.background,
+            measurement=tools.measurements.incoherent_sum,
+            saturation=self.saturation,
+            oversampling=self.oversampling,
+        )
 
     
     def loss(self, sim_data, real_data, mask=None):
@@ -566,21 +598,21 @@ class Bragg2DPtycho(CDIModel):
          )),
         ('Object Amplitude, Surface Normal View', 
          lambda self, fig: p.plot_amplitude(
-             self.obj,
+             self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units,
          )),
         ('Object Phase, Surface Normal View',
          lambda self, fig: p.plot_phase(
-             self.obj,
+             self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units,
          )),
         ('Object Amplitude, Beam View', 
          lambda self, fig: p.plot_amplitude(
-             self.obj,
+             self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              view_basis=beam_basis,
@@ -588,7 +620,7 @@ class Bragg2DPtycho(CDIModel):
          )),
         ('Object Phase, Beam View',
          lambda self, fig: p.plot_phase(
-             self.obj,
+             self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              view_basis=beam_basis,
@@ -596,7 +628,7 @@ class Bragg2DPtycho(CDIModel):
          )),
         ('Object Amplitude, Detector View', 
          lambda self, fig: p.plot_amplitude(
-             self.obj,
+             self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              view_basis=self.det_basis,
@@ -604,7 +636,7 @@ class Bragg2DPtycho(CDIModel):
          )),
         ('Object Phase, Detector View',
          lambda self, fig: p.plot_phase(
-             self.obj,
+             self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              view_basis=self.det_basis,
