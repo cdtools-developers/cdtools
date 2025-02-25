@@ -399,7 +399,6 @@ class Ptycho2DDataset(CDataset):
                 factor,
                 divisor_override=1)[0,0]
 
-
     def remove_translations_mask(self, mask):
         """Removes one or more translation positions, and their associated
         properties, from the dataset using logical indexing.
@@ -408,24 +407,31 @@ class Ptycho2DDataset(CDataset):
         self.translations.shape[0] (i.e., the number of individual
         translated points). Patterns, translations, and intentities
         associated with indices that are "True" will be removed.
-        
+
         Parameters:
         ----------
         mask : torch.tensor(dtype=torch.bool)
             The boolean mask indicating which indices are to be removed from
-            the dataset.
+            the dataset. True indicates that the corresponding index will be
+            removed.
         """
+
+        # Check that the mask is the right size
+        if mask.shape[0] != self.translations.shape[0]:
+            raise ValueError(
+                'The mask must have the same length as the number of translations in the dataset.'
+            )
+
         # Update patterns, translations, and intensities
         self.patterns = self.patterns[~mask]
         self.translations = self.translations[~mask]
-        
+
         if hasattr(self, 'intensities') and self.intensities is not None:
             self.intensities = self.intensities[~mask]
-    
-    
+
     def crop_translations(self, roi):
         """Shrinks the range of translation positions that are analyzed
-        
+
         This deletes all diffraction patterns associated with x- and 
         y-translations that lie outside of a specified rectangular
         region of interest. In essence, this operation crops the "relative 
@@ -443,7 +449,7 @@ class Ptycho2DDataset(CDataset):
             do not matter as long as roi[:2] and roi[2:] correspond with 
             the x and y coordinates, respectively.
         """
-        
+
         # Pull out the bounds of the ROI, ensuring that left < right and 
         #   top < bottom
         x_left, x_right = sorted(roi[:2])
