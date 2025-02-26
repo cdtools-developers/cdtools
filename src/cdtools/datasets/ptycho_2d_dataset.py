@@ -399,35 +399,37 @@ class Ptycho2DDataset(CDataset):
                 factor,
                 divisor_override=1)[0,0]
 
-    def remove_translations_mask(self, mask):
+
+    def remove_translations_mask(self, mask_remove):
         """Removes one or more translation positions, and their associated
         properties, from the dataset using logical indexing.
 
-        This takes a mask (boolean torch tensor) with the same size as
+        This takes a 1D mask (boolean torch tensor) with the length
         self.translations.shape[0] (i.e., the number of individual
-        translated points). Patterns, translations, and intentities
+        translated points). Patterns, translations, and intensities
         associated with indices that are "True" will be removed.
 
         Parameters:
         ----------
-        mask : torch.tensor(dtype=torch.bool)
-            The boolean mask indicating which indices are to be removed from
-            the dataset. True indicates that the corresponding index will be
+        mask_remove : 1D torch.tensor(dtype=torch.bool)
+            The boolean mask indicating which elements are to be removed from
+            the dataset. True indicates that the corresponding element will be
             removed.
         """
 
         # Check that the mask is the right size
-        if mask.shape[0] != self.translations.shape[0]:
+        if mask_remove.shape != t.Size([self.translations.shape[0]]):
             raise ValueError(
                 'The mask must have the same length as the number of translations in the dataset.'
             )
 
         # Update patterns, translations, and intensities
-        self.patterns = self.patterns[~mask]
-        self.translations = self.translations[~mask]
+        self.patterns = self.patterns[~mask_remove]
+        self.translations = self.translations[~mask_remove]
 
         if hasattr(self, 'intensities') and self.intensities is not None:
-            self.intensities = self.intensities[~mask]
+            self.intensities = self.intensities[~mask_remove]
+
 
     def crop_translations(self, roi):
         """Shrinks the range of translation positions that are analyzed

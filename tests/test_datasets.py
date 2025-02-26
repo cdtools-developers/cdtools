@@ -351,7 +351,7 @@ def test_Ptycho2DDataset_remove_translations_mask(ptycho_cxi_1):
     # Test 1: Complain when the the mask is not the same shape as the pattern
     # length
     with pytest.raises(ValueError) as excinfo:
-        copied_dataset.remove_translations_mask(mask=t.zeros(10))
+        copied_dataset.remove_translations_mask(mask_remove=t.zeros(10))
     assert ('The mask must have the same length') in str(excinfo.value)
 
     # Test 2: Remove the mask from the dataset
@@ -360,7 +360,7 @@ def test_Ptycho2DDataset_remove_translations_mask(ptycho_cxi_1):
     mask_success[10] = 1
     mask_success[-1] = 1
     mask_success = mask_success.bool()
-    copied_dataset.remove_translations_mask(mask=mask_success)
+    copied_dataset.remove_translations_mask(mask_remove=mask_success)
 
     # test if the mask is removed and patterns length is correct
     assert len(copied_dataset.patterns) == len(mask_success) - 3
