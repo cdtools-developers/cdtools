@@ -68,14 +68,14 @@ jobs:
         run: |
           make html
 
-      - name: List files in docs/build/html
+      - name: List files in docs/_build/html
         run: |
-          ls -la docs/build/html
+          ls -la docs/_build/html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'docs/build/html'
+          path: 'docs/_build/html'
           name: github-pages
 
       - name: Deploy to GitHub Pages
