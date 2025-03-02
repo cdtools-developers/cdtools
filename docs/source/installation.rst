@@ -1,7 +1,7 @@
 Installation
 ============
 
-Step 1: Download the Source Code
+Step 1: Download the Source Code from Github
 ----------------
 
 The source code for CDTools is hosted on `Github`_. At the moment, the repository remains private while we decide on licensing. Access can be granted upon request by contacting `Abe Levitan <alevitan@mit.edu>`_.
