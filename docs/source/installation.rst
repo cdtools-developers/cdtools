@@ -8,7 +8,7 @@ The source code for CDTools is hosted on `Github`_. At the moment, the repositor
 
 .. _`Github`: https://github.com/cdtools-developers/cdtools
 
-The repository remains under active development as of late 2024.
+The repository remains under active development as of early 2025.
 
 Step 2: Install Dependencies
 ----------------------------
