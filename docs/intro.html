@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Introduction to CDTools &mdash; CDTools 0.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=938c9ccc"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            CDTools
+          </a>
+              <div class="version">
+                0.2
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Introduction to CDTools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="general.html">General Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="datasets.html">Datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tools/index.html">Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="indices_tables.html">Indices and tables</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CDTools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Introduction to CDTools</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/intro.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="introduction-to-cdtools">
+<h1>Introduction to CDTools<a class="headerlink" href="#introduction-to-cdtools" title="Link to this heading"></a></h1>
+<p>CDTools is an open source python library for ptychography and CDI reconstructions, using an automatic differentiation based approach. It is distributed under an MIT (a.k.a. Expat) license.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">from</span> <span class="nn">cdtools.datasets</span> <span class="kn">import</span> <span class="n">Ptycho2DDataset</span>
+<span class="kn">from</span> <span class="nn">cdtools.models</span> <span class="kn">import</span> <span class="n">FancyPtycho</span>
+
+<span class="c1"># Load a data file</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="n">Ptycho2DDataset</span><span class="o">.</span><span class="n">from_cxi</span><span class="p">(</span><span class="s1">&#39;ptycho_data.cxi&#39;</span><span class="p">)</span>
+
+<span class="c1"># Look at the data inside</span>
+<span class="n">dataset</span><span class="o">.</span><span class="n">inspect</span><span class="p">()</span>
+
+<span class="c1"># Initialize a model from the data</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">FancyPtycho</span><span class="o">.</span><span class="n">from_dataset</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+
+<span class="c1"># Run a reconstruction</span>
+<span class="k">for</span> <span class="n">loss</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">Adam_optimize</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+     <span class="nb">print</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">report</span><span class="p">())</span>
+
+<span class="c1"># Save the results</span>
+<span class="n">model</span><span class="o">.</span><span class="n">save_to_h5</span><span class="p">(</span><span class="s1">&#39;ptycho_results.h5&#39;</span><span class="p">,</span> <span class="n">dataset</span><span class="p">)</span>
+
+<span class="c1"># And look at them!</span>
+<span class="n">model</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span> <span class="c1"># See the reconstructed object, probe, etc.</span>
+<span class="n">model</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span> <span class="c1"># See how the simulated and measured patterns compare</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>CDTools makes it simple to load and inspect data stored in .cxi files. Reconstruction models for common geometries are included “out of the box”. For more advanced users, it includes a collection of differentiable functions which can beused to construct new forward models.</p>
+<p>The high-level interface to CDTools - datasets and models - is built on a set of lower-level tools. These lower level tools include:</p>
+<ul class="simple">
+<li><p>functions for accessing stored data in .cxi files</p></li>
+<li><p>plotting tools to visualize data and reconstructions</p></li>
+<li><p>basic operations, like light propagators, needed for coherent diffraction</p></li>
+<li><p>tools that implement basic operations - such as light propagation - relevant to coherent diffraction.</p></li>
+<li><p>analysis functions for assessing the quality of reconstructions</p></li>
+</ul>
+<p>These functions can be used alongside the high-level interface to make fun and fancy reconstruction scripts for challenging data.</p>
+<p>If you’re interested, read the docs!</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019-2024, Abraham Levitan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

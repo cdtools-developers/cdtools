@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Processing &mdash; CDTools 0.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=938c9ccc"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Data" href="data.html" />
+    <link rel="prev" title="Tools" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            CDTools
+          </a>
+              <div class="version">
+                0.2
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Introduction to CDTools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../general.html">General Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../datasets.html">Datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Models</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tools</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Image Processing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.image_processing.hann_window"><code class="docutils literal notranslate"><span class="pre">hann_window()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.image_processing.centroid"><code class="docutils literal notranslate"><span class="pre">centroid()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.image_processing.centroid_sq"><code class="docutils literal notranslate"><span class="pre">centroid_sq()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.image_processing.sinc_subpixel_shift"><code class="docutils literal notranslate"><span class="pre">sinc_subpixel_shift()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.image_processing.find_subpixel_shift"><code class="docutils literal notranslate"><span class="pre">find_subpixel_shift()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.image_processing.find_pixel_shift"><code class="docutils literal notranslate"><span class="pre">find_pixel_shift()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.image_processing.find_shift"><code class="docutils literal notranslate"><span class="pre">find_shift()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.image_processing.convolve_1d"><code class="docutils literal notranslate"><span class="pre">convolve_1d()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.image_processing.center"><code class="docutils literal notranslate"><span class="pre">center()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="data.html">Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initializers.html">Initializers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interactions.html">Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="propagators.html">Propagators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="measurements.html">Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="losses.html">Losses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../indices_tables.html">Indices and tables</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">CDTools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Tools</a></li>
+      <li class="breadcrumb-item active">Image Processing</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tools/image_processing.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-cdtools.tools.image_processing">
+<span id="image-processing"></span><h1>Image Processing<a class="headerlink" href="#module-cdtools.tools.image_processing" title="Link to this heading"></a></h1>
+<p>Contains functions for basic image processing needs</p>
+<p>This module contains two kinds of image processing tools. The first type
+is specific tools for calculating commonly needed metrics (such as the
+centroid of an image), directly on complex-valued torch tensors. The second
+kind of tools perform common image manipulations on torch tensors, in such
+a way that it is safe to include them in automatic differentiation models.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.image_processing.hann_window">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.image_processing.</span></span><span class="sig-name descname"><span class="pre">hann_window</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.image_processing.hann_window" title="Link to this definition"></a></dt>
+<dd><p>Applies a hann window to a 2D image to apodize it</p>
+<p>TODO: update for pytorch</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>im</strong> (<em>np.array</em>) – A numpy array to apply a hann window to</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>apodidzed</strong> – The image, apodized by a hann window</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.image_processing.centroid">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.image_processing.</span></span><span class="sig-name descname"><span class="pre">centroid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.image_processing.centroid" title="Link to this definition"></a></dt>
+<dd><p>Returns the centroid of an image or a stack of images</p>
+<p>By default, the last two dimensions are used in the calculation
+and the remainder of the dimensions are passed through.</p>
+<p>Beware that the meaning of the centroid is not well defined if your
+image contains values less than 0</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>im</strong> (<em>torch.Tensor</em>) – An image or stack of images to calculate from</p></li>
+<li><p><strong>dims</strong> (<em>int</em>) – Default 2, how many trailing dimensions to calculate with</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>centroid</strong> – An (i,j) index or stack of indices</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.image_processing.centroid_sq">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.image_processing.</span></span><span class="sig-name descname"><span class="pre">centroid_sq</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">comp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.image_processing.centroid_sq" title="Link to this definition"></a></dt>
+<dd><p>Returns the centroid of the square of an image or stack of images</p>
+<p>By default, the last two dimensions are used in the calculation
+and the remainder of the dimensions are passed through.</p>
+<p>If the “comp” flag is set, it will be assumed that the last dimension
+represents the real and imaginary part of a complex number, and the
+centroid will be calculated for the magnitude squared of those numbers</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>im</strong> (<em>torch.Tensor</em>) – An image or stack of images to calculate from</p></li>
+<li><p><strong>dims</strong> (<em>int</em>) – Default 2, how many trailing dimensions to calculate for</p></li>
+<li><p><strong>comp</strong> (<em>bool</em>) – Default is False, whether the data represents complex numbers</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>centroid</strong> – An (i,j) index or stack of indices</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.image_processing.sinc_subpixel_shift">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.image_processing.</span></span><span class="sig-name descname"><span class="pre">sinc_subpixel_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.image_processing.sinc_subpixel_shift" title="Link to this definition"></a></dt>
+<dd><p>Performs a subpixel shift with sinc interpolation on the given tensor</p>
+<p>The subpixel shift is done circularly via a multiplication with a linear
+phase mask in Fourier space.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>im</strong> (<em>torch.Tensor</em>) – A complex-valued tensor to perform the subpixel shift on</p></li>
+<li><p><strong>shift</strong> (<em>array</em>) – A length-2 array describing the shift to perform, in pixels</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>shifted_im</strong> – The subpixel shifted tensor</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.image_processing.find_subpixel_shift">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.image_processing.</span></span><span class="sig-name descname"><span class="pre">find_subpixel_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">im2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_around</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(0,</span> <span class="pre">0)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.image_processing.find_subpixel_shift" title="Link to this definition"></a></dt>
+<dd><p>Calculates the subpixel shift between two images by maximizing the autocorrelation</p>
+<p>This function only searches in a 2 pixel by 2 pixel box around the
+specified search_around parameter. The calculation is done using the
+approach outlined in “Efficient subpixel image registration algorithms”,
+Optics Express (2008) by Manual Guizar-Sicarios et al.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>im1</strong> (<em>torch.Tensor</em>) – The first real or complex-valued torch tensor</p></li>
+<li><p><strong>im2</strong> (<em>torch.Tensor</em>) – The second real or complex-valued torch tensor</p></li>
+<li><p><strong>search_around</strong> (<em>array</em>) – Default (0,0), the shift to search in the vicinity of</p></li>
+<li><p><strong>resolution</strong> (<em>int</em>) – Default is 10, the fraction of a pixel to calculate to</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>shift</strong> – The relative shift (i,j) needed to best map im1 onto im2</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.image_processing.find_pixel_shift">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.image_processing.</span></span><span class="sig-name descname"><span class="pre">find_pixel_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">im2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.image_processing.find_pixel_shift" title="Link to this definition"></a></dt>
+<dd><p>Calculates the integer pixel shift between two images by maximizing the autocorrelation</p>
+<p>This function simply takes the circular correlation with an FFT and
+returns the position of the maximum of that correlation. This corresponds
+to the amount that im1 would have to be shifted by to line up best with
+im2</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>im1</strong> (<em>torch.Tensor</em>) – The first real or complex-valued torch tensor</p></li>
+<li><p><strong>im2</strong> (<em>torch.Tensor</em>) – The second real or complex-valued torch tensor</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>shift</strong> – The integer-valued shift (i,j) that best maps im1 onto im2</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.image_processing.find_shift">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.image_processing.</span></span><span class="sig-name descname"><span class="pre">find_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">im2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.image_processing.find_shift" title="Link to this definition"></a></dt>
+<dd><p>Calculates the shift between two images by maximizing the autocorrelation</p>
+<p>This function starts by calculating the maximum shift to integer
+pixel resolution, and then searchers the nearby area to calculate a
+subpixel shift</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>im1</strong> (<em>torch.Tensor</em>) – The first real or complex-valued torch tensor</p></li>
+<li><p><strong>im2</strong> (<em>torch.Tensor</em>) – The second real or complex-valued torch tensor</p></li>
+<li><p><strong>resolution</strong> (<em>int</em>) – Default is 10, the fraction of a pixel to calculate to</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>shift</strong> – The relative shift (i,j) needed to best map im1 onto im2</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.image_processing.convolve_1d">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.image_processing.</span></span><span class="sig-name descname"><span class="pre">convolve_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fftshift_kernel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.image_processing.convolve_1d" title="Link to this definition"></a></dt>
+<dd><p>Convolves an image with a 1d kernel along a specified dimension</p>
+<p>The convolution is a circular convolution calculated using a Fourier
+transform. The calculation is done so the input remains differentiable
+with respect to the output.</p>
+<p>If the image has a final dimension of 2, it is assumed to be complex.
+Otherwise, the image is assumed to be real. The image and kernel
+must either both be real or both be complex.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>torch.Tensor</em>) – The image to convolve</p></li>
+<li><p><strong>kernel</strong> (<em>torch.Tensor</em>) – The 1d kernel to convolve with</p></li>
+<li><p><strong>dim</strong> (<em>int</em>) – Default 0, the dimension to convolve along</p></li>
+<li><p><strong>fftshift_kernel</strong> (<em>bool</em>) – Default True, whether to fftshift the kernel first.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>convolved_im</strong> – The convolved image</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.image_processing.center">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.image_processing.</span></span><span class="sig-name descname"><span class="pre">center</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_dims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_power</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iterations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.image_processing.center" title="Link to this definition"></a></dt>
+<dd><p>Automatically centers an image or stack of images</p>
+<p>This function is designed with probes for ptychography in mind, so the
+default centering method is to place the centroid of the magnitude-squared
+of the input image on the central pixel.</p>
+<p># TODO I should place the centroid actually at the zero-frequency
+# pixel, rather than the center of the array, so this can be used in
+# Fourier space also.</p>
+<p>Because it’s intended for probes, the function will sum over all extra
+dimensions beyond &lt;image_dims&gt; when calculating the centroid, and shift
+all the images by the same amount. It does <em>not</em> calculate a separate
+shift for each image in the stack</p>
+<p>It also centers by using circular shifts. This means that, after calculating
+the centroid position and shifting by that amount, the centroid will not
+be perfectly centered. To counteract this, multiple iterations are run,
+by default 4</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>image</strong> (<em>torch.Tensor</em>) – The … x N x M image to center</p></li>
+<li><p><strong>image_dims</strong> (<em>int</em>) – Default 2, the number of dimensions to center along</p></li>
+<li><p><strong>use_power</strong> (<em>bool</em>) – Default True, whether to use the square of the magnitude</p></li>
+<li><p><strong>iterations</strong> (<em>int</em>) – Default 4, the number of iterations to do</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>centered_im</strong> – The centered image</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Tools" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="data.html" class="btn btn-neutral float-right" title="Data" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019-2024, Abraham Levitan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

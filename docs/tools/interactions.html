@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactions &mdash; CDTools 0.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=938c9ccc"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Propagators" href="propagators.html" />
+    <link rel="prev" title="Initializers" href="initializers.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            CDTools
+          </a>
+              <div class="version">
+                0.2
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Introduction to CDTools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../general.html">General Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../datasets.html">Datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Models</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tools</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="image_processing.html">Image Processing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data.html">Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initializers.html">Initializers</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Interactions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.interactions.translations_to_pixel"><code class="docutils literal notranslate"><span class="pre">translations_to_pixel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.interactions.pixel_to_translations"><code class="docutils literal notranslate"><span class="pre">pixel_to_translations()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.interactions.project_translations_to_sample"><code class="docutils literal notranslate"><span class="pre">project_translations_to_sample()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.interactions.ptycho_2D_round"><code class="docutils literal notranslate"><span class="pre">ptycho_2D_round()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.interactions.ptycho_2D_linear"><code class="docutils literal notranslate"><span class="pre">ptycho_2D_linear()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.interactions.ptycho_2D_sinc"><code class="docutils literal notranslate"><span class="pre">ptycho_2D_sinc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.interactions.RPI_interaction"><code class="docutils literal notranslate"><span class="pre">RPI_interaction()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="propagators.html">Propagators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="measurements.html">Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="losses.html">Losses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../indices_tables.html">Indices and tables</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">CDTools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Tools</a></li>
+      <li class="breadcrumb-item active">Interactions</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tools/interactions.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-cdtools.tools.interactions">
+<span id="interactions"></span><h1>Interactions<a class="headerlink" href="#module-cdtools.tools.interactions" title="Link to this heading"></a></h1>
+<p>This module contains various to simulate stages in the probe-sample interaction</p>
+<p>All the tools here are designed to work with automatic differentiation. Each
+function simulates some aspect of an interaction model that can be used
+for ptychographic reconstruction.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.interactions.translations_to_pixel">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.interactions.</span></span><span class="sig-name descname"><span class="pre">translations_to_pixel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">basis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">translations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">surface_normal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">tensor([0.,</span> <span class="pre">0.,</span> <span class="pre">1.])</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.interactions.translations_to_pixel" title="Link to this definition"></a></dt>
+<dd><p>Takes real space translations and outputs them in pixel space</p>
+<p>This works for any 2D ptychography geometry. It takes in
+A set of translations in (x,y) space and outputs the same translations
+in internal pixel units perpendicular to the detector.</p>
+<p>It uses information on the wavefield basis and, if defined, the
+sample normal, to perform the conversion.</p>
+<p>The assumed geometry is incoming radiation with a wavevector parallel
+to the +z axis, [0,0,1]. The default sample orientation has a surface
+normal parallel to this direction</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>basis</strong> (<em>torch.Tensor</em>) – The real space basis the wavefields are defined in</p></li>
+<li><p><strong>translations</strong> (<em>torch.Tensor</em>) – A Jx3 stack of real-space translations, or a single translation</p></li>
+<li><p><strong>surface_normal</strong> (<em>torch.Tensor</em>) – Optional, the sample’s surface normal</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>pixel_translations</strong> – A Jx2 stack of translations, or a single translation, in (i,j) pixel-space</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.interactions.pixel_to_translations">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.interactions.</span></span><span class="sig-name descname"><span class="pre">pixel_to_translations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">basis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pixel_translations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">surface_normal</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">tensor([0.,</span> <span class="pre">0.,</span> <span class="pre">1.])</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.interactions.pixel_to_translations" title="Link to this definition"></a></dt>
+<dd><p>Takes pixel-space translations and outputs them in real space</p>
+<p>This works for any 2D ptychography geometry. It takes in
+A set of internal pixel unit translations in (i,j) space and
+outputs the same translations real (x,y) space</p>
+<p>It uses information on the wavefield basis and, if defined, the
+sample normal, to perform the conversion.</p>
+<p>The assumed geometry is incoming radiation with a wavevector parallel
+to the +z axis, [0,0,1]. The default sample orientation has a surface
+normal parallel to this direction. Because of this, the z direction
+translation is always set to zero in the conversion</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>basis</strong> (<em>torch.Tensor</em>) – The real space basis the wavefields are defined in</p></li>
+<li><p><strong>translations</strong> (<em>torch.Tensor</em>) – A Jx2 stack of pixel-space translations, or a single translation</p></li>
+<li><p><strong>surface_normal</strong> (<em>torch.Tensor</em><em>, </em><em>default: torch.Tensor</em><em>(</em><em>[</em><em>0</em><em>,</em><em>0</em><em>,</em><em>1</em><em>]</em><em>)</em>) – The sample’s surface normal</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>real_translations</strong> – A Jx3 stack of real-space translations, or a single translation</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.interactions.project_translations_to_sample">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.interactions.</span></span><span class="sig-name descname"><span class="pre">project_translations_to_sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_basis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">translations</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.interactions.project_translations_to_sample" title="Link to this definition"></a></dt>
+<dd><p>Takes real space translations and outputs them in pixels in a sample basis</p>
+<p>This projection function is designed for the Bragg2DPtycho class. More
+broadly, it works to take a set of translations in the lab frame and
+convert each one into two values. First, an (i,j) value in pixels
+describing the location of the probe’s intersection with the sample
+plane, assuming the basis found in sample_basis is used. Second, an
+amount that the probe must be propagated along the z-axis to reach
+the sample plane at the given location. This includes both the effect of
+the tilted sample plane and any explicitly defined motion along the z axis
+of the probe-forming optic as included in the input translations.</p>
+<p>Note that because of the sign convention (that this function returns th
+relative amount the probe needs to be propagated to reach any given
+location), a positive motion along the z-axis of the probe forming optics
+will lead to a negative propagation distance.</p>
+<p>The assumed geometry is incoming radiation with a wavevector parallel
+to the +z axis, [0,0,1].</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sample_basis</strong> (<em>torch.Tensor</em>) – The real space basis the wavefields are defined in</p></li>
+<li><p><strong>translations</strong> (<em>torch.Tensor</em>) – A Jx3 stack of real-space translations, or a single translation</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>pixel_translations</strong> (<em>torch.Tensor</em>) – A Jx2 stack of translations in internal (i,j) pixel-space, or a single translation</p></li>
+<li><p><strong>propagations</strong> (<em>torch.Tensor</em>) – A length-J vector of propagation distances, in meters</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.interactions.ptycho_2D_round">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.interactions.</span></span><span class="sig-name descname"><span class="pre">ptycho_2D_round</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">probe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">translations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multiple_modes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upsample_obj</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.interactions.ptycho_2D_round" title="Link to this definition"></a></dt>
+<dd><p>Returns a stack of exit waves without accounting for subpixel shifts</p>
+<p>This function returns a collection of exit waves, with the first
+dimension as the translation index and the final dimensions
+corresponding to the detector. The exit waves are calculated by
+shifting the probe by the rounded value of the translation</p>
+<p>If multiple_modes is set to False, any additional dimensions in the
+ptycho_2D_round function will be assumed to correspond to the translation
+index. If multiple_modes is set to true, the (-4th) dimension of the probe
+will always be assumed to be defining a set of (P) incoherently mixing
+modes to be broadcast all translation indices. If any additional dimensions
+closer to the start exist, they will be assumed to be translation indices</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>probe</strong> (<em>torch.Tensor</em>) – A (P)xMxL probe function to illuminate the object</p></li>
+<li><p><strong>object</strong> (<em>torch.Tensor</em>) – The object function to be probed</p></li>
+<li><p><strong>translations</strong> (<em>torch.Tensor</em>) – The (N)x2 array of (i,j) translations to simulate</p></li>
+<li><p><strong>multuple_modes</strong> (<em>bool</em>) – Default False, whether to assume the probe contains multiple modes</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>exit_waves</strong> – An (N)x(P)xMxL tensor of the calculated exit waves</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.interactions.ptycho_2D_linear">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.interactions.</span></span><span class="sig-name descname"><span class="pre">ptycho_2D_linear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">probe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">translations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift_probe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.interactions.ptycho_2D_linear" title="Link to this definition"></a></dt>
+<dd><p>Returns a stack of exit waves accounting for subpixel shifts</p>
+<p>This function returns a collection of exit waves, with the first
+dimension as the translation index and the final dimensions
+corresponding to the detector. The exit waves are calculated by
+shifting the probe with each translation in turn, using linear
+interpolation to combine the results</p>
+<p>If shift_probe is True, it applies the subpixel shift to the probe,
+otherwise the subpixel shift is applied to the object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>probe</strong> (<em>torch.Tensor</em>) – An MxL probe function for the exit waves</p></li>
+<li><p><strong>object</strong> (<em>torch.Tensor</em>) – The object function to be probed</p></li>
+<li><p><strong>translations</strong> (<em>torch.Tensor</em>) – The Nx2 array of translations to simulate</p></li>
+<li><p><strong>shift_probe</strong> (<em>bool</em>) – Default True, Whether to subpixel shift the probe or object</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>exit_waves</strong> – An NxMxL tensor of the calculated exit waves</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.interactions.ptycho_2D_sinc">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.interactions.</span></span><span class="sig-name descname"><span class="pre">ptycho_2D_sinc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">probe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">translations</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shift_probe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">multiple_modes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_support</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.interactions.ptycho_2D_sinc" title="Link to this definition"></a></dt>
+<dd><p>Returns a stack of exit waves accounting for subpixel shifts</p>
+<p>This function returns a collection of exit waves, with the first
+dimension as the translation index and the final dimensions
+corresponding to the detector. The exit waves are calculated by
+shifting the probe with each translation in turn, using sinc
+interpolation (done via multiplication with a complex exponential
+in Fourier space)</p>
+<p>If shift_probe is True, it applies the subpixel shift to the probe,
+otherwise the subpixel shift is applied to the object [not yet implemented]</p>
+<p>If multiple_modes is set to False, any additional dimensions in the
+ptycho_2D_round function will be assumed to correspond to the translation
+index. If multiple_modes is set to true, the (-4th) dimension of the probe
+will always be assumed to be defining a set of (P) incoherently mixing
+modes to be broadcast all translation indices. If any additional dimensions
+closer to the start exist, they will be assumed to be translation indices</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>probe</strong> (<em>torch.Tensor</em>) – An (P)xMxL probe function for the exit waves</p></li>
+<li><p><strong>object</strong> (<em>torch.Tensor</em>) – The object function to be probed</p></li>
+<li><p><strong>translations</strong> (<em>torch.Tensor</em>) – The (N)x2 array of translations to simulate</p></li>
+<li><p><strong>shift_probe</strong> (<em>bool</em>) – Default True, Whether to subpixel shift the probe or object</p></li>
+<li><p><strong>multuple_modes</strong> (<em>bool</em>) – Default False, whether to assume the probe contains multiple modes</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>exit_waves</strong> – An (N)x(P)xMxL tensor of the calculated exit waves</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.interactions.RPI_interaction">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.interactions.</span></span><span class="sig-name descname"><span class="pre">RPI_interaction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">probe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.interactions.RPI_interaction" title="Link to this definition"></a></dt>
+<dd><p>Returns an exit wave from a high-res probe and a low-res obj</p>
+<p>In this interaction, the probe and object arrays are assumed to cover
+the same physical region of space, but with the probe array sampling that
+region of space more finely. Thus, to do the interaction, the object
+is first upsampled by padding it in Fourier space (equivalent to a sinc
+interpolation) before being multiplied with the probe. This function is
+called RPI_interaction because this interaction is central to the RPI
+method and is not commonly used elsewhere.</p>
+<p>This also works with object functions that have an extra first dimension
+for an incoherently mixing model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>probe</strong> (<em>torch.Tensor</em>) – An MxL probe function for simulating the exit waves</p></li>
+<li><p><strong>obj</strong> (<em>torch.Tensor</em>) – An M’xL’ or NxM’xL’ object function for simulating the exit waves</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>exit_wave</strong> – An MxL tensor of the calculated exit waves</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="initializers.html" class="btn btn-neutral float-left" title="Initializers" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="propagators.html" class="btn btn-neutral float-right" title="Propagators" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019-2024, Abraham Levitan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

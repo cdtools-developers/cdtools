@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data &mdash; CDTools 0.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=938c9ccc"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Initializers" href="initializers.html" />
+    <link rel="prev" title="Image Processing" href="image_processing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            CDTools
+          </a>
+              <div class="version">
+                0.2
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Introduction to CDTools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../general.html">General Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../datasets.html">Datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Models</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tools</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="image_processing.html">Image Processing</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Data</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.get_entry_info"><code class="docutils literal notranslate"><span class="pre">get_entry_info()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.get_sample_info"><code class="docutils literal notranslate"><span class="pre">get_sample_info()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.get_wavelength"><code class="docutils literal notranslate"><span class="pre">get_wavelength()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.get_detector_geometry"><code class="docutils literal notranslate"><span class="pre">get_detector_geometry()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.get_mask"><code class="docutils literal notranslate"><span class="pre">get_mask()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.get_dark"><code class="docutils literal notranslate"><span class="pre">get_dark()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.get_data"><code class="docutils literal notranslate"><span class="pre">get_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.get_shot_to_shot_info"><code class="docutils literal notranslate"><span class="pre">get_shot_to_shot_info()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.get_ptycho_translations"><code class="docutils literal notranslate"><span class="pre">get_ptycho_translations()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.create_cxi"><code class="docutils literal notranslate"><span class="pre">create_cxi()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.add_entry_info"><code class="docutils literal notranslate"><span class="pre">add_entry_info()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.add_sample_info"><code class="docutils literal notranslate"><span class="pre">add_sample_info()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.add_source"><code class="docutils literal notranslate"><span class="pre">add_source()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.add_detector"><code class="docutils literal notranslate"><span class="pre">add_detector()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.add_mask"><code class="docutils literal notranslate"><span class="pre">add_mask()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.add_dark"><code class="docutils literal notranslate"><span class="pre">add_dark()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.add_data"><code class="docutils literal notranslate"><span class="pre">add_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.add_shot_to_shot_info"><code class="docutils literal notranslate"><span class="pre">add_shot_to_shot_info()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.add_ptycho_translations"><code class="docutils literal notranslate"><span class="pre">add_ptycho_translations()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.nested_dict_to_h5"><code class="docutils literal notranslate"><span class="pre">nested_dict_to_h5()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.data.h5_to_nested_dict"><code class="docutils literal notranslate"><span class="pre">h5_to_nested_dict()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="initializers.html">Initializers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interactions.html">Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="propagators.html">Propagators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="measurements.html">Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="losses.html">Losses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../indices_tables.html">Indices and tables</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">CDTools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Tools</a></li>
+      <li class="breadcrumb-item active">Data</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tools/data.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-cdtools.tools.data">
+<span id="data"></span><h1>Data<a class="headerlink" href="#module-cdtools.tools.data" title="Link to this heading"></a></h1>
+<p>Contains the base functions for loading and saving data from/to .cxi files</p>
+<p>These functions are used when constructing a new dataset class to pull
+specific desired information from a .cxi file. These functions should
+handle all the needed conversions between standard formats (for example,
+transposes of the basis arrays, shifting from object to probe motion, etc).</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.get_entry_info">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">get_entry_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.get_entry_info" title="Link to this definition"></a></dt>
+<dd><p>Returns a dictionary with the basic metadata from the cxi file’s entry_1 attribute</p>
+<p>String type metadata is read out as a string, and datetime metadata
+is converted to python datetime objects if the string is properly
+formatted.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cxi_file</strong> (<em>h5py.File</em>) – A file object to be read</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>entry_info</strong> – A dictionary with basic metadata defined in the cxi file</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.get_sample_info">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">get_sample_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.get_sample_info" title="Link to this definition"></a></dt>
+<dd><p>Returns a dictionary with the basic metadata from the cxi file’s entry_1/sample_1 attribute</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cxi_file</strong> (<em>h5py.File</em>) – A file object to be read</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>sample_info</strong> – A dictionary with basic metadata from the sample defined in the cxi file</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.get_wavelength">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">get_wavelength</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.get_wavelength" title="Link to this definition"></a></dt>
+<dd><p>Returns the wavelength of the source defined in the cxi file object, in m</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cxi_file</strong> (<em>h5py.File</em>) – A file object to be read</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>wavelength</strong> – The wavelength of the source defined in the cxi file</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.float32</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.get_detector_geometry">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">get_detector_geometry</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.get_detector_geometry" title="Link to this definition"></a></dt>
+<dd><p>Returns a standardized description of the detector geometry defined in the cxi file object</p>
+<p>It makes intelligent assumptions based on the definitions in the cxi
+file definition. The standardized description of the geometry that it
+outputs includes the sample to detector distance, the corner location
+of the detector, and the basis vectors defining the detector. It can
+only handle detectors defined as rectangular grids of pixels.</p>
+<p>The distance and corner_location values are technically overdetermining
+the detector location, but for many experiments (particularly
+transmission experiments), the distance is needed and the exact
+corner location is not. If the corner location is not reported in
+the cxi file, no attempt will be made to calculate it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cxi_file</strong> (<em>h5py.File</em>) – A file object to be read</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>distance</strong> (<em>np.float32</em>) – The sample to detector distance, in m</p></li>
+<li><p><strong>basis_vectors</strong> (<em>np.array</em>) – The basis vectors for the detector</p></li>
+<li><p><strong>corner_location</strong> (<em>np.array</em>) – The real-space location of the (0,0) pixel in the detector</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.get_mask">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">get_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.get_mask" title="Link to this definition"></a></dt>
+<dd><p>Returns the detector mask defined in the cxi file object</p>
+<p>This function converts from the format specified in the cxi file
+definition to a simple on/off mask, where a value of 1 defines a
+good pixel (on) and a value of 0 defines a bad pixel (off).</p>
+<p>If any bit is set in the mask at all, it will be defined as a bad
+pixel, with the exception of pixels marked exactly as 0x00001000,
+which is defined to mean that the pixel has signal above the
+background. These pixels are treated as on pixels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cxi_file</strong> (<em>h5py.File</em>) – A file object to be read</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>mask</strong> – An array storing the mask from the cxi file</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.get_dark">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">get_dark</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.get_dark" title="Link to this definition"></a></dt>
+<dd><p>Returns an array with a dark image to use for initialization of a background model</p>
+<p>This looks for a set of dark images at
+entry_1/instrument_1/detector_1/data_dark. If the darks exist, it will
+return the mean of the array along all axes but the last two. That is,
+if the dark image is a single image, it will return that image. If it
+is a stack of images, it will return the mean along the stack axis.</p>
+<p>If the darks do not exist, it will return None.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cxi_file</strong> (<em>h5py.File</em>) – A file object to be read</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>dark</strong> – An array storing the dark image</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.get_data">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">get_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cut_zeros</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.get_data" title="Link to this definition"></a></dt>
+<dd><p>Returns an array with the full stack of detector data defined in the cxi file object</p>
+<p>This function will make sure to check all the various places that it’s
+okay to store the data in, to ensure that it can find the data regardless
+of whether the creator of the .cxi file has remembered to link the data
+to all the required locations.</p>
+<p>It will return the data array in whatever shape it’s defined in.</p>
+<p>It will also read out the axes attribute of the data into a list of strings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cxi_file</strong> (<em>h5py.File</em>) – A file object to be read</p></li>
+<li><p><strong>cut_zeros</strong> (<em>bool</em>) – Default True, whether to set all negative data to zero</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>data</strong> (<em>np.array</em>) – An array storing the data defined in the cxi file</p></li>
+<li><p><strong>axes</strong> (<em>list(str)</em>) – A list of the axes defined in the axes attribute, if any</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.get_shot_to_shot_info">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">get_shot_to_shot_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.get_shot_to_shot_info" title="Link to this definition"></a></dt>
+<dd><p>Gets a specified dataset of shot-to-shot information from the cxi file</p>
+<p>The data is assumed to be in the form of an array, with one dimension
+being the number of patterns being stored in the dataset. This is
+helpful for storing additional readback data on the shot-to-shot
+level that may be important but doens’t have a clearly defined
+place to be stored in the .cxi file specification. Such data includes
+shot-to-shot probe intensity measurements, polarizer positions, etc.</p>
+<p>It will look for this data in 3 places (in the following order):</p>
+<ol class="arabic simple">
+<li><p>entry_1/data_1/&lt;field_name&gt;</p></li>
+<li><p>entry_1/sample_1/geometry_1/&lt;field_name&gt;</p></li>
+<li><p>entry_1/instrument_1/detector_1/&lt;field_name&gt;</p></li>
+</ol>
+<p>This function is also used internally to read out the translations
+associated with a ptychography experiment</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cxi_file</strong> (<em>h5py.File</em>) – A file object to be read</p></li>
+<li><p><strong>field_name</strong> (<em>str</em>) – The name of the field to be read from</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>data</strong> – An array storing the translations defined in the cxi file</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.get_ptycho_translations">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">get_ptycho_translations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.get_ptycho_translations" title="Link to this definition"></a></dt>
+<dd><p>Gets an array of x,y,z translations, if such an array has been defined in the file</p>
+<p>It negates the translations, because the CXI file format is designed
+to specify translations of the samples and the cdtools code specifies
+translations of the optics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cxi_file</strong> (<em>h5py.File</em>) – A file object to be read</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>translations</strong> – An array storing the translations defined in the cxi file</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.create_cxi">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">create_cxi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.create_cxi" title="Link to this definition"></a></dt>
+<dd><p>Creates a new cxi file with a single entry group</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – The path at which to create the file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.add_entry_info">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">add_entry_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.add_entry_info" title="Link to this definition"></a></dt>
+<dd><p>Adds a dictionary of entry metadata to the entry_1 group of a cxi file object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cxi_file</strong> (<em>h5py.File</em>) – The file to add the info to</p></li>
+<li><p><strong>metadata</strong> (<em>dict</em>) – A dictionary containing all the metadata to be stored</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.add_sample_info">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">add_sample_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.add_sample_info" title="Link to this definition"></a></dt>
+<dd><p>Adds a dictionary of entry metadata to the entry_1/sample_1 group of a cxi file object</p>
+<p>This function will create the sample_1 attribute if it doesn’t already exist</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cxi_file</strong> (<em>h5py.File</em>) – The file to add the info to</p></li>
+<li><p><strong>metadata</strong> (<em>dict</em>) – A dictionary containing all the metadata to be stored</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.add_source">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">add_source</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wavelength</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.add_source" title="Link to this definition"></a></dt>
+<dd><p>Adds the entry_1/source_1 group to a cxi file object</p>
+<p>It stores the energy and wavelength attributes in the source_1 group,
+given a wavelength to define them from.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cxi_file</strong> (<em>h5py.File</em>) – The file to add the source to</p></li>
+<li><p><strong>wavelength</strong> (<em>float</em>) – The wavelength of light</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.add_detector">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">add_detector</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">corner</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.add_detector" title="Link to this definition"></a></dt>
+<dd><p>Adds the entry_1/instrument_1/detector_1 group to a cxi file object</p>
+<p>It will define all the relevant parameters - distance, pixel size,
+detector basis, and corner position (if relevant) based on the provided
+information.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cxi_file</strong> (<em>h5py.File</em>) – The file to add the detector to</p></li>
+<li><p><strong>distance</strong> (<em>float</em>) – The sample to detector distance</p></li>
+<li><p><strong>basis</strong> (<em>array</em>) – The detector basis</p></li>
+<li><p><strong>corner</strong> (<em>array</em>) – Optional, the corner position of the detector</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.add_mask">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">add_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.add_mask" title="Link to this definition"></a></dt>
+<dd><p>Adds the specified mask to the cxi file</p>
+<p>It places the mask into the mask dataset under
+entry_1/instrument_1/detector_1. The internal mask is defined
+simply as a 1 for an “on” pixel and a 0 for an “off” pixel, and
+the saved mask is exactly the opposite. This is simpler than the
+most general mask allowed by the cxi file format but it captures the
+distinction between pixels to be used and pixels not to be used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cxi_file</strong> (<em>h5py.File</em>) – The file to add the mask to</p></li>
+<li><p><strong>mask</strong> (<em>array</em>) – The mask to save out to the file</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.add_dark">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">add_dark</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dark</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.add_dark" title="Link to this definition"></a></dt>
+<dd><p>Adds the specified dark image to a cxi file</p>
+<p>It places the dark image data into the data_dark dataset under
+entry_1/instrument_1/detector_1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cxi_file</strong> (<em>h5py.File</em>) – The file to add the mask to</p></li>
+<li><p><strong>dark</strong> (<em>array</em>) – The dark image(s) to save out to the file</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.add_data">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">add_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compression</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'gzip'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.add_data" title="Link to this definition"></a></dt>
+<dd><p>Adds the specified data to the cxi file</p>
+<p>It will add the data unchanged to the file, placing it in two spots:</p>
+<ol class="arabic simple">
+<li><p>The entry_1/instrument_1/detector_1/data path</p></li>
+<li><p>A softlink at entry_1/data_1/data</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cxi_file</strong> (<em>h5py.File</em>) – The file to add the data to</p></li>
+<li><p><strong>data</strong> (<em>array</em>) – The data to be saved</p></li>
+<li><p><strong>axes</strong> (<em>list</em><em>(</em><em>str</em><em>)</em>) – Optional, a list of axis names to be saved in the axes attribute</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.add_shot_to_shot_info">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">add_shot_to_shot_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field_name</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.add_shot_to_shot_info" title="Link to this definition"></a></dt>
+<dd><p>Adds a specified dataset of shot-to-shot information to the cxi file</p>
+<p>The data is assumed to be in the form of an array, with one dimension
+being the number of patterns being stored in the dataset. This is
+helpful for storing additional readback data on the shot-to-shot
+level that may be important but doens’t have a clearly defined
+place to be stored in the .cxi file specification. Such data includes
+shot-to-shot probe intensity measurements, polarizer positions, etc.</p>
+<p>This function is also used internally to store the translations
+associated with a ptychography experiment</p>
+<p>It will store this data in 3 places:</p>
+<ol class="arabic simple">
+<li><p>The entry_1/sample_1/geometry_1/&lt;field_name&gt; path</p></li>
+<li><p>A softlink at entry_1/data_1/&lt;field_name&gt;</p></li>
+<li><p>A softlink at entry_1/instrument_1/detector_1/&lt;field_name&gt;</p></li>
+</ol>
+<p>The geometry and detector paths may not always be relevant, but this
+ensures that the data is always available in any of the places that
+an eventual reader may go to look for, e.g., the translations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cxi_file</strong> (<em>h5py.File</em>) – The file to add the translations to</p></li>
+<li><p><strong>data</strong> (<em>array</em>) – The data to be saved</p></li>
+<li><p><strong>field_name</strong> (<em>str</em>) – The field name to save the data under</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.add_ptycho_translations">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">add_ptycho_translations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cxi_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">translations</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.add_ptycho_translations" title="Link to this definition"></a></dt>
+<dd><p>Adds the specified translations to the cxi file</p>
+<p>It will add the translations to the file, negating them to conform to
+the standard in cxi files that the translations refer to the object’s
+translation.</p>
+<p>It will store them in 3 places:</p>
+<ol class="arabic simple">
+<li><p>The entry_1/sample_1/geometry_1/translation path</p></li>
+<li><p>A softlink at entry_1/data_1/translation</p></li>
+<li><p>A softlink at entry_1/instrument_1/detector_1/translation</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cxi_file</strong> (<em>h5py.File</em>) – The file to add the translations to</p></li>
+<li><p><strong>translations</strong> (<em>array</em>) – The translations to be saved</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.nested_dict_to_h5">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">nested_dict_to_h5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h5_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.nested_dict_to_h5" title="Link to this definition"></a></dt>
+<dd><p>saves a nested dictionary to an h5 file object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>h5_file</strong> (<em>h5py.File</em>) – A file object, or path to a file, to write the dictionary to</p></li>
+<li><p><strong>d</strong> (<em>dict</em>) – A mapping whose keys are all strings and whose values are only numpy arrays, pytorch tensors, scalars, or other mappings meeting the same conditions</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.data.h5_to_nested_dict">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.data.</span></span><span class="sig-name descname"><span class="pre">h5_to_nested_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h5_file</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.data.h5_to_nested_dict" title="Link to this definition"></a></dt>
+<dd><p>saves a nested dictionary to an h5 file object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>h5_file</strong> (<em>h5py.File</em>) – A file object, or path to a file, to load from</p></li>
+<li><p><strong>d</strong> (<em>dict</em>) – A mapping whose keys are all strings and whose values are only numpy arrays, pytorch tensors, scalars, python strings, or other mappings meeting the same conditions</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="image_processing.html" class="btn btn-neutral float-left" title="Image Processing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="initializers.html" class="btn btn-neutral float-right" title="Initializers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019-2024, Abraham Levitan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

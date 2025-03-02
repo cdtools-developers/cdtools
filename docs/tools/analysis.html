@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analysis &mdash; CDTools 0.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=938c9ccc"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Indices and tables" href="../indices_tables.html" />
+    <link rel="prev" title="Plotting" href="plotting.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            CDTools
+          </a>
+              <div class="version">
+                0.2
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Introduction to CDTools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../general.html">General Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../datasets.html">Datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Models</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tools</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="image_processing.html">Image Processing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data.html">Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initializers.html">Initializers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interactions.html">Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="propagators.html">Propagators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="measurements.html">Measurements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="losses.html">Losses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.product_svd"><code class="docutils literal notranslate"><span class="pre">product_svd()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.orthogonalize_probes"><code class="docutils literal notranslate"><span class="pre">orthogonalize_probes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.standardize"><code class="docutils literal notranslate"><span class="pre">standardize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.synthesize_reconstructions"><code class="docutils literal notranslate"><span class="pre">synthesize_reconstructions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.calc_consistency_prtf"><code class="docutils literal notranslate"><span class="pre">calc_consistency_prtf()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.calc_deconvolved_cross_correlation"><code class="docutils literal notranslate"><span class="pre">calc_deconvolved_cross_correlation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.calc_frc"><code class="docutils literal notranslate"><span class="pre">calc_frc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.calc_vn_entropy"><code class="docutils literal notranslate"><span class="pre">calc_vn_entropy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.calc_mode_power_fractions"><code class="docutils literal notranslate"><span class="pre">calc_mode_power_fractions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.calc_rms_error"><code class="docutils literal notranslate"><span class="pre">calc_rms_error()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.calc_fidelity"><code class="docutils literal notranslate"><span class="pre">calc_fidelity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.calc_generalized_rms_error"><code class="docutils literal notranslate"><span class="pre">calc_generalized_rms_error()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.standardize_reconstruction_set"><code class="docutils literal notranslate"><span class="pre">standardize_reconstruction_set()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.standardize_reconstruction_pair"><code class="docutils literal notranslate"><span class="pre">standardize_reconstruction_pair()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.analysis.calc_spectral_info"><code class="docutils literal notranslate"><span class="pre">calc_spectral_info()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../indices_tables.html">Indices and tables</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">CDTools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Tools</a></li>
+      <li class="breadcrumb-item active">Analysis</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tools/analysis.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-cdtools.tools.analysis">
+<span id="analysis"></span><h1>Analysis<a class="headerlink" href="#module-cdtools.tools.analysis" title="Link to this heading"></a></h1>
+<p>Contains basic functions for analyzing the results of reconstructions</p>
+<p>The functions in this module are designed to work either with pytorch tensors
+or numpy arrays, so they can be used either directly after reconstructions
+on the attributes of the models themselves, or after-the-fact once the
+data has been stored in numpy arrays.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.product_svd">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">product_svd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">A</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">B</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.product_svd" title="Link to this definition"></a></dt>
+<dd><p>Computes the SVD of A &#64; B</p>
+<p>This function uses a method which uses a QR decomposition of
+A and B to calculate the final reduced SVD, without explicitly
+calculating the full matrix. The output is defined such that
+A B = U S Vh, and as a reduced SVD</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>A</strong> (<em>array</em>) – An nxr matrix</p></li>
+<li><p><strong>B</strong> (<em>array</em>) – An rxm matrix</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>U</strong> (<em>array</em>) – An nxr matrix of left singular vectors</p></li>
+<li><p><strong>S</strong> (<em>array</em>) – An length-r array, t.diag(S) is the diagonal matrix of singular values</p></li>
+<li><p><strong>Vh</strong> (<em>array</em>) – And rxm matrix of the conjugate-transposed right singular vectors</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.orthogonalize_probes">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">orthogonalize_probes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">probes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight_matrix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_probe_dims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_reexpressed_weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.orthogonalize_probes" title="Link to this definition"></a></dt>
+<dd><p>Orthogonalizes a set of incoherently mixing probes</p>
+<p>This function takes any set of probe modes for mixed-mode ptychography,
+which are considered to define a mutual coherence function, and returns
+an orthogonalized set probe modes which refer to the same mutual coherence
+function. The orthogonalized modes are extracted via a singular value
+decomposition and are unique up to a global per-mode phase factor.</p>
+<p>If a weight matrix is explicitly given, the function will instead
+orthogonalize the light field defined by weight_matrix &#64; probes. It
+accomplishes this via a method which avoids explicitly constructing this
+potentially large matrix. This can be useful for Orthogonal Probe
+Relaxation ptychography. In this case, one may have a large stacked
+matrix of shot-to-shot weights but a small basis set of probes.</p>
+<p>In addition to returning the orthogonalized probe modes, this function
+also returns a re-expression of the original weight matrix in the basis
+of the orthogonalized probe modes, such that:</p>
+<p>reexpressed_weight_matrix &#64; orthogonalized_probes = weight_matrix &#64; probes.</p>
+<p>This re-expressed weight matrix is guaranteed to have orthonormalized rows,
+such that:</p>
+<p>reexpressed_weight_matrix^dagger &#64; reexpressed_weight_matrix = I.</p>
+<p>There is usually no reason to use the re-expressed weight matrix.
+However, it can be useful in situations where the individual rows in the
+weight matrix have a specific meaning, such as an exposure number, which
+should be preserved.</p>
+<p>Warning! The shape of the output orthogonalized_probes may not be equal to
+the shape of input probes, when a weight matrix is used. If the input
+weight matrix has m &lt; l rows, where l is the number of probe modes,
+then the output orthogonalized probes will have length m, not length l.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>probes</strong> (<em>array</em>) – An l x (&lt;n_probe_pix&gt;) array representing a stack of l probes</p></li>
+<li><p><strong>weight_matrix</strong> (<em>array</em>) – Optional, an m x l weight matrix further elaborating on the state</p></li>
+<li><p><strong>n_probe_dims</strong> (<em>int</em>) – Default is 2, the number of trailing dimensions for each probe state</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>orthogonalized_probes</strong> (<em>array</em>) – A min(m,l) x (&lt;n_probe_dims&gt;) array representing a stack of probes</p></li>
+<li><p><strong>reexpressed_weight_matrix</strong> (<em>array</em>) – A the original weight matrix, re-expressed to work with the new probes</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.standardize">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">standardize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">probe</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_slice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_ramp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.standardize" title="Link to this definition"></a></dt>
+<dd><p>Standardizes a probe and object to prepare them for comparison</p>
+<p>There are a number of ambiguities in the definition of a ptychographic
+reconstruction. This function makes an explicit choice for each ambiguity
+to allow comparisons between independent reconstructions without confusing
+these ambiguities for real differences between the reconstructions.</p>
+<p>The ambiguities and standardizations are:</p>
+<ol class="arabic simple">
+<li><ol class="loweralpha simple">
+<li><p>Probe and object can be scaled inversely to one another</p></li>
+<li><p>So we set the probe intensity to an average per-pixel value of 1</p></li>
+</ol>
+</li>
+<li><ol class="loweralpha simple">
+<li><p>The probe and object can aquire equal and opposite phase ramps</p></li>
+<li><p>So we set the centroid of the FFT of the probe to zero frequency</p></li>
+</ol>
+</li>
+<li><ol class="loweralpha simple">
+<li><p>The probe and object can each acquire an arbitrary overall phase</p></li>
+<li><p>So we set the phase of the sum of all values of both the probe and object to 0</p></li>
+</ol>
+</li>
+</ol>
+<p>When dealing with the properties of the object, a slice is used by
+default as the edges of the object often are dominated by unphysical
+noise. The default slice is from 3/8 to 5/8 of the way across. If the
+probe is actually a stack of incoherently mixing probes, then the
+dominant probe mode (assumed to be the first in the list) is used, but
+all the probes are updated with the same factors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>probe</strong> (<em>array</em>) – A complex array storing a retrieved probe or stack of incoherently mixed probes</p></li>
+<li><p><strong>obj</strong> (<em>array</em>) – A complex array storing a retrieved object</p></li>
+<li><p><strong>obj_slice</strong> (<em>slice</em>) – Optional, a slice to take from the object for calculating normalizations</p></li>
+<li><p><strong>correct_ramp</strong> (<em>bool</em>) – Default False, whether to correct for the relative phase ramps</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>standardized_probe</strong> (<em>array</em>) – The standardized probe</p></li>
+<li><p><strong>standardized_obj</strong> (<em>array</em>) – The standardized object</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.synthesize_reconstructions">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">synthesize_reconstructions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">probes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">objects</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_probe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_slice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_ramp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.synthesize_reconstructions" title="Link to this definition"></a></dt>
+<dd><p>Takes a collection of reconstructions and outputs a single synthesized probe and object</p>
+<p>The function first standardizes the sets of probes and objects using the
+standardize function, passing through the relevant options. Then it
+calculates the closest overlap of subsequent frames to subpixel
+precision and uses a sinc interpolation to shift all the probes and objects
+to a common frame. Then the images are summed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>probes</strong> (<em>list</em><em>(</em><em>array</em><em>)</em>) – A list of probes or stacks of probe modes</p></li>
+<li><p><strong>objects</strong> (<em>list</em><em>(</em><em>array</em><em>)</em>) – A list of objects</p></li>
+<li><p><strong>use_probe</strong> (<em>bool</em>) – Default False, whether to use the probe or object for alignment</p></li>
+<li><p><strong>obj_slice</strong> (<em>slice</em>) – Optional, A slice of the object to use for alignment and normalization</p></li>
+<li><p><strong>correct_ramp</strong> (<em>bool</em>) – Default False, whether to correct for a relative phase ramp in the probe and object</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>synth_probe</strong> (<em>array</em>) – The synthesized probe</p></li>
+<li><p><strong>synth_obj</strong> (<em>array</em>) – The synthesized object</p></li>
+<li><p><strong>obj_stack</strong> (<em>list(array)</em>) – A list of standardized objects, for further processing</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.calc_consistency_prtf">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">calc_consistency_prtf</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">synth_obj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">objects</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">obj_slice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.calc_consistency_prtf" title="Link to this definition"></a></dt>
+<dd><p>Calculates a PRTF between each the individual objects and a synthesized one</p>
+<p>The consistency PRTF at any given spatial frequency is defined as the ratio
+between the intensity of any given reconstruction and the intensity
+of a synthesized or averaged reconstruction at that spatial frequency.
+Typically, the PRTF is averaged over spatial frequencies with the same
+magnitude.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>synth_obj</strong> (<em>array</em>) – The synthesized object in the numerator of the PRTF</p></li>
+<li><p><strong>objects</strong> (<em>list</em><em>(</em><em>array</em><em>)</em>) – A list of objects or diffraction patterns for the denomenator of the PRTF</p></li>
+<li><p><strong>basis</strong> (<em>array</em>) – The basis for the reconstruction array to allow output in physical unit</p></li>
+<li><p><strong>obj_slice</strong> (<em>slice</em>) – Optional, a slice of the objects to use for calculating the PRTF</p></li>
+<li><p><strong>nbins</strong> (<em>int</em>) – Optional, number of bins to use in the histogram. Defaults to a sensible value</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>freqs</strong> (<em>array</em>) – The frequencies for the PRTF</p></li>
+<li><p><strong>PRTF</strong> (<em>array</em>) – The values of the PRTF</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.calc_deconvolved_cross_correlation">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">calc_deconvolved_cross_correlation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">im2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">im_slice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.calc_deconvolved_cross_correlation" title="Link to this definition"></a></dt>
+<dd><p>Calculates a cross-correlation between two images with their autocorrelations deconvolved.</p>
+<p>This is formally defined as the inverse Fourier transform of the normalized
+product of the Fourier transforms of the two images. It results in a
+kernel, whose characteristic size is related to the exactness of the
+possible alignment between the two images, on top of a random background</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>im1</strong> (<em>array</em>) – The first image, as a complex or real valued array</p></li>
+<li><p><strong>im2</strong> (<em>array</em>) – The first image, as a complex or real valued array</p></li>
+<li><p><strong>im_slice</strong> (<em>slice</em>) – Default is from 3/8 to 5/8 across the image, a slice to use in the processing.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>corr</strong> – The complex-valued deconvolved cross-correlation, in real space</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.calc_frc">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">calc_frc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">im1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">im2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">basis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">im_slice</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">snr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'side'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.calc_frc" title="Link to this definition"></a></dt>
+<dd><p>Calculates a Fourier ring correlation between two images</p>
+<p>This function requires an input of a basis to allow for FRC calculations
+to be related to physical units.</p>
+<p>Like other analysis functions, this can take input in numpy or pytorch,
+and will return output in the respective format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>im1</strong> (<em>array</em>) – The first image, a complex or real valued array</p></li>
+<li><p><strong>im2</strong> (<em>array</em>) – The first image, a complex or real valued array</p></li>
+<li><p><strong>basis</strong> (<em>array</em>) – The basis for the images, defined as is standard for datasets</p></li>
+<li><p><strong>im_slice</strong> (<em>slice</em>) – Default is the full image</p></li>
+<li><p><strong>nbins</strong> (<em>int</em>) – Number of bins to break the FRC up into</p></li>
+<li><p><strong>snr</strong> (<em>float</em>) – The signal to noise ratio (for the combined information in both images) to return a threshold curve for.</p></li>
+<li><p><strong>limit</strong> (<em>str</em>) – Default is ‘side’. What is the highest frequency to calculate the FRC to? If ‘side’, it chooses the side of the Fourier transform, if ‘corner’ it goes fully to the corner.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>freqs</strong> (<em>array</em>) – The frequencies associated with each FRC value</p></li>
+<li><p><strong>FRC</strong> (<em>array</em>) – The FRC values</p></li>
+<li><p><strong>threshold</strong> (<em>array</em>) – The threshold curve for comparison</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.calc_vn_entropy">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">calc_vn_entropy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">matrix</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.calc_vn_entropy" title="Link to this definition"></a></dt>
+<dd><p>Calculates the Von Neumann entropy of a density matrix</p>
+<p>Will either accept a single matrix, or a stack of matrices. Matrices
+are assumed to be Hermetian and positive definite, to be well-formed
+density matrices</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>matrix</strong> (<em>np.array</em>) – The nxn matrix or lxnxn stack of matrices to calculate the entropy of</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>entropy</strong> – The entropy or entropies of the arrays</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.calc_mode_power_fractions">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">calc_mode_power_fractions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">probes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight_matrix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_probe_dims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_preorthogonalized</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.calc_mode_power_fractions" title="Link to this definition"></a></dt>
+<dd><p>Calculates the fraction of total power in each orthogonalized mode</p>
+<p>This code first orthogonalizes the probe modes, so the result of this
+function are independent of the particular way that the multi-mode
+breakdown is expressed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>probes</strong> (<em>array</em>) – An l x (&lt;n_probe_pix&gt;) array representing a stack of l probes</p></li>
+<li><p><strong>weight_matrix</strong> (<em>array</em>) – Optional, an m x l weight matrix further elaborating on the state</p></li>
+<li><p><strong>n_probe_dims</strong> (<em>int</em>) – Default is 2, the number of trailing dimensions for each probe state</p></li>
+<li><p><strong>assume_preorthogonalized</strong> (<em>bool</em>) – Default is False. If True, will not orthogonalize the probes</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>power_fractions</strong> – The fraction of the total power in each mode</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.calc_rms_error">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">calc_rms_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">field_1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field_2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">align_phases</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.calc_rms_error" title="Link to this definition"></a></dt>
+<dd><p>Calculates the root-mean-squared error between two complex wavefields</p>
+<p>The formal definition of this function is:</p>
+<p>output = norm * sqrt(mean(abs(field_1 - gamma * field_2)**2))</p>
+<p>Where norm is an optional normalization factor, and gamma is an
+optional phase factor which is appropriate when the wavefields suffer
+from a global phase degeneracy as is often the case in diffractive
+imaging.</p>
+<p>The normalization is defined as the square root of the total intensity
+contained in field_1, which is appropriate when field_1 represents a
+known ground truth:</p>
+<p>norm = sqrt(mean(abs(field_1)**2))</p>
+<p>The phase offset is an analytic expression for the phase offset which
+will minimize the RMS error between the two wavefields:</p>
+<p>gamma = exp(1j * angle(sum(field_1 * conj(field_2))))</p>
+<p>This implementation is stable even in cases where field_1 and field_2
+are completely orthogonal.</p>
+<p>In the definitions above, the field_n are n-dimensional wavefields. The
+dimensionality of the wavefields can be altered via the dims argument,
+but the default is 2 for a 2D wavefield.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field_1</strong> (<em>array</em>) – The first complex-valued field</p></li>
+<li><p><strong>field_2</strong> (<em>array</em>) – The second complex-valued field</p></li>
+<li><p><strong>align_phases</strong> (<em>bool</em>) – Default is True, whether to account for a global phase offset</p></li>
+<li><p><strong>normalize</strong> (<em>bool</em>) – Default is False, whether to normalize to the intensity of field_1</p></li>
+<li><p><strong>dims</strong> (<em>(</em><em>int</em><em> or </em><em>tuple</em><em> of </em><em>python:ints</em><em>)</em>) – Default is 2, the number of final dimensions to reduce over.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>rms_error</strong> – The RMS error, or tensor of RMS errors, depending on the dim argument</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or t.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.calc_fidelity">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">calc_fidelity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fields_1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fields_2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.calc_fidelity" title="Link to this definition"></a></dt>
+<dd><p>Calculates the fidelity between two density matrices</p>
+<p>The fidelity is a comparison metric between two density matrices
+(i.e. mutual coherence functions) that extends the idea of the
+overlap to incoherent light. As a reminder, the overlap between two
+fields is:</p>
+<p>overlap = abs(sum(field_1 * field_2))**2</p>
+<p>Whereas the fidelity is defined as:</p>
+<p>fidelity = trace(sqrt(sqrt(dm_1) &lt;dot&gt; dm_2 &lt;dot&gt; sqrt(dm_1)))**2</p>
+<p>where dm_n refers to the density matrix encoded by fields_n such
+that dm_n = fields_n &lt;dot&gt; fields_&lt;n&gt;.conjtranspose(), sqrt
+refers to the matrix square root, and &lt;dot&gt; is the matrix product.</p>
+<p>This is not a practical implementation, however, as it is not feasible
+to explicitly construct the matrices dm_1 and dm_2 in memory. Therefore,
+we take advantage of the alternate definition based directly on the
+fields_&lt;n&gt; parameter:</p>
+<p>fidelity = sum(svdvals(fields_1 &lt;dot&gt; fields_2.conjtranspose()))**2</p>
+<p>In the definitions above, the fields_n are regarded as collections of
+wavefields, where each wavefield is by default 2-dimensional. The
+dimensionality of the wavefields can be altered via the dims argument,
+but the fields_n arguments must always have at least one more dimension
+than the dims argument. Any additional dimensions are treated as batch
+dimensions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fields_1</strong> (<em>array</em>) – The first set of complex-valued field modes</p></li>
+<li><p><strong>fields_2</strong> (<em>array</em>) – The second set of complex-valued field modes</p></li>
+<li><p><strong>dims</strong> (<em>int</em>) – Default is 2, the number of final dimensions to reduce over.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>fidelity</strong> – The fidelity, or tensor of fidelities, depending on the dim argument</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or t.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.calc_generalized_rms_error">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">calc_generalized_rms_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fields_1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fields_2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dims</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.calc_generalized_rms_error" title="Link to this definition"></a></dt>
+<dd><p>Calculates a generalization of the root-mean-squared error between two complex wavefields</p>
+<p>This function calculates an generalization of the RMS error which uses the
+concept of fidelity to extend it to capture the error between
+incoherent wavefields, defined as a mode decomposition. The extension has
+several nice properties, in particular:</p>
+<ol class="arabic simple">
+<li><p>For coherent wavefields, it precisely matches the RMS error including
+a correction for the global phase degeneracy (align_phases=True)</p></li>
+<li><p>All mode decompositions of either field that correspond to the same
+density matrix / mutual coherence function will produce the same
+output</p></li>
+<li><p>The error will only be zero when comparing mode decompositions that
+correspond to the same density matrix.</p></li>
+<li><p>Due to (2), one need not worry about the ordering of the modes,
+properly orthogonalizing the modes, and it is even possible to
+compare mode decompositions with different numbers of modes.</p></li>
+</ol>
+<p>The formal definition of this function is:</p>
+<dl>
+<dt>output = norm * sqrt(mean(abs(fields_1)**2)</dt><dd><ul class="simple">
+<li><p>mean(abs(fields_2)**2)</p></li>
+</ul>
+<ul class="simple">
+<li><p>2 * sqrt(fidelity(fields_1,fields_2)))</p></li>
+</ul>
+</dd>
+</dl>
+<p>Where norm is an optional normalization factor, and the fidelity is
+defined based on the mean, rather than the sum, to match the convention
+for the root <em>mean</em> squared error.</p>
+<p>The normalization is defined as the square root of the total intensity
+contained in fields_1, which is appropriate when fields_1 represents a
+known ground truth:</p>
+<p>norm = sqrt(mean(abs(fields_1)**2))</p>
+<p>In the definitions above, the fields_n are regarded as collections of
+wavefields, where each wavefield is by default 2-dimensional. The
+dimensionality of the wavefields can be altered via the dims argument,
+but the fields_n arguments must always have at least one more dimension
+than the dims argument. Any additional dimensions are treated as batch
+dimensions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fields_1</strong> (<em>array</em>) – The first set of complex-valued field modes</p></li>
+<li><p><strong>fields_2</strong> (<em>array</em>) – The second set of complex-valued field modes</p></li>
+<li><p><strong>normalize</strong> (<em>bool</em>) – Default is False, whether to normalize to the intensity of fields_1</p></li>
+<li><p><strong>dims</strong> (<em>(</em><em>int</em><em> or </em><em>tuple</em><em> of </em><em>python:ints</em><em>)</em>) – Default is 2, the number of final dimensions to reduce over.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>rms_error</strong> – The generalized RMS error, or tensor of generalized RMS errors, depending on the dim argument</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or t.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.standardize_reconstruction_set">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">standardize_reconstruction_set</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">half_1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">half_2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">full</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_phase_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_phase_ramp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_amplitude_exponent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(slice(None,</span> <span class="pre">None,</span> <span class="pre">None),</span> <span class="pre">slice(None,</span> <span class="pre">None,</span> <span class="pre">None))</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frc_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'side'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.standardize_reconstruction_set" title="Link to this definition"></a></dt>
+<dd><p>Standardizes and analyses a set of 50/50/100% reconstructions</p>
+<p>It’s very common to split a ptychography dataset into two sub-datasets,
+each with 50% of the exposures, so that the difference between the two
+sub-datasets can be used to estimate the quality and resolution of the
+final, full reconstruction. But to do that analysis, first the
+reconstructions need to be aligned with respect to each other and
+normalized in a few ways.</p>
+<p>This function takes the results (as output by model.save_results) of
+a set of 50/50/100% reconstructions and:</p>
+<ul class="simple">
+<li><p>Aligns the object reconstructions with one another</p></li>
+<li><p>Corrects for the global phase offset (by default)</p></li>
+<li><p>Sets a sensible value for the object/probe phase ramp (by default)</p></li>
+<li><dl class="simple">
+<dt>Sets a sensible value for the object/probe exponential decay (off by</dt><dd><p>default)</p>
+</dd>
+</dl>
+</li>
+<li><p>Calculates the FRC and derived SSNR.</p></li>
+</ul>
+<p>Then, these results are packaged into an output dictionary. The output
+does not retain all the information from the inputs, so if full traceability
+is desired, do not delete the files containing the individual
+reconstructions</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>half_1</strong> (<em>dict</em>) – The result of the first half dataset, as returned by model.save_results</p></li>
+<li><p><strong>half_2</strong> (<em>dict</em>) – The result of the second half dataset, as returned by model.save_results</p></li>
+<li><p><strong>full</strong> (<em>dict</em>) – The result of the full dataset, as returned by model.save_results</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>results</strong> – A dictionary containing the synthesized results</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.standardize_reconstruction_pair">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">standardize_reconstruction_pair</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">half_1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">half_2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_phase_offset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_phase_ramp</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">correct_amplitude_exponent</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">(slice(None,</span> <span class="pre">None,</span> <span class="pre">None),</span> <span class="pre">slice(None,</span> <span class="pre">None,</span> <span class="pre">None))</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_nbins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frc_limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'side'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.standardize_reconstruction_pair" title="Link to this definition"></a></dt>
+<dd><p>Standardizes and analyses a set of two repeat</p>
+<p>It’s very common to run two subsequent ptycho reconstructions, so that the
+effect of sample damage during the first reconstruction can be used in the
+estimate of thefinal quality. The difference between the two datasets
+datasets can be used to estimate the quality and resolution of each one.
+But to do that analysis, first the reconstructions need to be aligned
+with respect to each other and normalized in a few ways.</p>
+<p>This function takes the results (as output by model.save_results) of
+a pair of reconstructions and:</p>
+<ul class="simple">
+<li><p>Aligns the object reconstructions with one another</p></li>
+<li><p>Corrects for the global phase offset (by default)</p></li>
+<li><p>Sets a sensible value for the object/probe phase ramp (by default)</p></li>
+<li><dl class="simple">
+<dt>Sets a sensible value for the object/probe exponential decay (off by</dt><dd><p>default)</p>
+</dd>
+</dl>
+</li>
+<li><p>Calculates the FRC and derived SSNR.</p></li>
+</ul>
+<p>Then, these results are packaged into an output dictionary. The output
+does not retain all the information from the inputs, so if full traceability
+is desired, do not delete the files containing the individual
+reconstructions</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>half_1</strong> (<em>dict</em>) – The result of the first half dataset, as returned by model.save_results</p></li>
+<li><p><strong>half_2</strong> (<em>dict</em>) – The result of the second half dataset, as returned by model.save_results</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>results</strong> – A dictionary containing the synthesized results</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.analysis.calc_spectral_info">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.analysis.</span></span><span class="sig-name descname"><span class="pre">calc_spectral_info</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nbins</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.analysis.calc_spectral_info" title="Link to this definition"></a></dt>
+<dd><p>Makes a properly normalized sum diffraction pattern</p>
+<p>This returns a scaled version of sum of all the diffraction patterns
+within the dataset. The scaling is defined so that the total intensity
+in the final image is equal to the intensity arising from a region of
+the scan pattern whose area matches one detector conjugate field of
+view.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataset</strong> (<a class="reference internal" href="../datasets.html#cdtools.datasets.Ptycho2DDataset" title="cdtools.datasets.Ptycho2DDataset"><em>Ptycho2DDataset</em></a>) – A ptychography dataset to use</p></li>
+<li><p><strong>nbins</strong> (<em>int</em>) – The number of bins to use for the SNR curve</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>spectrum</strong> (<em>t.tensor</em>) – An image of the spectral signal rate</p></li>
+<li><p><strong>freqs</strong> (<em>t.tensor</em>) – The frequencies at which the SSNR is estimated</p></li>
+<li><p><strong>SSNR</strong> (<em>t.tensor</em>) – The estimated SSNR</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="plotting.html" class="btn btn-neutral float-left" title="Plotting" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../indices_tables.html" class="btn btn-neutral float-right" title="Indices and tables" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019-2024, Abraham Levitan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Losses &mdash; CDTools 0.2.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=938c9ccc"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Plotting" href="plotting.html" />
+    <link rel="prev" title="Measurements" href="measurements.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            CDTools
+          </a>
+              <div class="version">
+                0.2
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Introduction to CDTools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../general.html">General Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../datasets.html">Datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../models.html">Models</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tools</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="image_processing.html">Image Processing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data.html">Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="initializers.html">Initializers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="interactions.html">Interactions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="propagators.html">Propagators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="measurements.html">Measurements</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Losses</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.losses.amplitude_mse"><code class="docutils literal notranslate"><span class="pre">amplitude_mse()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.losses.intensity_mse"><code class="docutils literal notranslate"><span class="pre">intensity_mse()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cdtools.tools.losses.poisson_nll"><code class="docutils literal notranslate"><span class="pre">poisson_nll()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html">Analysis</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../indices_tables.html">Indices and tables</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">CDTools</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Tools</a></li>
+      <li class="breadcrumb-item active">Losses</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tools/losses.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-cdtools.tools.losses">
+<span id="losses"></span><h1>Losses<a class="headerlink" href="#module-cdtools.tools.losses" title="Link to this heading"></a></h1>
+<p>Contains various loss functions to be used for optimization</p>
+<p>It exposes three losses, one returning the mean squared amplitude error, one
+that returns the mean squared intensity error, and one that returns the
+maximum likelihood metric for a system with Poisson statistics.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.losses.amplitude_mse">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.losses.</span></span><span class="sig-name descname"><span class="pre">amplitude_mse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">intensities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sim_intensities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.losses.amplitude_mse" title="Link to this definition"></a></dt>
+<dd><p>Returns the mean squared error of a simulated dataset’s amplitudes</p>
+<p>Calculates the mean squared error between a given set of
+measured diffraction intensities and a simulated set.</p>
+<p>This function calculates the mean squared error between their
+associated amplitudes. Because this is not well defined for negative
+numbers, make sure that all the intensities are &gt;0 before using this
+loss. Note that this is actually a sum-squared error, because this
+formulation makes it vastly simpler to compare error calculations
+between reconstructions with different minibatch size. I hope to
+find a better way to do this that is more honest with this
+cost function, though.</p>
+<p>It can accept intensity and simulated intensity tensors of any shape
+as long as their shapes match, and the provided mask array can be
+broadcast correctly along them.</p>
+<p>This is empirically the most useful loss function for most cases</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>intensities</strong> (<em>torch.Tensor</em>) – A tensor with measured detector values</p></li>
+<li><p><strong>sim_intensities</strong> (<em>torch.Tensor</em>) – A tensor of simulated detector intensities</p></li>
+<li><p><strong>mask</strong> (<em>torch.Tensor</em>) – A mask with ones for pixels to include and zeros for pixels to exclude</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>loss</strong> – A single value for the mean amplitude mse</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.losses.intensity_mse">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.losses.</span></span><span class="sig-name descname"><span class="pre">intensity_mse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">intensities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sim_intensities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.losses.intensity_mse" title="Link to this definition"></a></dt>
+<dd><p>Returns the mean squared error of a simulated dataset’s intensities</p>
+<p>Calculates the summed mean squared error between a given set of
+diffraction intensities - the measured set of detector intensities -
+and a simulated set of diffraction intensities. This function
+calculates the mean squared error between the intensities.</p>
+<p>It can accept intensity and simulated intensity tensors of any shape
+as long as their shapes match, and the provided mask array can be
+broadcast correctly along them.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>intensities</strong> (<em>torch.Tensor</em>) – A tensor with measured detector intensities.</p></li>
+<li><p><strong>sim_intensities</strong> (<em>torch.Tensor</em>) – A tensor of simulated detector intensities</p></li>
+<li><p><strong>mask</strong> (<em>torch.Tensor</em>) – A mask with ones for pixels to include and zeros for pixels to exclude</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>loss</strong> – A single value for the mean intensity mse</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="cdtools.tools.losses.poisson_nll">
+<span class="sig-prename descclassname"><span class="pre">cdtools.tools.losses.</span></span><span class="sig-name descname"><span class="pre">poisson_nll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">intensities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sim_intensities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-06</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subtract_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#cdtools.tools.losses.poisson_nll" title="Link to this definition"></a></dt>
+<dd><p>Returns the Poisson negative log likelihood for simulated intensities</p>
+<p>Calculates the overall Poisson maximum likelihood metric using
+diffraction intensities - the measured set of detector intensities -
+and a simulated set of intensities. This loss would be appropriate
+for detectors in a single-photon counting mode, with their output
+scaled to number of photons</p>
+<p>Note that this calculation ignores the log(intensities!) term in the
+full expression for Poisson negative log likelihood. This term doesn’t
+change the calculated gradients so isn’t worth taking the time to compute</p>
+<p>It can accept intensity and simulated intensity tensors of any shape
+as long as their shapes match, and the provided mask array can be
+broadcast correctly along them.</p>
+<p>The default value of eps is 1e-6 - a nonzero value here helps avoid
+divergence of the log function near zero.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>intensities</strong> (<em>torch.Tensor</em>) – A tensor with measured detector intensities.</p></li>
+<li><p><strong>sim_intensities</strong> (<em>torch.Tensor</em>) – A tensor of simulated detector intensities</p></li>
+<li><p><strong>mask</strong> (<em>torch.Tensor</em>) – A mask with ones for pixels to include and zeros for pixels to exclude</p></li>
+<li><p><strong>eps</strong> (<em>float</em>) – Optional, a small number to add to the simulated intensities</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>loss</strong> – A single value for the poisson negative log likelihood</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="measurements.html" class="btn btn-neutral float-left" title="Measurements" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="plotting.html" class="btn btn-neutral float-right" title="Plotting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2019-2024, Abraham Levitan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
