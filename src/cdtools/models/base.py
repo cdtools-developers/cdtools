@@ -30,6 +30,8 @@ loss
 
 import torch as t
 from torch.utils import data as torchdata
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Slider
 from matplotlib import ticker
@@ -357,6 +359,10 @@ class CDIModel(t.nn.Module):
             The summed loss over the latest epoch, divided by the total diffraction pattern intensity
         """
 
+        # Check if multi-GPU operations are being conducted (i.e.,
+        # a process group is initialized)
+        is_multi_GPU = t.distributed.is_initialized()
+
         def run_epoch(stop_event=None):
             """Runs one full epoch of the reconstruction."""
             # First, initialize some tracking variables
@@ -444,6 +450,10 @@ class CDIModel(t.nn.Module):
                         yield float('nan')
                     continue
                 
+                # If we're using DistributedSampler (likely the case if
+                # you're using multiple GPUs), we need to tell it
+                # which epoch we're on before running an epoch
+                if is_multi_GPU: data_loader.sampler.set_epoch(self.epoch)
                 yield run_epoch()
                     
                 
@@ -470,6 +480,11 @@ class CDIModel(t.nn.Module):
                         yield float('nan')
                     continue
                 
+                # If we're using DistributedSampler, (likely the case if
+                # you're using multiple GPUs), we need to tell it which
+                # epoch we're on before running an epoch
+                if is_multi_GPU: data_loader.sampler.set_epoch(self.epoch)
+
                 calc = threading.Thread(target=target, name='calculator', daemon=True)
                 try:
                     calc.start()
@@ -509,7 +524,9 @@ class CDIModel(t.nn.Module):
             subset=None,
             regularization_factor=None,
             thread=True,
-            calculation_width=10
+            calculation_width=10,
+            num_workers=1,
+            rank=None
     ):
         """Runs a round of reconstruction using the Adam optimizer
 
@@ -540,7 +557,11 @@ class CDIModel(t.nn.Module):
             Default True, whether to run the computation in a separate thread to allow interaction with plots during computation
         calculation_width : int
             Default 10, how many translations to pass through at once for each round of gradient accumulation. Does not affect the result, only the calculation speed
-
+        num_workers: int
+            Default 1, how many GPUs to distribute calculations over
+        rank: int
+            Default None, the rank of the GPU to be used when performing multi-gpu operations. Value should be within [0, world_size-1]
+        
         """
 
         self.training_history += (
@@ -556,10 +577,28 @@ class CDIModel(t.nn.Module):
                 subset = [subset]
             dataset = torchdata.Subset(dataset, subset)
 
-        # Make a dataloader
-        data_loader = torchdata.DataLoader(dataset,
-                                           batch_size=batch_size,
-                                           shuffle=True)
+        # Make a dataloader suited for either single-GPU use or cases
+        # where a process group (i.e., multiple GPUs) has been initialized
+        if num_workers > 1:
+            # First, create a sampler to load subsets of dataset to the GPUs
+            # TODO: Test out drop_last to see how much that influences reconstructions
+            sampler = DistributedSampler(dataset,
+                                         num_replicas=num_workers,
+                                         rank=rank,
+                                         shuffle=True,
+                                         drop_last=False)
+            # Now create the dataloader
+            data_loader = torchdata.DataLoader(dataset,
+                                               batch_size=batch_size, # TODO: Recalculate the batch_size for multi-GPU operation
+                                               shuffle=False, # Shuffling is now handled by sampler
+                                               num_workers=0, # I'm not 100% sure what this does, but apparently making this >0 can cause bugs
+                                               drop_last=False, # TODO: Test out how this influences reconstructions
+                                               pin_memory=False,# I'm not 100% sure what this does, but apparently making this True can cause bugs
+                                               sampler=sampler)
+        else:
+            data_loader = torchdata.DataLoader(dataset,
+                                            batch_size=batch_size,
+                                            shuffle=True)
 
         # Define the optimizer
         optimizer = t.optim.Adam(
