@@ -5,7 +5,9 @@
 *.egg-info
 .pytest_cache
 docs/build
+docs/_build
 build/*
 dist
 */example_data/*
 *.h5
+.DS_Store
