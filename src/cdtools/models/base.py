@@ -30,6 +30,7 @@ loss
 
 import torch as t
 from torch.utils import data as torchdata
+from torch.utils.data.distributed import DistributedSampler
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Slider
 from matplotlib import ticker
@@ -60,6 +61,13 @@ class CDIModel(t.nn.Module):
         self.loss_history = []
         self.training_history = ''
         self.epoch = 0
+
+        # These properties indicate to the CDIModel methods whether or not 
+        # multiple GPUs will be used. The purpose is to allow only 1 GPU to call
+        # certain methods to prevent the creation of redundant plots/reports/saves
+        self.rank = None                # Rank of the subprocess running the GPU
+        self.world_size = 1             # Total number of GPUs being used.
+        self.multi_gpu_used = False     # Self explanatory
 
     def from_dataset(self, dataset):
         raise NotImplementedError()
@@ -357,6 +365,10 @@ class CDIModel(t.nn.Module):
             The summed loss over the latest epoch, divided by the total diffraction pattern intensity
         """
 
+        # Check if multi-GPU operations are being conducted (i.e.,
+        # a process group is initialized)
+        is_multi_GPU = t.distributed.is_initialized()
+
         def run_epoch(stop_event=None):
             """Runs one full epoch of the reconstruction."""
             # First, initialize some tracking variables
@@ -392,7 +404,7 @@ class CDIModel(t.nn.Module):
                             exit()
 
                         # Run the simulation
-                        sim_patterns = self.forward(*inp)
+                        sim_patterns = self.forward(*inp) ## TODO: Do a deep dive plotting-per-iteration of this
 
                         # Calculate the loss
                         if hasattr(self, 'mask'):
@@ -444,6 +456,10 @@ class CDIModel(t.nn.Module):
                         yield float('nan')
                     continue
                 
+                # If we're using DistributedSampler (likely the case if
+                # you're using multiple GPUs), we need to tell it
+                # which epoch we're on before running an epoch
+                if is_multi_GPU: data_loader.sampler.set_epoch(self.epoch)
                 yield run_epoch()
                     
                 
@@ -470,6 +486,11 @@ class CDIModel(t.nn.Module):
                         yield float('nan')
                     continue
                 
+                # If we're using DistributedSampler, (likely the case if
+                # you're using multiple GPUs), we need to tell it which
+                # epoch we're on before running an epoch
+                if is_multi_GPU: data_loader.sampler.set_epoch(self.epoch)
+
                 calc = threading.Thread(target=target, name='calculator', daemon=True)
                 try:
                     calc.start()
@@ -539,8 +560,8 @@ class CDIModel(t.nn.Module):
         thread : bool
             Default True, whether to run the computation in a separate thread to allow interaction with plots during computation
         calculation_width : int
-            Default 10, how many translations to pass through at once for each round of gradient accumulation. Does not affect the result, only the calculation speed
-
+            Default 10, how many translations to pass through at once for each round of gradient accumulation. Does not affect the result, only the calculation speed 
+        
         """
 
         self.training_history += (
@@ -556,10 +577,28 @@ class CDIModel(t.nn.Module):
                 subset = [subset]
             dataset = torchdata.Subset(dataset, subset)
 
-        # Make a dataloader
-        data_loader = torchdata.DataLoader(dataset,
-                                           batch_size=batch_size,
-                                           shuffle=True)
+        # Make a dataloader suited for either single-GPU use or cases
+        # where a process group (i.e., multiple GPUs) has been initialized
+        if self.multi_gpu_used:
+            # First, create a sampler to load subsets of dataset to the GPUs
+            # TODO: Test out drop_last to see how much that influences reconstructions
+            sampler = DistributedSampler(dataset,
+                                         num_replicas=self.world_size,
+                                         rank=self.rank,
+                                         shuffle=True,
+                                         drop_last=False)
+            # Now create the dataloader
+            data_loader = torchdata.DataLoader(dataset,
+                                               batch_size=batch_size, # TODO: Recalculate the batch_size for multi-GPU operation
+                                               shuffle=False, # Shuffling is now handled by sampler
+                                               num_workers=0, # I'm not 100% sure what this does, but apparently making this >0 can cause bugs
+                                               drop_last=False, # TODO: Test out how this influences reconstructions
+                                               pin_memory=False,# I'm not 100% sure what this does, but apparently making this True can cause bugs
+                                               sampler=sampler)
+        else:
+            data_loader = torchdata.DataLoader(dataset,
+                                            batch_size=batch_size,
+                                            shuffle=True)
 
         # Define the optimizer
         optimizer = t.optim.Adam(
@@ -743,6 +782,10 @@ class CDIModel(t.nn.Module):
             Whether to update existing plots or plot new ones
 
         """
+        # FOR MULTI-GPU: Only run this method if it's called by the rank 0 GPU
+        if self.multi_gpu_used and self.rank != 0:
+            return
+
         # We find or create all the figures
         first_update = False
         if update and hasattr(self, 'figs') and self.figs:
@@ -852,6 +895,10 @@ class CDIModel(t.nn.Module):
         logarithmic : bool, default: False
             Whether to plot the diffraction on a logarithmic scale
         """
+
+        # FOR MULTI-GPU: Only run this method if it's called by the rank 0 GPU
+        if self.multi_gpu_used and self.rank != 0:
+            return
 
         fig, axes = plt.subplots(1,3,figsize=(12,5.3))
         fig.tight_layout(rect=[0.02, 0.09, 0.98, 0.96])
