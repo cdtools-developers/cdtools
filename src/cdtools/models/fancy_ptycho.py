@@ -195,7 +195,7 @@ class FancyPtycho(CDIModel):
     @classmethod
     def from_dataset(cls,
                      dataset,
-                     probe_size=None,
+                     probe_shape=None,
                      randomize_ang=0,
                      n_modes=1,
                      n_obj_modes=1,
@@ -277,7 +277,7 @@ class FancyPtycho(CDIModel):
         )
 
         # Finally, initialize the probe and  object using this information
-        if probe_size is None:
+        if probe_shape is None:
             probe = tools.initializers.SHARP_style_probe(
                 dataset,
                 propagation_distance=propagation_distance,
@@ -288,7 +288,6 @@ class FancyPtycho(CDIModel):
                 dataset,
                 obj_basis,
                 probe_shape,
-                probe_size,
                 propagation_distance=propagation_distance,
             )
 

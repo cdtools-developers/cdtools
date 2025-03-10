@@ -1,4 +1,4 @@
-from cdtools.datasets import *
+from cdtools.datasets import CDataset, Ptycho2DDataset
 from cdtools.tools import data as cdtdata
 import numpy as np
 import torch as t
@@ -340,7 +340,31 @@ def test_Ptycho2DDataset_downsample(test_ptycho_cxis):
             if dataset.background is not None:
                 assert np.allclose(np.array(dataset.background.shape) // factor,
                                    np.array(copied_dataset.background.shape))
-        
+
+
+def test_Ptycho2DDataset_remove_translations_mask(ptycho_cxi_1):
+    # Grab dataset
+    cxi, expected = ptycho_cxi_1
+    dataset = Ptycho2DDataset.from_cxi(cxi)
+    copied_dataset = deepcopy(dataset)
+
+    # Test 1: Complain when the the mask is not the same shape as the pattern
+    # length
+    with pytest.raises(ValueError) as excinfo:
+        copied_dataset.remove_translations_mask(mask_remove=t.zeros(10))
+    assert ('The mask must have the same length') in str(excinfo.value)
+
+    # Test 2: Remove the mask from the dataset
+    mask_success = t.zeros(len(copied_dataset.patterns))
+    mask_success[1] = 1
+    mask_success[10] = 1
+    mask_success[-1] = 1
+    mask_success = mask_success.bool()
+    copied_dataset.remove_translations_mask(mask_remove=mask_success)
+
+    # test if the mask is removed and patterns length is correct
+    assert len(copied_dataset.patterns) == len(mask_success) - 3
+
 
 def test_Ptycho2DDataset_crop_translations(ptycho_cxi_1):
     # Grab dataset

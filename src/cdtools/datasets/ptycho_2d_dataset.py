@@ -400,9 +400,40 @@ class Ptycho2DDataset(CDataset):
                 divisor_override=1)[0,0]
 
 
+    def remove_translations_mask(self, mask_remove):
+        """Removes one or more translation positions, and their associated
+        properties, from the dataset using logical indexing.
+
+        This takes a 1D mask (boolean torch tensor) with the length
+        self.translations.shape[0] (i.e., the number of individual
+        translated points). Patterns, translations, and intensities
+        associated with indices that are "True" will be removed.
+
+        Parameters:
+        ----------
+        mask_remove : 1D torch.tensor(dtype=torch.bool)
+            The boolean mask indicating which elements are to be removed from
+            the dataset. True indicates that the corresponding element will be
+            removed.
+        """
+
+        # Check that the mask is the right size
+        if mask_remove.shape != t.Size([self.translations.shape[0]]):
+            raise ValueError(
+                'The mask must have the same length as the number of translations in the dataset.'
+            )
+
+        # Update patterns, translations, and intensities
+        self.patterns = self.patterns[~mask_remove]
+        self.translations = self.translations[~mask_remove]
+
+        if hasattr(self, 'intensities') and self.intensities is not None:
+            self.intensities = self.intensities[~mask_remove]
+
+
     def crop_translations(self, roi):
         """Shrinks the range of translation positions that are analyzed
-        
+
         This deletes all diffraction patterns associated with x- and 
         y-translations that lie outside of a specified rectangular
         region of interest. In essence, this operation crops the "relative 
@@ -420,7 +451,7 @@ class Ptycho2DDataset(CDataset):
             do not matter as long as roi[:2] and roi[2:] correspond with 
             the x and y coordinates, respectively.
         """
-        
+
         # Pull out the bounds of the ROI, ensuring that left < right and 
         #   top < bottom
         x_left, x_right = sorted(roi[:2])
@@ -441,9 +472,5 @@ class Ptycho2DDataset(CDataset):
                              '(i.e., patterns and translations will be empty).'
                              ' Please redefine the bounds of the roi.')
 
-        # Update patterns and translations
-        self.patterns = self.patterns[inside_roi]
-        self.translations = self.translations[inside_roi]
-        
-        if hasattr(self, 'intensities') and self.intensities is not None:
-            self.intensities = self.intensities[inside_roi]
+        # Remove translations outside the ROI
+        self.remove_translations_mask(~inside_roi)

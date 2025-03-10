@@ -8,25 +8,27 @@ The source code for CDTools is hosted on `Github`_. At the moment, the repositor
 
 .. _`Github`: https://github.com/cdtools-developers/cdtools
 
-The repository remains under active development as of late 2024.
+The repository remains under active development as of early 2025.
 
 Step 2: Install Dependencies
 ----------------------------
 
-CDTools requires python 3.7 or greater.
+CDTools is regularly tested with Python versions 3.8 to 3.12, so it is recommended to use one of these versions. In general, CDTools requires Python 3.7 or higher.
 
 The major dependency for CDTools is pytorch (version 1.9.0 or greater). Because the details of the installation can vary depending on platform, GPU availability, etc, it is recommended that you follow the install instructions on `the pytorch site`_ to install pytorch before installing the remaining dependencies.
 
 .. _`the pytorch site`: https://pytorch.org/get-started/locally/
 
-If you manage your environment with conda, the remaining dependencies can be installed by running the following command in the top level directory of the package:
+pytorch stopped supporting installation using conda for installation, so it is recommended continue the installation using pip.
 
 .. code:: bash
 	  
-   $ conda install --file requirements.txt -c conda-forge
+   $ pip install -r requirements.txt
 
-This will install all required dependencies *except for pytorch*, as well as several optional dependencies which are used for the tests and documentation. The full set of dependencies are noted below.
-   
+This will install all required dependencies and verify that they meet the pytorch version requirements. Additionally, several optional dependencies used for testing and documentation will also be installed. The full set of dependencies and minimum requirements are listed below is listed below.
+
+CDTools is reguarly tested with the latest versions of the packages shown below.   
+
 Required dependencies:
 
    * `numpy <http://www.numpy.org>`_ >= 1.0
