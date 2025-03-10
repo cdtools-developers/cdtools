@@ -27,6 +27,7 @@ __all__ = [
     'plot_real',
     'plot_imag',
     'plot_nanomap_with_images',
+    'plot_holo_results',
     'cmocean_phase'
 ]
 
@@ -889,6 +890,54 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
 
     return fig
 
+
+def plot_holo_results(dataset):
+    # Plot all important results from a holography dataset
+    # TODO - tidy up a few things here
+    fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+
+    try:
+        target_hologram = dataset.target_hologram
+        axes[0, 0].imshow(np.log(target_hologram.detach().cpu()))
+    except:
+        pass
+    axes[0, 0].set_title("target holo")
+    try:
+        initial_support = dataset.initial_support
+        axes[0, 1].imshow(initial_support.detach().cpu().numpy())
+        axes[0, 1].set_title("initial support guess")
+    except:
+        pass
+
+    try:
+        object = dataset.object
+        axes[0, 2].imshow(np.abs(object.detach().cpu().numpy()))
+        axes[0, 2].set_title("Reconstructed Amplitude")
+        axes[0, 3].imshow(np.angle(object.detach().cpu().numpy()), cmap=cmocean_phase)
+        axes[0, 3].set_title("Reconstructed Phase")
+        axes[1, 0].imshow(np.log(np.abs(np.fft.fftshift(np.fft.fft2((object.detach().cpu()))))))
+        axes[1, 0].set_title("log recon holo")
+    except:
+        pass
+
+    try:
+        support = dataset.support
+        axes[1, 1].imshow(support.detach().cpu().numpy())
+        axes[1, 1].set_title("final support")
+    except:
+        pass
+
+    try:
+        loss_hist = dataset.loss_hist
+        learning_rate_hist = dataset.learning_rate_hist
+        axes[1, 2].plot(np.log(loss_hist))
+        axes[1, 2].set_title("Loss history")
+
+        axes[1, 3].plot(learning_rate_hist)
+        axes[1, 3].set_title("Learning rate hist")
+    except:
+        pass
+    plt.tight_layout()
 
 #
 # Some code to include the "phase" colormap from cmocean, which is
