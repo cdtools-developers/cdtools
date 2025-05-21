@@ -21,6 +21,7 @@ def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
         propagation_distance=5e-3, 
         units='mm', 
         obj_view_crop=-50,
+        use_qe_mask=True, # test this in the case where no qe mask is defined
     )
     
     print('Running reconstruction on provided reconstruction_device,',
@@ -28,7 +29,7 @@ def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
     model.to(device=reconstruction_device)
     dataset.get_as(device=reconstruction_device)
 
-    for loss in model.Adam_optimize(50, dataset, lr=0.02, batch_size=10):
+    for loss in model.Adam_optimize(70, dataset, lr=0.02, batch_size=10):
         print(model.report())
         if show_plot and model.epoch % 10 == 0:
             model.inspect(dataset)

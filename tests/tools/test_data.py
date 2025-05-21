@@ -60,7 +60,15 @@ def test_get_mask(test_ptycho_cxis):
         mask = data.get_mask(cxi)
         if expected['mask'] is None and mask is None:
             continue
-        assert np.all(data.get_mask(cxi) == expected['mask'])
+        assert np.all(mask == expected['mask'])
+
+        
+def test_get_qe_mask(test_ptycho_cxis):
+    for cxi, expected in test_ptycho_cxis:
+        qe_mask = data.get_qe_mask(cxi)
+        if expected['qe_mask'] is None and qe_mask is None:
+            continue
+        assert np.allclose(qe_mask, expected['qe_mask'])
 
 
 def test_get_dark(test_ptycho_cxis):
@@ -205,6 +213,18 @@ def test_add_mask(tmp_path):
         read_mask = data.get_mask(f)
 
     assert np.all(mask == read_mask)
+
+    
+def test_add_qe_mask(tmp_path):
+    qe_mask = np.random.rand(350,199).astype(np.float32)
+
+    with data.create_cxi(tmp_path / 'test_add_qe_mask.cxi') as f:
+        data.add_qe_mask(f, qe_mask)
+
+    with h5py.File(tmp_path / 'test_add_qe_mask.cxi','r') as f:
+        read_qe_mask = data.get_qe_mask(f)
+
+    assert np.allclose(qe_mask, read_qe_mask)
 
     
 def test_add_dark(tmp_path):

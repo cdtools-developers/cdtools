@@ -28,6 +28,7 @@ class FancyPtycho(CDIModel):
                  probe_fourier_shifts=None,
                  mask=None,
                  weights=None,
+                 qe_mask=None,
                  translation_scale=1,
                  saturation=None,
                  probe_support=None,
@@ -87,7 +88,18 @@ class FancyPtycho(CDIModel):
         else:
             self.register_buffer('mask',
                                  t.as_tensor(mask, dtype=t.bool))
-        
+
+
+        if qe_mask is None:
+            self.qe_mask = None
+        else:
+            self.qe_mask = t.nn.Parameter(
+                t.as_tensor(qe_mask, dtype=dtype))
+            # I want the ability to optimize over this, but experience shows
+            # that it is wildly unstable, so I think it's best to keep
+            # gradients turned off by default
+            self.qe_mask.requires_grad=False
+            
         probe_guess = t.as_tensor(probe_guess, dtype=t.complex64)
         obj_guess = t.as_tensor(obj_guess, dtype=t.complex64)
 
@@ -202,6 +214,7 @@ class FancyPtycho(CDIModel):
                      dm_rank=None,
                      translation_scale=1,
                      saturation=None,
+                     use_qe_mask=False,
                      probe_support_radius=None,
                      probe_fourier_crop=None,
                      propagation_distance=None,
@@ -376,6 +389,14 @@ class FancyPtycho(CDIModel):
         else:
             mask = None
 
+        if use_qe_mask:
+            if hasattr(dataset, 'qe_mask') and dataset.qe_mask is not None:
+                qe_mask = t.as_tensor(dataset.qe_mask, dtype=t.float32)
+            else:
+                qe_mask = t.ones(dataset.patterns.shape[-2:], dtype=t.float32)
+        else:
+            qe_mask = None
+            
         if probe_support_radius is not None:
             probe_support = t.zeros(probe[0].shape, dtype=t.bool)
             xs, ys = np.mgrid[:probe.shape[-2], :probe.shape[-1]]
@@ -389,24 +410,34 @@ class FancyPtycho(CDIModel):
         else:
             probe_support = None
 
-        return cls(wavelength, det_geo, obj_basis, probe, obj,
-                   surface_normal=surface_normal,
-                   min_translation=min_translation,
-                   translation_offsets=translation_offsets,
-                   weights=Ws, mask=mask, background=background,
-                   translation_scale=translation_scale,
-                   saturation=saturation,
-                   probe_basis=probe_basis,
-                   probe_support=probe_support,
-                   fourier_probe=fourier_probe,
-                   oversampling=oversampling,
-                   loss=loss, units=units,
-                   probe_fourier_shifts=probe_fourier_shifts,
-                   simulate_probe_translation=simulate_probe_translation,
-                   simulate_finite_pixels=simulate_finite_pixels,
-                   phase_only=phase_only,
-                   exponentiate_obj=exponentiate_obj,
-                   obj_view_crop=obj_view_crop)
+        return cls(
+            wavelength,
+            det_geo,
+            obj_basis,
+            probe,
+            obj,
+            surface_normal=surface_normal,
+            min_translation=min_translation,
+            translation_offsets=translation_offsets,
+            weights=Ws,
+            mask=mask,
+            background=background,
+            qe_mask=qe_mask,
+            translation_scale=translation_scale,
+            saturation=saturation,
+            probe_basis=probe_basis,
+            probe_support=probe_support,
+            fourier_probe=fourier_probe,
+            oversampling=oversampling,
+            loss=loss,
+            units=units,
+            probe_fourier_shifts=probe_fourier_shifts,
+            simulate_probe_translation=simulate_probe_translation,
+            simulate_finite_pixels=simulate_finite_pixels,
+            phase_only=phase_only,
+            exponentiate_obj=exponentiate_obj,
+            obj_view_crop=obj_view_crop
+        )
 
 
     def interaction(self, index, translations, *args):
@@ -521,6 +552,7 @@ class FancyPtycho(CDIModel):
             wavefields,
             self.background,
             measurement=tools.measurements.incoherent_sum,
+            qe_mask=self.qe_mask,
             saturation=self.saturation,
             oversampling=self.oversampling,
             simulate_finite_pixels=self.simulate_finite_pixels,
@@ -840,7 +872,10 @@ class FancyPtycho(CDIModel):
         ('Corrected Translations',
          lambda self, fig, dataset: p.plot_translations(self.corrected_translations(dataset), fig=fig, units=self.units)),
         ('Background',
-         lambda self, fig: p.plot_amplitude(self.background**2, fig=fig))
+         lambda self, fig: p.plot_amplitude(self.background**2, fig=fig)),
+        ('Quantum Efficiency Mask',
+         lambda self, fig: p.plot_amplitude(self.qe_mask, fig=fig),
+         lambda self: (hasattr(self, 'qe_mask') and self.qe_mask is not None))
     ]
     
     

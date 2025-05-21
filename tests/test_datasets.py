@@ -62,6 +62,9 @@ def test_CDataset_from_cxi(test_ptycho_cxis):
         if expected['mask'] is not None:
             assert t.all(t.eq(t.tensor(expected['mask']),dataset.mask))
 
+        if expected['qe_mask'] is not None:
+            assert t.all(t.eq(t.tensor(expected['qe_mask']),dataset.qe_mask))
+
         if expected['dark'] is not None:
             assert t.all(t.eq(t.as_tensor(expected['dark'], dtype=t.float32),
                               dataset.background))
@@ -101,6 +104,9 @@ def test_CDataset_to_cxi(test_ptycho_cxis, tmp_path):
         if dataset.mask is not None:
             assert t.all(t.eq(dataset.mask,read_dataset.mask))
 
+        if dataset.qe_mask is not None:
+            assert t.all(t.eq(dataset.qe_mask,read_dataset.qe_mask))
+
         if dataset.background is not None:
             assert t.all(t.eq(dataset.background, read_dataset.background))
 
@@ -115,6 +121,7 @@ def test_CDataset_to(ptycho_cxi_1):
     if t.cuda.is_available():
         dataset.to(device='cuda:0')
         assert dataset.mask.device == t.device('cuda:0')
+        assert dataset.qe_mask.device == t.device('cuda:0')
         assert dataset.background.device == t.device('cuda:0')
 
 
@@ -135,6 +142,7 @@ def test_Ptycho2DDataset_init():
                                             [-20e-6,0,0]]).transpose(),
                          'corner': np.array((2550e-6,3825e-6,0.3))}
     mask = np.ones((256,256))
+    qe_mask = 1.2*np.ones((256,256), dtype=np.float32)
     patterns = np.random.rand(20,256,256)
     translations = np.random.rand(20,3)
     
@@ -146,6 +154,24 @@ def test_Ptycho2DDataset_init():
                                 mask=mask)
 
     assert t.all(t.eq(dataset.mask,t.BoolTensor(mask)))
+    assert dataset.entry_info == entry_info
+    assert dataset.sample_info == sample_info
+    assert dataset.wavelength == wavelength
+    assert dataset.detector_geometry == detector_geometry
+    assert t.allclose(dataset.patterns, t.as_tensor(patterns))
+    assert t.allclose(dataset.translations, t.as_tensor(translations))
+
+    # Also test one with a qe_mask
+    dataset = Ptycho2DDataset(translations, patterns,
+                                entry_info=entry_info,
+                                sample_info=sample_info,
+                                wavelength=wavelength,
+                                detector_geometry=detector_geometry,
+                                mask=mask,
+                                qe_mask=qe_mask)
+
+    assert t.all(t.eq(dataset.mask,t.BoolTensor(mask)))
+    assert t.all(t.eq(dataset.qe_mask,t.as_tensor(qe_mask)))
     assert dataset.entry_info == entry_info
     assert dataset.sample_info == sample_info
     assert dataset.wavelength == wavelength
@@ -181,6 +207,9 @@ def test_Ptycho2DDataset_from_cxi(test_ptycho_cxis):
 
         if expected['mask'] is not None:
             assert t.all(t.eq(t.tensor(expected['mask']),dataset.mask))
+
+        if expected['qe_mask'] is not None:
+            assert t.all(t.eq(t.tensor(expected['qe_mask']),dataset.qe_mask))
 
         if expected['dark'] is not None:
             assert t.all(t.eq(t.as_tensor(expected['dark'], dtype=t.float32),
@@ -221,10 +250,11 @@ def test_Ptycho2DDataset_to_cxi(test_ptycho_cxis, tmp_path):
         if dataset.detector_geometry['corner'] is not None:
             assert 'corner' in read_dataset.detector_geometry
             
-
-        
         if dataset.mask is not None:
             assert t.all(t.eq(dataset.mask,read_dataset.mask))
+
+        if dataset.qe_mask is not None:
+            assert t.all(t.eq(dataset.qe_mask,read_dataset.qe_mask))
 
         if dataset.background is not None:
             assert t.all(t.eq(dataset.background, read_dataset.background))
@@ -238,12 +268,14 @@ def test_Ptycho2DDataset_to(ptycho_cxi_1):
     
     dataset.to(dtype=t.float64)
     assert dataset.mask.dtype == t.bool
+    assert dataset.qe_mask.dtype == t.float64
     assert dataset.patterns.dtype == t.float64
     assert dataset.translations.dtype == t.float64
     # If cuda is available, check that moving the mask to CUDA works.
     if t.cuda.is_available():
         dataset.to(device='cuda:0')
         assert dataset.mask.device == t.device('cuda:0')
+        assert dataset.qe_mask.device == t.device('cuda:0')
         assert dataset.background.device == t.device('cuda:0')
         assert dataset.patterns.device == t.device('cuda:0')
         assert dataset.translations.device == t.device('cuda:0')
@@ -291,24 +323,49 @@ def test_Ptycho2DDataset_downsample(test_ptycho_cxis):
         # May start failing if the test datasets are changed to include
         # a dataset with any dimension not even. That's a problem with the
         # test, not the code. Sorry! -Abe
+
+        masked_patterns = dataset.mask * dataset.patterns
         assert t.allclose(
             copied_dataset.patterns,
-            dataset.patterns[:,::2,::2] +
-            dataset.patterns[:,1::2,::2] +
-            dataset.patterns[:,::2,1::2] +
-            dataset.patterns[:,1::2,1::2]
+            masked_patterns[:,::2,::2] +
+            masked_patterns[:,1::2,::2] +
+            masked_patterns[:,::2,1::2] +
+            masked_patterns[:,1::2,1::2]
         )
-        
-        assert t.allclose(
-            copied_dataset.mask,
-            t.logical_and(
+
+        if dataset.qe_mask is None:
+            manually_downsampled_mask = t.logical_and(
                 t.logical_and(dataset.mask[::2,::2],
                               dataset.mask[1::2,::2]),
                 t.logical_and(dataset.mask[::2,1::2],
-                              dataset.mask[1::2,1::2]),
+                              dataset.mask[1::2,1::2])
             )
-        )
+            assert t.allclose(
+                copied_dataset.mask,
+                manually_downsampled_mask,
+            )
+        else:
+            manually_downsampled_mask = t.logical_or(
+                t.logical_or(dataset.mask[::2,::2],
+                             dataset.mask[1::2,::2]),
+                t.logical_or(dataset.mask[::2,1::2],
+                             dataset.mask[1::2,1::2])
+            )
+            assert t.allclose(
+                copied_dataset.mask,
+                manually_downsampled_mask
+            )
 
+            masked_qe_mask = dataset.mask * dataset.qe_mask
+            manually_downsampled_qe_mask = (
+                masked_qe_mask[::2,::2] + masked_qe_mask[1::2,::2]
+                + masked_qe_mask[::2,1::2] + masked_qe_mask[1::2,1::2]
+            ) / 4
+
+            assert t.allclose(
+                copied_dataset.qe_mask,
+                manually_downsampled_qe_mask
+            )
 
         
         if dataset.background is not None:
