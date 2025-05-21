@@ -5,6 +5,45 @@ import torch as t
 import cdtools
 from matplotlib import pyplot as plt
 
+
+def test_center_probe(lab_ptycho_cxi):
+    dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(lab_ptycho_cxi)
+    model = cdtools.models.FancyPtycho.from_dataset(
+        dataset,
+        n_modes=3,
+        fourier_probe=False
+    )
+    base_probe = model.probe.detach().clone()
+    model.center_probes()
+    centered_probe = model.probe.detach().clone()
+
+    fourier_model = cdtools.models.FancyPtycho.from_dataset(
+        dataset,
+        n_modes=3,
+        fourier_probe=True,
+    )
+
+    fourier_model.probe.data = cdtools.tools.propagators.far_field(
+        base_probe
+    )
+    
+    fourier_base_probe = fourier_model.probe.detach().clone()
+    fourier_model.center_probes()
+    fourier_centered_probe = fourier_model.probe.detach().clone()
+    ifft_fourier_centered_probe = cdtools.tools.propagators.inverse_far_field(
+        fourier_centered_probe)
+
+    # So we know the code had to do something
+    assert not t.allclose(base_probe, centered_probe)
+    # And checking that they both do the same thing, whether or not
+    # fourier_probe was set to True
+    assert t.allclose(
+        centered_probe,
+        ifft_fourier_centered_probe,
+        atol=1e-4,
+        rtol=1e-3
+    )
+    
 @pytest.mark.slow
 def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
 

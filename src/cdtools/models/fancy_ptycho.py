@@ -597,15 +597,40 @@ class FancyPtycho(CDIModel):
 
         
     def center_probes(self, iterations=4):
-        """Centers the probes
+        """Centers the probes in real space
+
+        Takes the current guess of the illumination function and centers it
+        using a shift with periodic boundary conditions. It uses
+        cdtools.tools.image_processing.center internally to do the centering.
+        Multiple iterations of an algorithm are run, which is helpful if the
+        illumination is reconstructed near the corners and "wraps around" the
+        probe field of view.
+
+        Note that the centering is always performed in real space, even if
+        the probe array is defined in Fourier space.
         
-        Note that this does not compensate for the centering by adjusting
+        Note also that this does not compensate for the centering by adjusting
         the object, so it's a good idea to reset the object after centering
         the probes
+
+        Parameters
+        ----------
+        iterations : int
+            Default 4, how many iterations of the centering algorithm to run
         """
-        centered_probe = tools.image_processing.center(
-            self.probe.data.cpu(), iterations=iterations)
-        self.probe.data = centered_probe.to(device=self.probe.data.device)
+        if self.fourier_probe:
+            prs = tools.propagators.inverse_far_field(self.probe.detach()).cpu()
+        else:
+            prs = self.probe.detach().cpu()
+        
+        centered_prs = tools.image_processing.center(prs, iterations=iterations)
+
+        if self.fourier_probe:
+            self.probe.data = tools.propagators.far_field(
+                centered_prs.to(device=self.probe.data.device))
+        else:
+            self.probe.data = centered_prs.to(device=self.probe.data.device)
+
 
 
     def tidy_probes(self):
