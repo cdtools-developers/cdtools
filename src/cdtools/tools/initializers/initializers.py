@@ -419,15 +419,10 @@ def SHARP_style_near_field_probe(dataset, backward_propagator, oversampling=1):
     probe_guess = backward_propagator(probe_guess_det_plane)
 
     if oversampling != 1:
-        probe_guess_real = t.nn.functional.interpolate(
-            t.real(probe_guess).unsqueeze(0).unsqueeze(0),
-            scale_factor=oversampling, mode='bilinear')[0,0]
-        probe_guess_imag = t.nn.functional.interpolate(
-            t.imag(probe_guess).unsqueeze(0).unsqueeze(0),
-            scale_factor=oversampling, mode='bilinear')[0,0]
-        
-        probe_guess = ( t.complex(probe_guess_real, probe_guess_imag)
-                        / oversampling**2 )
+        probe_guess = image_processing.fourier_upsample(
+            probe_guess,
+            upsample_factor=oversampling, preserve_mean=False
+        )
     
     return probe_guess
 
