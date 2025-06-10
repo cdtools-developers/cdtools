@@ -321,19 +321,23 @@ def convolve_1d(image, kernel, dim=0, fftshift_kernel=True):
     return conv_im
 
 
-def fourier_upsample(ims, preserve_mean=False):
+def fourier_upsample(ims, upsample_factor=2, preserve_mean=False):
     # If preserve_mean is true, it preserves the mean pixel intensity
     # otherwise, it preserves the total summed intensity
-    upsampled = t.zeros(ims.shape[:-2]+(2*ims.shape[-2],2*ims.shape[-1]),
+    
+    upsampled = t.zeros(ims.shape[:-2]+(upsample_factor*ims.shape[-2],
+                                        upsample_factor*ims.shape[-1]),
                            dtype=ims.dtype,
                            device=ims.device)
-    left = [ims.shape[-2]//2,ims.shape[-1]//2]
-    right = [ims.shape[-2]//2+ims.shape[-2],
-             ims.shape[-1]//2+ims.shape[-1]]
+    
+    left = [((upsample_factor-1)*ims.shape[-2])//2,
+            ((upsample_factor-1)*ims.shape[-1])//2]
+    right = [left[0]+ims.shape[-2],
+             left[1]+ims.shape[-1]]
     
     upsampled[...,left[0]:right[0],left[1]:right[1]] = propagators.far_field(ims)
     if preserve_mean:
-        upsampled *= 2
+        upsampled *= upsample_factor
     return propagators.inverse_far_field(upsampled)
 
 
