@@ -4,9 +4,9 @@ import warnings
 warnings.filterwarnings("ignore",
                         message='To copy construct from a tensor, ')
 
-__all__ = ['tools', 'datasets', 'models']
+__all__ = ['tools', 'datasets', 'models', 'reconstructors']
 
 from cdtools import tools
 from cdtools import datasets
 from cdtools import models
-
+from cdtools import reconstructors
