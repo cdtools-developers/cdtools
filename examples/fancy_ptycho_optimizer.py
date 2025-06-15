@@ -1,7 +1,7 @@
 import cdtools
 from matplotlib import pyplot as plt
 
-filename = 'example_data/lab_ptycho_data.cxi'
+filename = 'examples/example_data/lab_ptycho_data.cxi'
 dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(filename)
 
 # FancyPtycho is the workhorse model
@@ -19,10 +19,14 @@ device = 'cuda'
 model.to(device=device)
 dataset.get_as(device=device)
 
+# An Adam Reconstructor object is created to perform Adam 
+# optimization on the FancyPtycho model and dataset
+recon = cdtools.reconstructors.Adam(model, dataset)
+
 # The learning rate parameter sets the alpha for Adam.
 # The beta parameters are (0.9, 0.999) by default
 # The batch size sets the minibatch size
-for loss in model.Adam_optimize(50, dataset, lr=0.02, batch_size=20):
+for loss in recon.optimize(50, lr=0.02, batch_size=10):
     print(model.report())
     # Plotting is expensive, so we only do it every tenth epoch
     if model.epoch % 10 == 0:
@@ -31,7 +35,7 @@ for loss in model.Adam_optimize(50, dataset, lr=0.02, batch_size=20):
 # It's common to chain several different reconstruction loops. Here, we
 # started with an aggressive refinement to find the probe, and now we
 # polish the reconstruction with a lower learning rate and larger minibatch
-for loss in model.Adam_optimize(50, dataset,  lr=0.005, batch_size=50):
+for loss in recon.optimize(50, lr=0.005, batch_size=50):
     print(model.report())
     if model.epoch % 10 == 0:
         model.inspect(dataset)
