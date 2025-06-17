@@ -37,5 +37,10 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
+    entry_points={
+        'console_scripts': {
+            'cdt-torchrun = cdtools.tools.distributed.distributed:run_single_to_multi_gpu'
+        }
+    }
 )
 
