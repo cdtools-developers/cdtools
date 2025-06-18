@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="cdtools",
-    version="0.2.0",
+    version="0.3.0",
     python_requires='>3.8', # recommended minimum version for pytorch 2.3.0
     author="Abe Levitan",
     author_email="abraham.levitan@psi.ch",
