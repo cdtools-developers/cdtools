@@ -22,7 +22,7 @@ dataset.get_as(device=device)
 # The learning rate parameter sets the alpha for Adam.
 # The beta parameters are (0.9, 0.999) by default
 # The batch size sets the minibatch size
-for loss in model.Adam_optimize(50, dataset, lr=0.02, batch_size=10):
+for loss in model.Adam_optimize(50, dataset, lr=0.02, batch_size=20):
     print(model.report())
     # Plotting is expensive, so we only do it every tenth epoch
     if model.epoch % 10 == 0:

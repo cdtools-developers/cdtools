@@ -19,6 +19,7 @@ import h5py
 import pathlib
 from cdtools.tools import data as cdtdata
 from torch.utils import data as torchdata
+import os
 
 __all__ = ['CDataset']
 
@@ -91,6 +92,18 @@ class CDataset(torchdata.Dataset):
             self.background = None
 
         self.get_as(device='cpu')
+
+        # These attributes indicate to the CDataset methods whether or not 
+        # multi-GPU calculations are being performed. These flags are mostly
+        # used to prevent the production of duplicate plots when CDataset.inspect
+        # is called.
+        rank = os.environ.get('RANK')
+        world_size = os.environ.get('WORLD_SIZE')
+        # Rank of the subprocess running the GPU (defauly rank 0)
+        self.rank = int(rank) if rank is not None else 0 
+        # Total number of GPUs being used.    
+        self.world_size = int(world_size) if world_size is not None else 1   
+        self.multi_gpu_used = int(self.world_size) > 1      
 
 
     def to(self, *args, **kwargs):
