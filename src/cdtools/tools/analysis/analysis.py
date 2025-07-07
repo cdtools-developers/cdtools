@@ -1067,7 +1067,7 @@ def remove_phase_ramp(im, window, probe=None):
     Is, Js = np.mgrid[:window.shape[0],:window.shape[1]]
     def zero_freq_component(freq):
         phase_ramp = np.exp(2j * np.pi * (freq[0] * Is + freq[1] * Js))
-        return -np.abs(np.sum(phase_ramp * window))**2
+        return 1/np.abs(np.sum(phase_ramp * window))**2 ##Somehow scipy did not like to optimize a negative value, so to circumvent that, we can minimize 1/f?
     
     x0 = np.array([0,0])
     result = opt.minimize(zero_freq_component, x0)
@@ -1213,17 +1213,17 @@ def standardize_reconstruction_set(
         obj_1, probe_1, weights_1 = remove_amplitude_exponent(
             obj_1, window, probe=probe_1,
             weights=half_1['weights'],
-            basis=half_1['basis'],
+            basis=half_1['obj_basis'],
             translations=half_1['translations'])
         obj_2, probe_2, weights_2 = remove_amplitude_exponent(
             obj_2, window, probe=probe_2,
             weights=half_2['weights'],
-            basis=half_2['basis'],
+            basis=half_2['obj_basis'],
             translations=half_2['translations'])
         obj, probe, weights = remove_amplitude_exponent(
             obj, window, probe=probe,
             weights=full['weights'],
-            basis=full['basis'],
+            basis=full['obj_basis'],
             translations=full['translations'])
 
     
