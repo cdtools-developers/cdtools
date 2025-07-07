@@ -1,3 +1,6 @@
 [tool.ruff]
 # Decrease the maximum line length to 79 characters.
 line-length = 79
+
+[tool.pytest.ini_options]
+testpaths = 'tests'

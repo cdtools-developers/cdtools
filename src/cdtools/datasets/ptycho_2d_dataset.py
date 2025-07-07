@@ -230,7 +230,9 @@ class Ptycho2DDataset(CDataset):
         can display a base-10 log plot of the detector readout at each
         position.
         """
-
+        # FOR MULTI-GPU: Only run this method if it's called by the rank 0 GPU
+        if self.multi_gpu_used and self.rank != 0:
+            return
 
         def get_images(idx):
             inputs, output = self[idx]
