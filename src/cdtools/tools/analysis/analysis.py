@@ -1067,7 +1067,7 @@ def remove_phase_ramp(im, window, probe=None):
     Is, Js = np.mgrid[:window.shape[0],:window.shape[1]]
     def zero_freq_component(freq):
         phase_ramp = np.exp(2j * np.pi * (freq[0] * Is + freq[1] * Js))
-        return 1/np.abs(np.sum(phase_ramp * window))**2 ##Somehow scipy did not like to optimize a negative value, so to circumvent that, we can minimize 1/f?
+        return 1/np.abs(np.sum(phase_ramp * window))**2 ##Somehow scipy did not like to minize a negative value, so to circumvent that, we can minimize 1/f instead.
     
     x0 = np.array([0,0])
     result = opt.minimize(zero_freq_component, x0)
@@ -1153,7 +1153,8 @@ def standardize_reconstruction_set(
         correct_phase_offset=True,
         correct_phase_ramp=True,
         correct_amplitude_exponent=False,
-        window=np.s_[:,:],
+        window = np.s_[:,:],
+        window_frc = np.s_[:,:],
         nbins=50,
         frc_limit='side',
 ):
@@ -1234,21 +1235,22 @@ def standardize_reconstruction_set(
 
 
     # Todo update the translations to account for the determined shift
+    # Using a different window for the FRC than for the other function
     shift_1 = ip.find_shift(
-        t.as_tensor(ip.hann_window(np.abs(obj[window]))),
-        t.as_tensor(ip.hann_window(np.abs(obj_1[window]))))
+        t.as_tensor(ip.hann_window(np.abs(obj[window_frc]))),
+        t.as_tensor(ip.hann_window(np.abs(obj_1[window_frc]))))
     obj_1  = ip.sinc_subpixel_shift(
         t.as_tensor(obj_1), shift_1).numpy()
 
     shift_2 = ip.find_shift(
-        t.as_tensor(ip.hann_window(np.abs(obj[window]))),
-        t.as_tensor(ip.hann_window(np.abs(obj_2[window]))))
+        t.as_tensor(ip.hann_window(np.abs(obj[window_frc]))),
+        t.as_tensor(ip.hann_window(np.abs(obj_2[window_frc]))))
     obj_2  = ip.sinc_subpixel_shift(
         t.as_tensor(obj_2), shift_2).numpy()
 
     freqs, frc, threshold = calc_frc(
-        ip.hann_window(obj_1[window]),
-        ip.hann_window(obj_2[window]),
+        ip.hann_window(obj_1[window_frc]),
+        ip.hann_window(obj_2[window_frc]),
         full['obj_basis'], nbins=nbins, limit=frc_limit)
 
     
