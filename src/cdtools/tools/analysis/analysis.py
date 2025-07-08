@@ -1114,7 +1114,8 @@ def remove_amplitude_exponent(im, window, probe=None, weights=None, translations
     if weights is not None:
         pix_translations = cdtools.tools.interactions.translations_to_pixel(t.as_tensor(basis), t.as_tensor(translations)).numpy()
         pix_translations -= np.min(pix_translations,axis=0)
-        weights = weights * np.exp(growth_rate[0] * pix_translations[:,0] + growth_rate[1] * pix_translations[:,1])
+        scale = np.exp(growth_rate[0] * pix_translations[:,0] + growth_rate[1] * pix_translations[:,1])
+        weights = weights * scale[:,np.newaxis,np.newaxis] # taking into account when dm_rank is not zero. 
         to_return = to_return + (weights,)
     
     if len(to_return) == 1:
@@ -1234,7 +1235,7 @@ def standardize_reconstruction_set(
         obj = np.exp(-1j* np.angle(np.sum(obj[window]))) * obj
 
 
-    # Todo update the translations to account for the determined shift
+    # Todo: update the translations to account for the determined shift
     # Using a different window for the FRC than for the other function
     shift_1 = ip.find_shift(
         t.as_tensor(ip.hann_window(np.abs(obj[window_frc]))),
