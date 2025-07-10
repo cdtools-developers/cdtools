@@ -1,7 +1,8 @@
 import numpy as np
+import pytest
+import torch as t
 from scipy import linalg as la
 from scipy.sparse import linalg as spla
-import torch as t
 
 from cdtools.tools import analysis, initializers
 from cdtools.tools.analysis import line_based_frc
@@ -612,3 +613,10 @@ def test_line_based_frc():
     assert res_dict["1/2"] > 70.0 and res_dict["1/2"] < 75.0
     assert res_dict["1/4"] > 52.0 and res_dict["1/4"] < 57.0
     assert res_dict["1/7"] > 45.0 and res_dict["1/7"] < 48.0
+
+    # Now lets check if we catch some errors correctly
+    # Check if it raises an error for non-2D input
+    with pytest.raises(ValueError):
+        line_based_frc(np.random.rand(30, 17, 3), np.random.rand(30, 17, 3))
+        line_based_frc(np.random.rand(30, 17, 3), np.random.rand(30, 17))
+        line_based_frc("string", np.random.rand(30, 17))

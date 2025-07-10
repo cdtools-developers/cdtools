@@ -1530,7 +1530,8 @@ def calc_spectral_info(dataset, nbins=50):
 
 def line_based_frc(image1, image2, axis=1, n_bins=None, thresholds={}, pixel_size=1.0, unit="pixels"):
     """
-    Compute line-based FRC with multiple threshold methods
+    Compute line-based FRC with multiple threshold methods. This works great for highly anisotropic
+    images, such as those with vertical or horizontal stripes.
 
     Parameters
     ----------
@@ -1562,6 +1563,9 @@ def line_based_frc(image1, image2, axis=1, n_bins=None, thresholds={}, pixel_siz
         image1 = image1.numpy()
     if isinstance(image2, t.Tensor):
         image2 = image2.numpy()
+
+    assert isinstance(image1, np.ndarray), "image1 must be a numpy array or torch tensor"
+    assert isinstance(image2, np.ndarray), "image2 must be a numpy array or torch tensor"
 
     assert image1.shape == image2.shape, "Images must have same shape"
 
