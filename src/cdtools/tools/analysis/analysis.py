@@ -1622,10 +1622,11 @@ def line_based_frc(image1, image2, axis=1, n_bins=None, thresholds={}, pixel_siz
 
             if n_freq_components > 0:
                 # Extract FFT values in this frequency bin
-                fft1_bin = fft1[:, mask]  # Shape: (n_lines, n_freq_components)
+                fft1_bin = fft1[:, mask]
                 fft2_bin = fft2[:, mask]
 
                 # Compute FRC for this bin (sum over both lines and frequencies)
+                # see van Heel, M. (2005). https://doi.org/10.1016/j.jsb.2005.05.009
                 numerator = np.sum(fft1_bin * np.conj(fft2_bin))
                 denominator = np.sqrt(np.sum(np.abs(fft1_bin)**2) * np.sum(np.abs(fft2_bin)**2))
 
