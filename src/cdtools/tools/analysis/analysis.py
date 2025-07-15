@@ -1561,42 +1561,51 @@ def line_based_frc(
         Resolution at different thresholds
     """
 
+    def find_resolution(frequencies, frc_curve, thresholds):
+        resolution_dict = {}
+        for method, threshold_val in thresholds.items():
+            above_threshold = frc_curve >= threshold_val
+            crossings = np.where(np.diff(above_threshold.astype(int)) == -1)[0]
+            if crossings.size > 0:
+                idx = crossings[0]
+                freq1, freq2 = frequencies[idx], frequencies[idx + 1]
+                frc1, frc2 = frc_curve[idx], frc_curve[idx + 1]
+                # Linear interpolation
+                resolution_frequency = freq1 + (threshold_val - frc1) * (freq2 - freq1) / (frc2 - frc1)
+            else:
+                if np.all(above_threshold):
+                    resolution_frequency = frequencies[-1]
+                else:
+                    resolution_frequency = 0
+            if resolution_frequency > 0:
+                resolution_pixels = 1 / resolution_frequency
+                resolution_physical = resolution_pixels * pixel_size
+            else:
+                resolution_physical = np.inf
+            resolution_dict[method] = resolution_physical
+        return resolution_dict
+
     # transform all torch tensors to np.arrays
     if isinstance(image1, t.Tensor):
         image1 = image1.numpy()
     if isinstance(image2, t.Tensor):
         image2 = image2.numpy()
 
-    assert isinstance(
-        image1, np.ndarray
-    ), "image1 must be a numpy array or torch tensor"
-    assert isinstance(
-        image2, np.ndarray
-    ), "image2 must be a numpy array or torch tensor"
-
+    assert isinstance(image1, np.ndarray), "image1 must be a numpy array or torch tensor"
+    assert isinstance(image2, np.ndarray), "image2 must be a numpy array or torch tensor"
     assert image1.shape == image2.shape, "Images must have same shape"
-
-    if image1.ndim != 2:
-        raise ValueError("Images must be 2D")
-
-    if image2.ndim != 2:
+    if image1.ndim != 2 or image2.ndim != 2:
         raise ValueError("Images must be 2D")
 
     if axis == 1:
-        # Extract horizontal lines (perpendicular to vertical stripes)
-        lines1 = image1
-        lines2 = image2
+        lines1, lines2 = image1, image2
         n_freq = image1.shape[1] // 2
     elif axis == 0:
-        # Extract vertical lines (perpendicular to horizontal stripes)
-        lines1 = image1.T
-        lines2 = image2.T
+        lines1, lines2 = image1.T, image2.T
         n_freq = image1.shape[0] // 2
     elif axis is None:
-        # we now assume axis=None, which means we compute standard 2D FRC
-        lines1 = image1
-        lines2 = image2
-        n_freq = min(image1.shape) // 2  # Use half the smaller dimension
+        lines1, lines2 = image1, image2
+        n_freq = min(image1.shape) // 2
     else:
         raise ValueError("Axis must be 0, 1, or None for line-based FRC")
 
@@ -1626,20 +1635,10 @@ def line_based_frc(
             # Binning approach - similar to 2D FRC
             max_freq = raw_frequencies[-1]
             freq_bins = np.linspace(0, max_freq, n_bins + 1)
-
-            # Compute binned FRC
-            frc_curve = []
-            frequencies = []
-
+            frc_curve, frequencies = [], []
             for i in range(len(freq_bins) - 1):
-                # Find frequency indices in this bin
-                mask = (raw_frequencies >= freq_bins[i]) & (
-                    raw_frequencies < freq_bins[i + 1]
-                )
-                n_freq_components = np.sum(mask)
-
-                if n_freq_components > 0:
-                    # Extract FFT values in this frequency bin
+                mask = (raw_frequencies >= freq_bins[i]) & (raw_frequencies < freq_bins[i + 1])
+                if np.any(mask):
                     fft1_bin = fft1[:, mask]
                     fft2_bin = fft2[:, mask]
 
@@ -1649,54 +1648,8 @@ def line_based_frc(
                     denominator = np.sqrt(
                         np.sum(np.abs(fft1_bin) ** 2) * np.sum(np.abs(fft2_bin) ** 2)
                     )
-
-                    frc_value = np.abs(numerator) / denominator
-                    frc_curve.append(frc_value)
+                    frc_curve.append(np.abs(numerator) / denominator)
                     frequencies.append((freq_bins[i] + freq_bins[i + 1]) / 2)
-
-            # Convert lists to numpy arrays
-            frc_curve = np.array(frc_curve)
-            frequencies = np.array(frequencies)
-
-        # Find resolution at each threshold using interpolation
-        resolution_dict = {}
-        for method, threshold_val in thresholds.items():
-            # Find where FRC crosses the threshold
-            above_threshold = frc_curve >= threshold_val
-
-            # Find all crossings (from above to below threshold)
-            crossings = np.where(np.diff(above_threshold.astype(int)) == -1)[0]
-
-            if crossings.size > 0:
-                # Use the first crossing (lowest frequency where FRC drops below threshold)
-                idx = crossings[0]
-                freq1 = frequencies[idx]
-                freq2 = frequencies[idx + 1]
-                frc1 = frc_curve[idx]
-                frc2 = frc_curve[idx + 1]
-
-                # Linear interpolation: find frequency where FRC == threshold_val
-                resolution_frequency = freq1 + (threshold_val - frc1) * (
-                    freq2 - freq1
-                ) / (frc2 - frc1)
-            else:
-                # No crossing found, check if all above or all below
-                if np.all(above_threshold):
-                    # FRC never drops below threshold, use max frequency
-                    resolution_frequency = frequencies[-1]
-                else:
-                    # FRC never reaches threshold
-                    resolution_frequency = 0
-
-            if resolution_frequency > 0:
-                resolution_pixels = 1 / resolution_frequency
-                resolution_physical = resolution_pixels * pixel_size
-            else:
-                resolution_physical = np.inf
-
-            resolution_dict[method] = resolution_physical
-
-        return frequencies, frc_curve, resolution_dict
     else:
         # Compute standard 2D FRC
         fft1 = np.fft.fft2(lines1)
@@ -1710,17 +1663,12 @@ def line_based_frc(
         shape = fft1.shape
         center = [int(s // 2) for s in shape]
         Y, X = np.ogrid[:shape[0], :shape[1]]
-        r = np.sqrt((Y - center[0]) ** 2 + (X - center[1]) ** 2)
-        r = r.astype(np.int32)
-
+        r = np.sqrt((Y - center[0]) ** 2 + (X - center[1]) ** 2).astype(np.int32)
         if n_bins is None:
             n_bins = min(shape) // 2
-
         max_r = np.min(center)
         bin_edges = np.linspace(0, max_r, n_bins + 1)
-        frc_curve = []
-        frequencies = []
-
+        frc_curve, frequencies = [], []
         for i in range(n_bins):
             mask = (r >= bin_edges[i]) & (r < bin_edges[i + 1])
             if np.any(mask):
@@ -1731,33 +1679,7 @@ def line_based_frc(
                 # Frequency in cycles per pixel
                 freq = (bin_edges[i] + bin_edges[i + 1]) / 2 / max_r * 0.5 / pixel_size
                 frequencies.append(freq)
-
-        frc_curve = np.array(frc_curve)
-        frequencies = np.array(frequencies)
-
-        # Find resolution at each threshold using interpolation
-        resolution_dict = {}
-        for method, threshold_val in thresholds.items():
-            above_threshold = frc_curve >= threshold_val
-            crossings = np.where(np.diff(above_threshold.astype(int)) == -1)[0]
-            if crossings.size > 0:
-                idx = crossings[0]
-                freq1 = frequencies[idx]
-                freq2 = frequencies[idx + 1]
-                frc1 = frc_curve[idx]
-                frc2 = frc_curve[idx + 1]
-                # Linear interpolation
-                resolution_frequency = freq1 + (threshold_val - frc1) * (freq2 - freq1) / (frc2 - frc1)
-            else:
-                if np.all(above_threshold):
-                    resolution_frequency = frequencies[-1]
-                else:
-                    resolution_frequency = 0
-            if resolution_frequency > 0:
-                resolution_pixels = 1 / resolution_frequency
-                resolution_physical = resolution_pixels * pixel_size
-            else:
-                resolution_physical = np.inf
-            resolution_dict[method] = resolution_physical
-
-        return frequencies, frc_curve, resolution_dict
+    frc_curve, frequencies = np.array(frc_curve), np.array(frequencies)
+    resolution_dict = find_resolution(frequencies, frc_curve, thresholds)
+    
+    return frequencies, frc_curve, resolution_dict
