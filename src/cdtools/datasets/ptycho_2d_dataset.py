@@ -198,6 +198,8 @@ class Ptycho2DDataset(CDataset):
         cxi_file : str, pathlib.Path, or h5py.File
             The .cxi file to write to
         """
+        if self.multi_gpu_used and self.rank != 0:
+            return
 
         # If a bare string is passed
         if isinstance(cxi_file, str) or isinstance(cxi_file, pathlib.Path):
@@ -230,7 +232,9 @@ class Ptycho2DDataset(CDataset):
         can display a base-10 log plot of the detector readout at each
         position.
         """
-
+        # FOR MULTI-GPU: Only run this method if it's called by the rank 0 GPU
+        if self.multi_gpu_used and self.rank != 0:
+            return
 
         def get_images(idx):
             inputs, output = self[idx]

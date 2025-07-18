@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 import torch as t
 
-
 #
 #
 # The following few fixtures define some standard data files
@@ -33,20 +32,32 @@ def pytest_addoption(parser):
         default=False,
         help="run slow tests, primarily full reconstruction tests."
     )
+    parser.addoption(
+        "--runmultigpu",
+        action="store_true",
+        default=False,
+        help="Runs tests using 2 NVIDIA CUDA GPUs."
+    )
 
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark test as slow to run")
+    config.addinivalue_line("markers", "multigpu: run the multigpu test using 2 NVIDIA GPUs")
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--runslow"):
-        # --runslow given in cli: do not skip slow tests
-        return
+    # Skip the slow and/or multigpu tests if --runslow and/or --multigpu 
+    # is given in cli.
+
     skip_slow = pytest.mark.skip(reason="need --runslow option to run")
+    skip_multigpu = pytest.mark.skip(reason='need --runmultigpu option to run')
+
     for item in items:
-        if "slow" in item.keywords:
+        if "slow" in item.keywords and not config.getoption("--runslow"):
             item.add_marker(skip_slow)
+        
+        if "multigpu" in item.keywords and not config.getoption("--runmultigpu"):
+            item.add_marker(skip_multigpu)
 
 
 @pytest.fixture
@@ -382,6 +393,18 @@ def lab_ptycho_cxi(pytestconfig):
 
 
 @pytest.fixture(scope='module')
+def optical_data_ss_cxi(pytestconfig):
+    return str(pytestconfig.rootpath) + \
+        '/examples/example_data/Optical_Data_ss.cxi'
+
+
+@pytest.fixture(scope='module')
+def optical_ptycho_incoherent_pickle(pytestconfig):
+    return str(pytestconfig.rootpath) + \
+        '/examples/example_data/Optical_ptycho_incoherent.pickle'
+
+
+@pytest.fixture(scope='module')
 def example_nested_dicts(pytestconfig):
     example_tensor = t.as_tensor(np.array([1, 4.5, 7]))
     example_array = np.ones([10, 20, 30])
@@ -404,3 +427,15 @@ def example_nested_dicts(pytestconfig):
     }
 
     return [test_dict_1, test_dict_2, test_dict_3]
+
+
+@pytest.fixture(scope='module')
+def multigpu_script_1(pytestconfig):
+    return str(pytestconfig.rootpath) + \
+        '/tests/multi_gpu/multi_gpu_script_quality.py'
+
+
+@pytest.fixture(scope='module')
+def multigpu_script_2(pytestconfig):
+    return str(pytestconfig.rootpath) + \
+        '/tests/multi_gpu/multi_gpu_script_plot_and_save.py'
