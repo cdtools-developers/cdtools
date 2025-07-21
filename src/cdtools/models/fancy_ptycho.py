@@ -407,7 +407,9 @@ class FancyPtycho(CDIModel):
         if hasattr(dataset, 'intensities') and dataset.intensities is not None:
             intensities = dataset.intensities.to(dtype=Ws.dtype)[:,...]
             weights = t.sqrt(intensities)
-            Ws *= (weights / t.mean(weights))
+            Ws *= (weights / t.mean(weights)).reshape(
+                (len(weights),) + (1,)*(Ws.ndim - 1))
+
 
         if hasattr(dataset, 'mask') and dataset.mask is not None:
             mask = dataset.mask.to(t.bool)
