@@ -40,6 +40,7 @@ class FancyPtycho(CDIModel):
                  simulate_finite_pixels=False,
                  exponentiate_obj=False,
                  phase_only=False,
+                 high_NA=False,
                  dtype=t.float32,
                  obj_view_crop=0
                  ):
@@ -79,6 +80,8 @@ class FancyPtycho(CDIModel):
 
         self.register_buffer('phase_only',
                              t.as_tensor(phase_only, dtype=bool))
+        self.register_buffer('high_NA',
+                             t.as_tensor(high_NA, dtype=bool))
 
         # Not sure how to make this a buffer...
         self.units = units
@@ -133,6 +136,27 @@ class FancyPtycho(CDIModel):
             background = 1e-6 * t.ones(shape, dtype=t.float32)
             
         self.background = t.nn.Parameter(background)
+
+        if high_NA:
+            k_map, intensity_map = \
+                tools.propagators.generate_high_NA_k_intensity_map(
+                    self.obj_basis,
+                    self.get_detector_geometry()['basis'] / oversampling,
+                    [oversampling * d for d in self.background.shape],
+                    self.get_detector_geometry()['distance'],
+                    self.wavelength,
+                    dtype=t.float32,
+                    lens=False)
+
+            self.register_buffer('k_map',
+                                 t.as_tensor(k_map, dtype=dtype))
+            self.register_buffer('intensity_map',
+                                 t.as_tensor(intensity_map, dtype=dtype))
+
+        else:
+            self.k_map = None
+            self.intensity_map = None
+
 
         if weights is None:
             self.weights = None
@@ -228,6 +252,7 @@ class FancyPtycho(CDIModel):
                      simulate_finite_pixels=False,
                      exponentiate_obj=False,
                      phase_only=False,
+                     high_NA=False,
                      obj_view_crop=None,
                      obj_padding=200,
                      ):
@@ -288,7 +313,7 @@ class FancyPtycho(CDIModel):
             pix_translations,
             padding=obj_padding,
         )
-
+        
         # Finally, initialize the probe and  object using this information
         if probe_shape is None:
             probe = tools.initializers.SHARP_style_probe(
@@ -436,6 +461,7 @@ class FancyPtycho(CDIModel):
             simulate_finite_pixels=simulate_finite_pixels,
             phase_only=phase_only,
             exponentiate_obj=exponentiate_obj,
+            high_NA=high_NA,
             obj_view_crop=obj_view_crop
         )
 
@@ -540,11 +566,18 @@ class FancyPtycho(CDIModel):
 
 
     def forward_propagator(self, wavefields):
-        return tools.propagators.far_field(wavefields)
+        if self.high_NA:
+            return tools.propagators.high_NA_far_field(
+                wavefields,self.k_map,intensity_map=self.intensity_map)
+        else:
+            return tools.propagators.far_field(wavefields)
 
 
     def backward_propagator(self, wavefields):
-        return tools.propagators.inverse_far_field(wavefields)
+        if self.high_NA:
+            assert NotImplementedError('Backward propagator not defined with tilt correction')
+        else:
+            return tools.propagators.inverse_far_field(wavefields)
 
 
     def measurement(self, wavefields):
