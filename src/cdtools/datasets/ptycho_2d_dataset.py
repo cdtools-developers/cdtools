@@ -296,35 +296,71 @@ class Ptycho2DDataset(CDataset):
             cmap_label=cmap_label,
             title=title,
         )
-        
-        
-    def split(self):
-        """Splits a dataset into two pseudorandomly selected sub-datasets
+
+    def split(self, select_randomly: bool = True):
+        """
+        Splits a dataset into two pseudorandomly selected sub-datasets
+
+        select_randomly : bool
+            If True, the dataset is split into two disjoint datasets
+            using a pseudorandom selection. If False, the dataset is split
+            into two halves.
         """
 
-        # the selection is only 5,000 items long, so we repeat it to be long
-        # enough for the dataset
-        repeated_random_selection = (random_selection
-                            * int(np.ceil(len(self) / len(random_selection))))
+        if select_randomly is True:
+            # the selection is only 5,000 items long, so we repeat it to be long
+            # enough for the dataset
+            repeated_random_selection = (random_selection * int(np.ceil(len(self) / len(random_selection))))
 
-        repeated_random_selection = np.array(repeated_random_selection)
-        # Here, I use a fixed random selection for reproducibility
-        cut_random_selection =repeated_random_selection.astype(bool)[:len(self)]
-        
-        dataset_1 = deepcopy(self)
-        dataset_1.translations = self.translations[cut_random_selection]
-        dataset_1.patterns = self.patterns[cut_random_selection]
-        if hasattr(self, 'intensities') and self.intensities is not None:
-            dataset_1.intensities = self.intensities[cut_random_selection]
-            
-        dataset_2 = deepcopy(self)
-        dataset_2.translations = self.translations[~cut_random_selection]
-        dataset_2.patterns = self.patterns[~cut_random_selection]
-        if hasattr(self, 'intensities') and self.intensities is not None:
-            dataset_2.intensities = self.intensities[~cut_random_selection]
+            repeated_random_selection = np.array(repeated_random_selection)
+            # Here, I use a fixed random selection for reproducibility
+            cut_random_selection = repeated_random_selection.astype(bool)[:len(self)]
 
-        return dataset_1, dataset_2
+            dataset_1 = deepcopy(self)
+            dataset_1.translations = self.translations[cut_random_selection]
+            dataset_1.patterns = self.patterns[cut_random_selection]
+            if hasattr(self, 'intensities') and self.intensities is not None:
+                dataset_1.intensities = self.intensities[cut_random_selection]
 
+            dataset_2 = deepcopy(self)
+            dataset_2.translations = self.translations[~cut_random_selection]
+            dataset_2.patterns = self.patterns[~cut_random_selection]
+            if hasattr(self, 'intensities') and self.intensities is not None:
+                dataset_2.intensities = self.intensities[~cut_random_selection]
+
+            return dataset_1, dataset_2
+
+        elif select_randomly is False:
+            # If we are not randomly selecting, we just split the dataset in half
+            # by taking every second item of the dataset
+
+            if len(self.translations) < 2:
+                raise ValueError(
+                    'The dataset is too small to split. It must contain at least 2 items.'
+                )
+            if len(self.translations) % 2 != 0:
+                warnings.warn(
+                    'The dataset has an odd number of items, so the first half will be one item larger than the second half.'
+                )
+
+            dataset_1 = deepcopy(self)
+            dataset_1.translations = self.translations[::2]
+            dataset_1.patterns = self.patterns[::2]
+            if hasattr(self, 'intensities') and self.intensities is not None:
+                dataset_1.intensities = self.intensities[::2]
+
+            dataset_2 = deepcopy(self)
+            dataset_2.translations = self.translations[1::2]
+            dataset_2.patterns = self.patterns[1::2]
+            if hasattr(self, 'intensities') and self.intensities is not None:
+                dataset_2.intensities = self.intensities[1::2]
+
+            return dataset_1, dataset_2
+        else:
+            raise ValueError(
+                'select_randomly must be True or a list of booleans, not '
+                f'{type(select_randomly)}'
+            )
 
     def pad(self, to_pad, value=0, mask=True):
         """Pads all the diffraction patterns by a speficied amount
