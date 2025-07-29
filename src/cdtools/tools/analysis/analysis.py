@@ -1597,6 +1597,14 @@ def line_based_frc(
     if image1.ndim != 2 or image2.ndim != 2:
         raise ValueError("Images must be 2D")
 
+    # Aligning the images using find_shift and sinc_subpixel_shift
+    # using hann window to reduce artifacts
+    shift = ip.find_shift(
+        t.as_tensor(ip.hann_window(image1)),
+        t.as_tensor(ip.hann_window(image2))
+    )
+    image2 = ip.sinc_subpixel_shift(t.as_tensor(image2), shift).numpy()
+
     if axis == 1:
         lines1, lines2 = image1, image2
         n_freq = image1.shape[1] // 2
