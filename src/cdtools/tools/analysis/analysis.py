@@ -1538,7 +1538,8 @@ def line_based_frc(
     Parameters
     ----------
     image1, image2: np.ndarray or torch.Tensor
-        Input images (should be same size). Must be 2D arrays.
+        Input images (should be same size). Must be 2D arrays. Should be aligned before
+        hand using ip.find_shift, ip.sinc_subpixel_shift, or similar methods.
     axis: int
         axis along which to extract lines (1 for horizontal lines, 0 for vertical)
         if None, standard 2D FRC is computed
@@ -1596,14 +1597,6 @@ def line_based_frc(
     assert image1.shape == image2.shape, "Images must have same shape"
     if image1.ndim != 2 or image2.ndim != 2:
         raise ValueError("Images must be 2D")
-
-    # Aligning the images using find_shift and sinc_subpixel_shift
-    # using hann window to reduce artifacts
-    shift = ip.find_shift(
-        t.as_tensor(ip.hann_window(image1)),
-        t.as_tensor(ip.hann_window(image2))
-    )
-    image2 = ip.sinc_subpixel_shift(t.as_tensor(image2), shift).numpy()
 
     if axis == 1:
         lines1, lines2 = image1, image2
