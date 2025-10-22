@@ -1678,9 +1678,9 @@ def line_based_frc(
                 frc_val = np.abs(num) / denom if denom != 0 else 0
                 frc_curve.append(frc_val)
                 # Frequency in cycles per pixel
-                freq = (bin_edges[i] + bin_edges[i + 1]) / 2 / max_r * 0.5 / pixel_size
+                freq = (bin_edges[i] + bin_edges[i + 1]) / 2 / max_r * 0.5
                 frequencies.append(freq)
     frc_curve, frequencies = np.array(frc_curve), np.array(frequencies)
     resolution_dict = find_resolution(frequencies, frc_curve, thresholds)
-    
+
     return frequencies, frc_curve, resolution_dict
