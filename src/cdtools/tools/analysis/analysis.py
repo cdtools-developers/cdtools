@@ -9,9 +9,12 @@ data has been stored in numpy arrays.
 import torch as t
 import numpy as np
 from cdtools.tools import image_processing as ip
+import cdtools
 from scipy import linalg as sla
 from scipy import special
 from scipy import optimize as opt
+from scipy import spatial
+import warnings
 
 __all__ = [
     'product_svd',
@@ -30,6 +33,7 @@ __all__ = [
     'remove_amplitude_exponent',
     'standardize_reconstruction_set',
     'standardize_reconstruction_pair',
+    'calc_spectral_info',
 ]
 
 
@@ -349,8 +353,7 @@ def synthesize_reconstructions(probes, objects, use_probe=False, obj_slice=None,
         else:
             shift = ip.find_shift(synth_obj[obj_slice],obj[obj_slice], resolution=50)
 
-
-        obj = ip.sinc_subpixel_shift(obj,np.array(shift))
+        obj = ip.sinc_subpixel_shift(obj, shift)
 
         if len(probe.shape) == 3:
             probe = t.stack([ip.sinc_subpixel_shift(p,tuple(shift))
@@ -1338,23 +1341,21 @@ def standardize_reconstruction_pair(
         obj_2, probe_2 = remove_phase_ramp(
             half_2['obj'], window, probe=half_2['probe'])
 
+    # TODO weights are not included
     if correct_amplitude_exponent:
-        obj_1, probe_1, weights_1 = remove_amplitude_exponent(
+        obj_1, probe_1 = remove_amplitude_exponent(
             obj_1, window, probe=probe_1,
-            weights=half_1['weights'],
-            basis=half_1['basis'],
+            basis=half_1['obj_basis'],
             translations=half_1['translations'])
-        obj_2, probe_2, weights_2 = remove_amplitude_exponent(
+        obj_2, probe_2 = remove_amplitude_exponent(
             obj_2, window, probe=probe_2,
-            weights=half_2['weights'],
-            basis=half_2['basis'],
+            basis=half_2['obj_basis'],
             translations=half_2['translations'])
 
     
     if correct_phase_offset:
         obj_1 = np.exp(-1j* np.angle(np.sum(obj_1[window]))) * obj_1
         obj_2 = np.exp(-1j* np.angle(np.sum(obj_2[window]))) * obj_2
-
 
     # Todo update the translations to account for the determined shift
     shift = ip.find_shift(
@@ -1367,6 +1368,7 @@ def standardize_reconstruction_pair(
         t.as_tensor(probe_1[0]),
         t.as_tensor(probe_2[0]),
     )
+    
     for idx in range(probe_2.shape[0]):
         probe_2[idx] = ip.sinc_subpixel_shift(
             t.as_tensor(probe_2[idx]), probe_shift).numpy()
@@ -1388,9 +1390,16 @@ def standardize_reconstruction_pair(
         limit=frc_limit,
     )
 
+
+    probe_1_intensity = np.sum(np.abs(probe_1)**2)
+    probe_2_intensity = np.sum(np.abs(probe_2)**2)
+
+    probe_nmse = 1 - (calc_fidelity(probe_1, probe_2)
+                      / (probe_1_intensity * probe_2_intensity))
+    
     probe_nrms_error = calc_generalized_rms_error(
-        probe_1,
-        probe_2,
+        probe_1[0:],
+        probe_2[0:],
         normalize=True
     )
     
@@ -1420,7 +1429,100 @@ def standardize_reconstruction_pair(
         'probe_frc': probe_frc,
         'probe_frc_threshold': probe_frc_threshold,
         'probe_nrms_error': probe_nrms_error,
+        'probe_nmse': probe_nmse,
     }
     
     return results
 
+
+def calc_spectral_info(dataset, nbins=50):
+    """Makes a properly normalized sum diffraction pattern
+
+    This returns a scaled version of sum of all the diffraction patterns
+    within the dataset. The scaling is defined so that the total intensity
+    in the final image is equal to the intensity arising from a region of
+    the scan pattern whose area matches one detector conjugate field of
+    view.
+
+    This estimation will start to deviate from the truth if the scan area
+    is not significantly larger than the illumination function, because
+    the nonzero size of the illumination function is not taken into account.
+    Furthermore, in the edge case where all the scan points are colinear,
+    the estimate will fail, and the mean diffraction pattern will be returned
+    instead
+
+    Parameters
+    ----------
+    dataset : Ptycho2DDataset
+        A ptychography dataset to use
+    nbins : int
+        The number of bins to use for the SNR curve
+    
+    Returns
+    -------
+    spectrum : t.tensor
+        An image of the spectral signal rate
+    freqs : t.tensor
+        The frequencies at which the SSNR is estimated
+    SSNR : t.tensor
+        The estimated SSNR
+    
+    """
+
+    try:
+        scan_hull = spatial.ConvexHull(dataset.translations[:,:2].cpu().numpy())
+        scan_area = scan_hull.volume
+    except spatial._qhull.QhullError as e:
+        scan_area = None
+        
+    ewg = cdtools.tools.initializers.exit_wave_geometry
+    obj_basis = ewg(
+        dataset.detector_geometry['basis'],
+        dataset[0][1].shape,
+        dataset.wavelength,
+        dataset.detector_geometry['distance'],
+    )
+
+    det_conj_fov_area = np.linalg.norm(
+        np.cross(obj_basis[:,0]*dataset.patterns.shape[-2],
+                 obj_basis[:,1]*dataset.patterns.shape[-1])
+    )
+
+    if scan_area is not None:
+        scale_factor = det_conj_fov_area / scan_area
+    else:
+        warnings.warn("The scan points in this dataset are all colinear. The mean pattern will be calculated rather than a scaled mean based on the scanned area.")
+        scale_factor = 1/len(dataset)
+
+    mask = dataset.mask.cpu().numpy().astype(int)
+    sum_pattern = dataset.mask * t.sum(dataset.patterns, dim=0) * scale_factor
+    sum_pattern = sum_pattern.cpu().numpy()
+
+    # TODO this assumes orthogonal axes
+    pix_sizes = np.linalg.norm(obj_basis, axis=0)
+    i_freqs = np.fft.fftshift(np.fft.fftfreq(
+        sum_pattern.shape[0],d=pix_sizes[0]))
+    j_freqs = np.fft.fftshift(np.fft.fftfreq(
+        sum_pattern.shape[1],d=pix_sizes[1]))
+
+    
+    Js,Is = np.meshgrid(j_freqs,i_freqs)
+    Rs = np.sqrt(Is**2+Js**2)
+    max_i = np.max(i_freqs)
+    max_j = np.max(j_freqs)
+    frc_range = [0, max(max_i,max_j)]
+
+    sum_spectrum, frc_bins = np.histogram(Rs, bins=nbins, range=frc_range,
+                                          weights=sum_pattern)
+    sum_spectrum_sq, frc_bins = np.histogram(Rs, bins=nbins, range=frc_range,
+                                             weights=sum_pattern**2)
+
+    
+    n_pix, frc_bins = np.histogram(Rs, bins=nbins, range=frc_range,
+                                   weights=mask)
+    mean_spectrum = sum_spectrum / n_pix
+
+    pattern_snr = sum_spectrum_sq / sum_spectrum
+
+    return sum_pattern, frc_bins[:-1], mean_spectrum
+        

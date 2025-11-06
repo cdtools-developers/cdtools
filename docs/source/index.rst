@@ -9,6 +9,7 @@
    general
    datasets
    models
+   reconstructors
    tools/index
    indices_tables
    

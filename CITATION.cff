@@ -1,0 +1,30 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: CDTools
+message: >-
+  Please contact Abe Levitan (abraham.levitan@psi.ch) if you
+  publishing work using this code, so we know!
+type: software
+authors:
+  - given-names: Abraham
+    family-names: Levitan
+    email: abraham.levitan@psi.ch
+    affiliation: Paul Scherrer Institute
+    orcid: 'https://orcid.org/0000-0002-4568-2637'
+  - given-names: Madelyn
+    family-names: Cain
+  - given-names: Anastasiia
+    family-names: Kutakh
+identifiers:
+  - type: url
+    value: 'https://github.com/cdtools-developers/cdtools'
+    description: Github Repository
+repository-code: 'https://github.com/cdtools-developers/cdtools'
+url: 'https://cdtools-developers.github.io/cdtools/'
+abstract: >-
+  CDTools is a python library for ptychography and CDI
+  reconstructions, using an Automatic Differentiation based
+  approach.
+license: MIT

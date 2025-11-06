@@ -7,7 +7,7 @@ Introduction to CDTools
    Introduction to CDTools
    -----------------------
 
-CDTools is a python library for ptychography and CDI reconstructions, using an automatic differentiation based approach.
+CDTools is an open source python library for ptychography and CDI reconstructions, using an automatic differentiation based approach. It is distributed under an MIT (a.k.a. Expat) license.
 
 .. code-block:: python
 
@@ -44,7 +44,6 @@ The high-level interface to CDTools - datasets and models - is built on a set of
 - functions for accessing stored data in .cxi files
 - plotting tools to visualize data and reconstructions
 - basic operations, like light propagators, needed for coherent diffraction
-- tools that implement basic operations - such as light propagation - relevant to coherent diffraction.
 - analysis functions for assessing the quality of reconstructions
 
 

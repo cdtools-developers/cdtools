@@ -1,3 +1,12 @@
+"""
+Runs a very simple reconstruction using the SimplePtycho model, which was
+designed to be an easy introduction to show how the models are made and used.
+
+For a more realistic example of how to use cdtools for real-world data,
+look at fancy_ptycho.py and gold_ball_ptycho.py, both of which use the
+more powerful FancyPtycho model and include more information on how to
+correct for common sources of error.
+"""
 import cdtools
 from matplotlib import pyplot as plt
 
@@ -13,7 +22,7 @@ device = 'cuda'
 model.to(device=device)
 dataset.get_as(device=device)
 
-# We run the actual reconstruction
+# We run the reconstruction
 for loss in model.Adam_optimize(100, dataset, batch_size=10):
     # We print a quick report of the optimization status
     print(model.report())

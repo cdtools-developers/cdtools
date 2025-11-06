@@ -29,6 +29,7 @@ model = cdtools.models.FancyPtycho.from_dataset(
     probe_fourier_crop=pad 
 )
 
+
 # This is a trick that my grandmother taught me, to combat the raster grid
 # pathology: we randomze the our initial guess of the probe positions.
 # The units here are pixels in the object array.
@@ -42,17 +43,20 @@ device = 'cuda'
 model.to(device=device)
 dataset.get_as(device=device)
 
+# Create the reconstructor
+recon = cdtools.reconstructors.AdamReconstructor(model, dataset)
+
 # This will save out the intermediate results if an exception is thrown
 # during the reconstruction
 with model.save_on_exception(
         'example_reconstructions/gold_balls_earlyexit.h5', dataset):
     
-    for loss in model.Adam_optimize(20, dataset, lr=0.005, batch_size=50):
+    for loss in recon.optimize(20, lr=0.005, batch_size=50):
         print(model.report())
         if model.epoch % 10 == 0:
             model.inspect(dataset)
 
-    for loss in model.Adam_optimize(50, dataset, lr=0.002, batch_size=100):
+    for loss in recon.optimize(50, lr=0.002, batch_size=100):
         print(model.report())
         if model.epoch % 10 == 0:
             model.inspect(dataset)
@@ -64,8 +68,7 @@ with model.save_on_exception(
 
     # Setting schedule=True automatically lowers the learning rate if
     # the loss fails to improve after 10 epochs
-    for loss in model.Adam_optimize(100, dataset, lr=0.001, batch_size=100,
-                                    schedule=True):
+    for loss in recon.optimize(100, lr=0.001, batch_size=100, schedule=True):
         print(model.report())
         if model.epoch % 10 == 0:
             model.inspect(dataset)

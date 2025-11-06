@@ -34,10 +34,16 @@ class CDataset(torchdata.Dataset):
     needed to allow for easy mixing of data on the CPU and GPU.
     """
 
-    def __init__(self, entry_info=None, sample_info=None,
-                 wavelength=None,
-                 detector_geometry=None, mask=None,
-                 background=None):
+    def __init__(
+            self,
+            entry_info=None,
+            sample_info=None,
+            wavelength=None,
+            detector_geometry=None,
+            mask=None,
+            qe_mask=None,
+            background=None,
+    ):
 
         """The __init__ function allows construction from python objects.
 
@@ -73,6 +79,12 @@ class CDataset(torchdata.Dataset):
             self.mask = t.tensor(mask, dtype=t.bool)
         else:
             self.mask = None
+
+        if qe_mask is not None:
+            self.qe_mask = t.as_tensor(qe_mask, dtype=t.float32)
+        else:
+            self.qe_mask = None
+
         if background is not None:
             self.background = t.tensor(background, dtype=t.float32)
         else:
@@ -98,6 +110,8 @@ class CDataset(torchdata.Dataset):
 
         if self.mask is not None:
             self.mask = self.mask.to(*args,**mask_kwargs)
+        if self.qe_mask is not None:
+            self.qe_mask = self.qe_mask.to(*args,**kwargs)
         if self.background is not None:
             self.background = self.background.to(*args,**kwargs)
 
@@ -193,12 +207,17 @@ class CDataset(torchdata.Dataset):
                              'basis'    : basis,
                              'corner'   : corner}
         mask = cdtdata.get_mask(cxi_file)
+        qe_mask = cdtdata.get_qe_mask(cxi_file)
         dark = cdtdata.get_dark(cxi_file)
-        return cls(entry_info = entry_info,
-                   sample_info = sample_info,
-                   wavelength=wavelength,
-                   detector_geometry=detector_geometry,
-                   mask=mask, background=dark)
+        return cls(
+            entry_info=entry_info,
+            sample_info=sample_info,
+            wavelength=wavelength,
+            detector_geometry=detector_geometry,
+            mask=mask,
+            qe_mask=qe_mask,
+            background=dark,
+        )
     
     
     def to_cxi(self, cxi_file):
@@ -236,6 +255,8 @@ class CDataset(torchdata.Dataset):
                                corner = corner)
         if self.mask is not None:
             cdtdata.add_mask(cxi_file, self.mask)
+        if self.qe_mask is not None:
+            cdtdata.add_qe_mask(cxi_file, self.qe_mask)
         if self.background is not None:
             cdtdata.add_dark(cxi_file, self.background)
         

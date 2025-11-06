@@ -26,9 +26,15 @@ model.compare(dataset) # See how the simulated and measured patterns compare
 plt.show()
 ```
 
-Full installation instructions and documentation can be found [here](https://cdtools-developers.github.io/cdtools-docs/).
+CDTools can be installed via pip as the [cdtools-py](https://pypi.org/project/cdtools-py/) package on [PyPI](https://pypi.org/):
+
+```bash
+$ pip install cdtools-py
+```
+
+Further documentation is found [here](https://cdtools-developers.github.io/cdtools/).
 
 
-CDTools was developed in the [photon scattering lab](https://scattering.mit.edu/) at MIT, and further development took place within the [computational x-ray imaging group](https://www.psi.ch/en/cxi) at PSI. If you would like to publish any work that uses CDTools, please contact [Abe Levitan](mailto:abraham.levitan@psi.ch).
+CDTools was developed in the [photon scattering lab](https://scattering.mit.edu/) at MIT, and further development took place within the [computational x-ray imaging group](https://www.psi.ch/en/cxi) at PSI. The code is distributed under an MIT (a.k.a. Expat) license. If you would like to publish any work that uses CDTools, please contact [Abe Levitan](mailto:abraham.levitan@psi.ch).
 
 Have a wonderful day!

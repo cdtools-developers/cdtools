@@ -57,7 +57,7 @@ def exit_wave_geometry(det_basis, det_shape, wavelength, distance, oversampling=
 
     # This method should work for a general parallelogram-shaped detector
     det_shape = det_basis * det_shape.to(t.float32)
-    pinv_basis = t.tensor(np.linalg.pinv(det_shape).transpose()).to(t.float32)
+    pinv_basis = t.linalg.pinv(det_shape).transpose(0,1)
     real_space_basis = pinv_basis * wavelength * distance
 
     return real_space_basis
@@ -234,7 +234,7 @@ def gaussian_probe(dataset, basis, shape, sigma, propagation_distance=0, polariz
         polarizer = dataset.polarizer.tolist()
         analyzer = dataset.analyzer.tolist()
         factors = [(math.cos(math.radians(polarizer[idx] - analyzer[idx])))**2 for idx in range(len(dataset)) if (abs(polarizer[idx] - analyzer[idx]) > 5)]
-        avg_intensities = [t.sum(dataset[idx][1]) / factor[idx] for idx in range(len(dataset))]
+        avg_intensities = [t.sum(dataset[idx][1]) / factors[idx] for idx in range(len(dataset))]
 
     avg_intensity = t.mean(t.tensor(avg_intensities))
     probe_intensity = t.sum(t.abs(probe)**2)

@@ -1,0 +1,13 @@
+The datasets contained in the following three files:
+
+- Optical_Data_ss.cxi
+- Optical_ptycho_incoherent.pickle
+- lab_ptycho_data.cxi
+
+were collected by Abraham Levitan, abraham.levitan@psi.ch. Copyright (2023) is held by Massachusetts Institute of Technology. All three datasets are made available under a CC BY 4.0 License, defined at https://creativecommons.org/licenses/by/4.0/.
+
+The dataset contained in the file:
+
+- AuBalls_700ms_30nmStep_3_6SS_filter.cxi
+
+is sourced from https://cxidb.org/id-65.html, and was made available by the original authors under the CC0 Public Domain Dedication Waiver. This data was deposited into the CXIDB by Stefano Marchesini.

@@ -22,6 +22,7 @@ __all__ = ['get_entry_info',
            'get_wavelength',
            'get_detector_geometry',
            'get_mask',
+           'get_qe_mask',
            'get_dark',
            'get_data',
            'get_shot_to_shot_info',
@@ -32,6 +33,7 @@ __all__ = ['get_entry_info',
            'add_source',
            'add_detector',
            'add_mask',
+           'add_qe_mask',
            'add_dark',
            'add_data',
            'add_shot_to_shot_info',
@@ -134,18 +136,18 @@ def get_sample_info(cxi_file):
             metadata[attr] = np.float32(s1[attr][()])
 
     if 'unit_cell' in s1:
-        metadata['unit_cell'] = np.array(s1['unit_cell']).astype(np.float32)
+        metadata['unit_cell'] = s1['unit_cell'][()].astype(np.float32)
 
 
     if 'geometry_1/orientation' in s1:
-        orient = np.array(s1['geometry_1/orientation']).astype(np.float32)
+        orient = s1['geometry_1/orientation'][()].astype(np.float32)
         xvec = orient[:3] / np.linalg.norm(orient[:3])
         yvec = orient[3:] / np.linalg.norm(orient[3:])
         metadata['orientation'] = np.array([xvec,yvec,
                                             np.cross(xvec,yvec)])
 
     if 'geometry_1/surface_normal' in s1:
-        snorm = np.array(s1['geometry_1/surface_normal']).astype(np.float32)
+        snorm = s1['geometry_1/surface_normal'][()].astype(np.float32)
         xvec = np.cross(np.array([0.,1.,0.]), snorm)
         xvec /= np.linalg.norm(xvec)
         yvec = np.cross(snorm, xvec)
@@ -218,7 +220,7 @@ def get_detector_geometry(cxi_file):
     d1 = i1['detector_1']
 
     if 'detector_1/basis_vectors' in i1:
-        basis_vectors = np.array(d1['basis_vectors'])
+        basis_vectors = d1['basis_vectors'][()]
         if basis_vectors.shape == (2,3):
             basis_vectors = basis_vectors.T
     else:
@@ -244,11 +246,11 @@ def get_detector_geometry(cxi_file):
                                   [-x_pixel_size,0,0]]).transpose()
 
     try:
-        distance = np.float32(d1['distance'])
+        distance = np.float32(d1['distance'][()])
     except:
         distance = None
     try:
-        corner_position = np.array(d1['corner_position'])
+        corner_position = d1['corner_position'][()]
     except:
         corner_position = None
 
@@ -292,10 +294,46 @@ def get_mask(cxi_file):
 
     i1 = cxi_file['entry_1/instrument_1']
     if 'detector_1/mask' in i1:
-        mask = np.array(i1['detector_1/mask']).astype(np.uint32)
+        mask = i1['detector_1/mask'][()].astype(np.uint32)
         mask_on = np.equal(mask,np.uint32(0))
         mask_has_signal = np.equal(mask,np.uint32(0x00001000))
         return np.logical_or(mask_on,mask_has_signal).astype(bool)
+    else:
+        return None
+
+
+def get_qe_mask(cxi_file):
+    """Returns the quantum efficiency mask defined in the cxi file object
+
+    There is no way to store a quantum efficiency mask (a.k.a. a flat-field
+    image) in the .cxi file specification, but experience has indicated that
+    this is often a valuable thing to store, because just correcting for a
+    flatfield with e.g. a division will mess up the photon counting statistics.
+
+    Because there is no specification, I have simply chosen to store the
+    quantum efficiency mask as a float32 array in the same location as the
+    mask is, i.e. `entry_1/instrument_1/detector_1/qe_mask`.
+    
+    The stored quantum efficiency mask should be defined as the mask that
+    a simulated intensity pattern needs to be multiplied by to realize the
+    measured image. In other words, it should be a flat-field image, not the
+    inverse of a flat-field image.
+    
+    Parameters
+    ----------
+    cxi_file : h5py.File
+        A file object to be read
+
+    Returns
+    -------
+    qe_mask : np.array
+        A float32 array storing the quantum efficiency mask from the cxi file
+    """
+
+    i1 = cxi_file['entry_1/instrument_1']
+    if 'detector_1/qe_mask' in i1:
+        qe_mask = i1['detector_1/qe_mask'][()].astype(np.float32)
+        return qe_mask
     else:
         return None
 
@@ -324,7 +362,7 @@ def get_dark(cxi_file):
 
     i1 = cxi_file['entry_1/instrument_1']
     if 'detector_1/data_dark' in i1:
-        darks = np.array(i1['detector_1/data_dark'])
+        darks = i1['detector_1/data_dark'][()]
         dims = tuple(range(len(darks.shape) - 2))
         darks = np.nanmean(darks,axis=dims)
     else:
@@ -426,7 +464,7 @@ def get_shot_to_shot_info(cxi_file, field_name):
     else:
         raise KeyError('Data is not defined within cxi file')
 
-    return np.array(cxi_file[pull_from]).astype(np.float32)
+    return cxi_file[pull_from][()].astype(np.float32)
 
 
 def get_ptycho_translations(cxi_file):
@@ -485,9 +523,9 @@ def add_entry_info(cxi_file, metadata):
     # included in case the cxi spec becomes more permissive
     for key, value in metadata.items():
         if isinstance(value,(str,bytes)):
-            cxi_file['entry_1'][key] = np.string_(value)
+            cxi_file['entry_1'][key] = np.bytes_(value)
         elif isinstance(value, datetime.datetime):
-            cxi_file['entry_1'][key] = np.string_(value.isoformat())
+            cxi_file['entry_1'][key] = np.bytes_(value.isoformat())
         elif isinstance(value, numbers.Number):
             cxi_file['entry_1'][key] = value
         elif isinstance(value, (np.ndarray,list,tuple)):
@@ -525,9 +563,9 @@ def add_sample_info(cxi_file, metadata):
         if key == 'orientation':
             continue # this is a special case
         if isinstance(value,(str,bytes)):
-            s1[key] = np.string_(value)
+            s1[key] = np.bytes_(value)
         elif isinstance(value, datetime.datetime):
-            s1[key] = np.string_(value.isoformat())
+            s1[key] = np.bytes_(value.isoformat())
         elif isinstance(value, numbers.Number):
             s1[key] = value
         elif isinstance(value, (np.ndarray,list,tuple)):
@@ -635,6 +673,43 @@ def add_mask(cxi_file, mask):
     d1.create_dataset('mask',data=mask_to_save)
 
 
+def add_qe_mask(cxi_file, qe_mask):
+    """Adds the specified quantum efficiency mask to the cxi file
+
+    There is no way to store a quantum efficiency mask (a.k.a. a flat-field
+    image) in the .cxi file specification, but experience has indicated that
+    this is often a valuable thing to store, because just correcting for a
+    flatfield with e.g. a division will mess up the photon counting statistics.
+
+    Because there is no specification, I have simply chosen to store the
+    quantum efficiency mask as an array in the same location as the
+    mask is, i.e. `entry_1/instrument_1/detector_1/qe_mask`.
+    
+    The stored quantum efficiency mask should be defined as the mask that
+    a simulated intensity pattern needs to be multiplied by to realize the
+    measured image. In other words, it should be a flat-field image, not the
+    inverse of a flat-field image.
+
+    Parameters
+    ----------
+    cxi_file : h5py.File
+        The file to add the mask to
+    qe_mask : array
+        The quantum efficiency mask to save out to the file
+    """
+
+    if 'entry_1/instrument_1' not in cxi_file:
+        cxi_file['entry_1'].create_group('instrument_1')
+    i1 = cxi_file['entry_1/instrument_1']
+    if 'detector_1' not in i1:
+        i1.create_group('detector_1')
+    d1 = i1['detector_1']
+    if isinstance(qe_mask, t.Tensor):
+        qe_mask = qe_mask.detach().cpu().numpy()
+
+    d1.create_dataset('qe_mask',data=qe_mask)
+
+
 def add_dark(cxi_file, dark):
     """Adds the specified dark image to a cxi file
 
@@ -701,7 +776,7 @@ def add_data(cxi_file, data, axes=None, compression='gzip',
             axes_str = ':'.join(axes)
         else:
             axes_str = str(axes)
-        det1['data'].attrs['axes'] = np.string_(axes_str)
+        det1['data'].attrs['axes'] = np.bytes_(axes_str)
 
         
 def add_shot_to_shot_info(cxi_file, data, field_name):
@@ -796,7 +871,7 @@ def add_ptycho_translations(cxi_file, translations):
 
 
 def nested_dict_to_h5(h5_file, d):
-    """saves a nested dictionary to an h5 file object
+    """Saves a nested dictionary to an h5 file object
 
     Parameters
     ----------
@@ -813,7 +888,7 @@ def nested_dict_to_h5(h5_file, d):
     
     for key in d.keys():
         value = d[key]
-        if isinstance(value, numbers.Number):
+        if isinstance(value, (numbers.Number, np.bool_)):
             arr = np.array(value)
             h5_file.create_dataset(key, data=arr)
         elif isinstance(value, np.ndarray):
@@ -832,14 +907,17 @@ def nested_dict_to_h5(h5_file, d):
 
 
 def h5_to_nested_dict(h5_file):
-    """saves a nested dictionary to an h5 file object
+    """Loads a nested dictionary from an h5 file object
 
     Parameters
     ----------
     h5_file : h5py.File
         A file object, or path to a file, to load from
+
+    Returns
+    -------
     d : dict
-        A mapping whose keys are all strings and whose values are only numpy arrays, pytorch tensors, scalars, python strings, or other mappings meeting the same conditions
+        A dictionary whose keys are all strings and whose values are numpy arrays, scalars, or python strings. Will raise an error if the data cannot be loaded into this format
     """
     
     # If a bare string is passed
@@ -851,11 +929,14 @@ def h5_to_nested_dict(h5_file):
     for key in h5_file.keys():
         value = h5_file[key]
         if isinstance(value, h5py.Dataset):
-            arr = np.array(value)
-            if arr.dtype == object:
+            arr = value[()]
+            # Strings stored via nested_dict_to_h5 will wind up as bytes objs
+            if type(arr) == type(b''):
+                d[key] = arr.decode('utf-8')
+            # Some strings in h5 files seem to be stored this way
+            elif hasattr(arr, 'dtype') and arr.dtype == object:
                 d[key] = arr.ravel()[0].decode('utf-8')
-            elif arr.ndim == 0:
-                d[key] = arr.ravel()[0]
+            # This is the default case: it's an array of numbers
             else:
                 d[key] = arr
             
@@ -869,16 +950,24 @@ def h5_to_nested_dict(h5_file):
 
 
 def nested_dict_to_numpy(d):
+    """Sends all array like objects in a nested dict to numpy arrays
 
+    Parameters
+    ----------
+    d : dict
+        A mapping whose keys are all strings and whose values are only numpy arrays, pytorch tensors, scalars, or other mappings meeting the same conditions
+
+    Returns
+    -------
+    new_dict : dict
+        A new dictionary with all array like objects sent to numpy 
+    """
+    
     new_dict = {}
     for key in d.keys():
         value = d[key]
-        if isinstance(value, numbers.Number):
-            new_dict[key] = value
         # bools are an instance of number, but not np.bool_...
-        elif isinstance(value, np.bool_):
-            new_dict[key] = value
-        elif isinstance(value, np.ndarray):
+        if isinstance(value, (numbers.Number, np.bool_, np.ndarray)):
             new_dict[key] = value
         elif t.is_tensor(value):
             new_dict[key] = value.cpu().numpy()
@@ -887,29 +976,45 @@ def nested_dict_to_numpy(d):
         elif isinstance(value, Mapping):
             new_dict[key] = nested_dict_to_numpy(value)
         else:
-            raise ValueError(f'{value} is not a number, numpy array, torch tensor, or mapping')
+            raise ValueError(f'{value} is not a number, numpy array, torch tensor, string, or mapping')
 
     return new_dict
 
-def nested_dict_to_torch(d):
+def nested_dict_to_torch(d, device=None):
+    """Sends all array like objects in a nested dict to pytorch tensors
+
+    This will also send all the tensors to a specific device, if specified.
+    There is no option to send all tensors to a specific dtype, as tensors
+    are often a mixture of integer, floating point, and complex types. In
+    the future, this may support a "precision" option to send all tensors to
+    a specified precision.
     
+    Parameters
+    ----------
+    d : dict
+        A mapping whose keys are all strings and whose values are only numpy arrays, pytorch tensors, scalars, or other mappings meeting the same conditions
+    device : torch.device
+        A valid device argument for torch.Tensor.to
+    
+    Returns
+    -------
+    new_dict : dict
+        A new dictionary with all array like objects sent to torch tensors 
+    """
+
     new_dict = {}
     for key in d.keys():
         value = d[key]
-        if isinstance(value, numbers.Number):
-            new_dict[key] = t.as_tensor(value)
         # bools are an instance of number, but not np.bool_...
-        elif isinstance(value, np.bool_):
-            new_dict[key] = t.as_tensor(value)
-        elif isinstance(value, np.ndarray):
-            new_dict[key] = t.as_tensor(value)
+        if isinstance(value, (numbers.Number, np.bool_, np.ndarray)):
+            new_dict[key] = t.as_tensor(value, device=device)
         elif t.is_tensor(value):
-            new_dict[key] = value
+            new_dict[key] = value.to(device=device)
         elif isinstance(value, str):
             new_dict[key] = value
         elif isinstance(value, Mapping):
-            new_dict[key] = nested_dict_to_numpy(value)
+            new_dict[key] = nested_dict_to_torch(value, device=device)
         else:
-            raise ValueError(f'{value} is not a number, numpy array, torch tensor, or mapping')
+            raise ValueError(f'{value} is not a number, numpy array, torch tensor, string, or mapping')
 
     return new_dict

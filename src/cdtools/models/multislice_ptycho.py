@@ -181,7 +181,7 @@ class MultislicePtycho(CDIModel):
                      dataset,
                      dz,
                      nz,
-                     probe_size=None,
+                     probe_shape=None,
                      randomize_ang=0,
                      n_modes=1,
                      n_obj_modes=1,
@@ -262,7 +262,7 @@ class MultislicePtycho(CDIModel):
         )
 
         # Finally, initialize the probe and  object using this information
-        if probe_size is None:
+        if probe_shape is None:
             probe = tools.initializers.SHARP_style_probe(
                 dataset,
                 propagation_distance=propagation_distance,
@@ -273,7 +273,6 @@ class MultislicePtycho(CDIModel):
                 dataset,
                 obj_basis,
                 probe_shape,
-                probe_size,
                 propagation_distance=propagation_distance,
             )
 

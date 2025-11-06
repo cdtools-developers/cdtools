@@ -1,77 +1,92 @@
 Installation
 ============
 
-Step 1: Download
-----------------
+CDTools supports python >=3.8 and can be installed via pip as the the `cdtools-py`_ package on `PyPI`_. If you plan to contribute to the code or need a custom environment, installation from source is also possible.
 
-The source code for CDTools is hosted on `Github`_. At the moment, the repository remains private while we decide on licensing. Access can be granted upon request by contacting `Abe Levitan <alevitan@mit.edu>`_.
+.. _`cdtools-py`: https://pypi.org/project/cdtools-py/
+.. _`PyPI`: https://pypi.org/
 
-.. _`Github`: https://github.com/cdtools-developers/cdtools
+Option 1: Installation from PyPI
+--------------------------------
 
-The repository remains under active development as of late 2024.
-
-Step 2: Install Dependencies
-----------------------------
-
-CDTools requires python 3.7 or greater.
-
-The major dependency for CDTools is pytorch (version 1.9.0 or greater). Because the details of the installation can vary depending on platform, GPU availability, etc, it is recommended that you follow the install instructions on `the pytorch site`_ to install pytorch before installing the remaining dependencies.
-
-.. _`the pytorch site`: https://pytorch.org/get-started/locally/
-
-If you manage your environment with conda, the remaining dependencies can be installed by running the following command in the top level directory of the package:
+To install from `PyPI`_, run:
 
 .. code:: bash
 	  
-   $ conda install --file requirements.txt -c conda-forge
+   $ pip install cdtools-py
 
-This will install all required dependencies *except for pytorch*, as well as several optional dependencies which are used for the tests and documentation. The full set of dependencies are noted below.
-   
+Pytorch, a major dependence of CDTools, often needs to be installed with a specific CUDA version for machine compatability. If you run into issues with pytorch, consider first installing pytorch into your environment using the instructions on `the pytorch site`_.
+
+.. _`the pytorch site`: https://pytorch.org/get-started/locally/
+
+Option 2: Installation from source
+----------------------------------
+
+
+Step 1: Download
+^^^^^^^^^^^^^^^^
+
+The source code for CDTools is hosted on `Github`_.
+
+.. _`Github`: https://github.com/cdtools-developers/cdtools
+
+
+Step 2: Install Dependencies
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The major dependency for CDTools is pytorch version 2.3.0 or greater. Because the details of the pytorch installation can vary depending on platform and GPU availability, it is recommended that you first install pytorch using the instructions on `the pytorch site`_. The remaining dependencies can be installed by running the following command from the top level directory of the git repository:
+
+.. code:: bash
+	  
+   $ pip install -r requirements.txt
+
+Note that several optional dependencies used for testing and documentation will also be installed. The full set of dependencies and minimum requirements are listed below. CDTools is reguarly tested with the latest versions of these packages and with python 3.8 through 3.12.
+
 Required dependencies:
 
    * `numpy <http://www.numpy.org>`_ >= 1.0
    * `scipy <http://www.scipy.org>`_ >= 1.0
    * `matplotlib <https://matplotlib.org>`_ >= 2.0
-   * `pytorch <https://pytorch.org>`_ >= 1.9.0
+   * `pytorch <https://pytorch.org>`_ >= 2.3.0
    * `python-dateutil <https://github.com/dateutil/dateutil/>`_
    * `h5py <https://www.h5py.org/>`_ >= 2.1
 
-Optional dependencies:
+Optional dependencies for running tests:
 
    * `pytest <https://docs.pytest.org/>`_
    * `pooch <https://www.fatiando.org/pooch/latest/>`_
+
+Optional dependencies for building docs:
+
    * `sphinx <https://www.sphinx-doc.org/>`_ >= 4.3.0
    * `sphinx-argparse <https://sphinx-argparse.readthedocs.io>`_
    * `sphinx_rtd_theme <https://sphinx-rtd-theme.readthedocs.io/en/stable/>`_ >= 0.5.1
 
-The file "example_environment.yml", included in the repository's top level directory, contains an example of an environment with all dependencies properly installed on a linux machine with a GPU, circa early 2024.
-
 
 Step 3: Install
----------------
+^^^^^^^^^^^^^^^
 
-To install CDTools, run the following command from the top level directory (the directory including the setup.py file).
-
-.. code:: bash
-	  
-   $ pip install . --no-deps
-
-   
-This will install a copy of the code, as it exists at the moment of installation. If you would prefer for changes to the code to propagate to the installed version without reinstalling, install the package in developer mode:
+To install CDTools, run the following command from the top level directory of the git repository:
 
 .. code:: bash
 	  
    $ pip install -e . --no-deps
+
+   
+This will install CDTools in developer mode, so that changes to the code will propagate to the installed version immediately. This is best if you plan to actively develop CDTools. If you simply need a custom environment, you can also install CDTools in standard mode using:
+
+.. code:: bash
+	  
+   $ pip install . --no-deps
    
   
 Step 4: Run The Tests
----------------------
+^^^^^^^^^^^^^^^^^^^^^
 
-To ensure that the installation has worked correctly, it is recommended that you run the unit tests. After ensuring that pytest is installed, run the following command from the top level directory:
+To ensure that the installation has worked correctly, it is recommended that you run the unit tests. Execute the following command from the top level directory of the git repository:
 
 .. code:: bash
 
    $ pytest
 
-
-If any tests fail, make sure that you have all the noted dependencies properly installed. If you do, and things still aren't working, `send me (Abe Levitan) an email <alevitan@mit.edu>`_  and we'll get to the bottom of it. CDTools has been tested on linux and mac, on CPU, CUDA, and MPS.
+If any tests fail, make sure that you have all the noted dependencies properly installed. If you do, and things still aren't working, `open an issue on the github page <https://github.com/cdtools-developers/cdtools/issues>`_ and we'll get to the bottom of it.

@@ -25,8 +25,10 @@ class FancyPtycho(CDIModel):
                  background=None,
                  probe_basis=None,
                  translation_offsets=None,
+                 probe_fourier_shifts=None,
                  mask=None,
                  weights=None,
+                 qe_mask=None,
                  translation_scale=1,
                  saturation=None,
                  probe_support=None,
@@ -86,7 +88,18 @@ class FancyPtycho(CDIModel):
         else:
             self.register_buffer('mask',
                                  t.as_tensor(mask, dtype=t.bool))
-        
+
+
+        if qe_mask is None:
+            self.qe_mask = None
+        else:
+            self.qe_mask = t.nn.Parameter(
+                t.as_tensor(qe_mask, dtype=dtype))
+            # I want the ability to optimize over this, but experience shows
+            # that it is wildly unstable, so I think it's best to keep
+            # gradients turned off by default
+            self.qe_mask.requires_grad=False
+            
         probe_guess = t.as_tensor(probe_guess, dtype=t.complex64)
         obj_guess = t.as_tensor(obj_guess, dtype=t.complex64)
 
@@ -102,9 +115,16 @@ class FancyPtycho(CDIModel):
         self.probe = t.nn.Parameter(probe_guess / self.probe_norm)
         self.obj = t.nn.Parameter(obj_guess)
 
-
-        self.obj_view_slice = np.s_[obj_view_crop:-obj_view_crop,
-                                    obj_view_crop:-obj_view_crop]
+        # NOTE: I think it makes sense to protect against obj_view_crop
+        # being zero or below, because there is nothing else to show outside
+        # the object array. No reason to throw an error if, e.g., the user
+        # asks for a big padding which goes outside of the actual object array.
+        # Just show the full array.
+        if obj_view_crop > 0:
+            self.obj_view_slice = np.s_[obj_view_crop:-obj_view_crop,
+                                        obj_view_crop:-obj_view_crop]
+        else:
+            self.obj_view_slice = np.s_[:,:]
         
         # TODO: perhaps not working anymore for fourier cropped probes
         if background is None:
@@ -134,6 +154,13 @@ class FancyPtycho(CDIModel):
             t_o = t.as_tensor(translation_offsets, dtype=t.float32)
             t_o = t_o / translation_scale
             self.translation_offsets = t.nn.Parameter(t_o)
+            
+        if probe_fourier_shifts is None:
+            self.probe_fourier_shifts = None
+        else:
+            self.probe_fourier_shifts = t.nn.Parameter(
+                t.as_tensor(translation_offsets, dtype=t.float32)
+            )
 
         self.register_buffer('translation_scale',
                              t.as_tensor(translation_scale, dtype=dtype))
@@ -152,7 +179,7 @@ class FancyPtycho(CDIModel):
             t.as_tensor(simulate_probe_translation, dtype=bool)
         )
 
-        if simulate_probe_translation:
+        if simulate_probe_translation or (self.probe_fourier_shifts is not None):
             Is = t.arange(self.probe.shape[-2], dtype=dtype)
             Js = t.arange(self.probe.shape[-1], dtype=dtype)
             Is, Js = t.meshgrid(Is/t.max(Is), Js/t.max(Js))
@@ -180,13 +207,14 @@ class FancyPtycho(CDIModel):
     @classmethod
     def from_dataset(cls,
                      dataset,
-                     probe_size=None,
+                     probe_shape=None,
                      randomize_ang=0,
                      n_modes=1,
                      n_obj_modes=1,
                      dm_rank=None,
                      translation_scale=1,
                      saturation=None,
+                     use_qe_mask=False,
                      probe_support_radius=None,
                      probe_fourier_crop=None,
                      propagation_distance=None,
@@ -195,6 +223,7 @@ class FancyPtycho(CDIModel):
                      fourier_probe=False,
                      loss='amplitude mse',
                      units='um',
+                     allow_probe_fourier_shifts=False,
                      simulate_probe_translation=False,
                      simulate_finite_pixels=False,
                      exponentiate_obj=False,
@@ -261,7 +290,7 @@ class FancyPtycho(CDIModel):
         )
 
         # Finally, initialize the probe and  object using this information
-        if probe_size is None:
+        if probe_shape is None:
             probe = tools.initializers.SHARP_style_probe(
                 dataset,
                 propagation_distance=propagation_distance,
@@ -272,7 +301,6 @@ class FancyPtycho(CDIModel):
                 dataset,
                 obj_basis,
                 probe_shape,
-                probe_size,
                 propagation_distance=propagation_distance,
             )
 
@@ -327,6 +355,11 @@ class FancyPtycho(CDIModel):
 
         translation_offsets = 0 * (t.rand((len(dataset), 2)) - 0.5)
 
+        if allow_probe_fourier_shifts:
+            probe_fourier_shifts = t.zeros((len(dataset), 2), dtype=t.float32)
+        else:
+            probe_fourier_shifts = None
+
         if dm_rank is not None and dm_rank != 0:
             if dm_rank > n_modes:
                 raise KeyError('Density matrix rank cannot be greater than the number of modes. Use dm_rank = -1 to use a full rank matrix.')
@@ -347,14 +380,23 @@ class FancyPtycho(CDIModel):
             Ws = t.ones(len(dataset))
 
         if hasattr(dataset, 'intensities') and dataset.intensities is not None:
-            Ws *= (dataset.intensities.to(dtype=Ws.dtype)[:,...]
-                   / t.mean(dataset.intensities))
+            intensities = dataset.intensities.to(dtype=Ws.dtype)[:,...]
+            weights = t.sqrt(intensities)
+            Ws *= (weights / t.mean(weights))
 
         if hasattr(dataset, 'mask') and dataset.mask is not None:
             mask = dataset.mask.to(t.bool)
         else:
             mask = None
 
+        if use_qe_mask:
+            if hasattr(dataset, 'qe_mask') and dataset.qe_mask is not None:
+                qe_mask = t.as_tensor(dataset.qe_mask, dtype=t.float32)
+            else:
+                qe_mask = t.ones(dataset.patterns.shape[-2:], dtype=t.float32)
+        else:
+            qe_mask = None
+            
         if probe_support_radius is not None:
             probe_support = t.zeros(probe[0].shape, dtype=t.bool)
             xs, ys = np.mgrid[:probe.shape[-2], :probe.shape[-1]]
@@ -368,23 +410,34 @@ class FancyPtycho(CDIModel):
         else:
             probe_support = None
 
-        return cls(wavelength, det_geo, obj_basis, probe, obj,
-                   surface_normal=surface_normal,
-                   min_translation=min_translation,
-                   translation_offsets=translation_offsets,
-                   weights=Ws, mask=mask, background=background,
-                   translation_scale=translation_scale,
-                   saturation=saturation,
-                   probe_basis=probe_basis,
-                   probe_support=probe_support,
-                   fourier_probe=fourier_probe,
-                   oversampling=oversampling,
-                   loss=loss, units=units,
-                   simulate_probe_translation=simulate_probe_translation,
-                   simulate_finite_pixels=simulate_finite_pixels,
-                   phase_only=phase_only,
-                   exponentiate_obj=exponentiate_obj,
-                   obj_view_crop=obj_view_crop)
+        return cls(
+            wavelength,
+            det_geo,
+            obj_basis,
+            probe,
+            obj,
+            surface_normal=surface_normal,
+            min_translation=min_translation,
+            translation_offsets=translation_offsets,
+            weights=Ws,
+            mask=mask,
+            background=background,
+            qe_mask=qe_mask,
+            translation_scale=translation_scale,
+            saturation=saturation,
+            probe_basis=probe_basis,
+            probe_support=probe_support,
+            fourier_probe=fourier_probe,
+            oversampling=oversampling,
+            loss=loss,
+            units=units,
+            probe_fourier_shifts=probe_fourier_shifts,
+            simulate_probe_translation=simulate_probe_translation,
+            simulate_finite_pixels=simulate_finite_pixels,
+            phase_only=phase_only,
+            exponentiate_obj=exponentiate_obj,
+            obj_view_crop=obj_view_crop
+        )
 
 
     def interaction(self, index, translations, *args):
@@ -431,12 +484,19 @@ class FancyPtycho(CDIModel):
             # Maybe this can be done with a matmul now?
             prs = t.sum(Ws[..., None, None] * basis_prs, axis=-3)
         
-        if self.simulate_probe_translation:
-            det_pix_trans = tools.interactions.translations_to_pixel(
+        if self.simulate_probe_translation or (self.probe_fourier_shifts is not None):
+            if self.probe_fourier_shifts is not None:
+                det_pix_trans = self.probe_fourier_shifts[index]
+            else:
+                det_pix_trans = t.zeros_like(translations)
+
+            if self.simulate_probe_translation:
+                det_pix_trans = det_pix_trans +  tools.interactions.translations_to_pixel(
                     self.det_basis,
                     translations,
                     surface_normal=self.surface_normal)
-            
+
+                
             probe_masks = t.exp(1j* (det_pix_trans[:,0,None,None] *
                                      self.I_phase[None,...] +
                                      det_pix_trans[:,1,None,None] *
@@ -475,6 +535,7 @@ class FancyPtycho(CDIModel):
             shift_probe=True,
             multiple_modes=True,
             probe_support=self.probe_support)
+        
         return exit_waves
 
 
@@ -491,8 +552,9 @@ class FancyPtycho(CDIModel):
             wavefields,
             self.background,
             measurement=tools.measurements.incoherent_sum,
+            qe_mask=self.qe_mask,
             saturation=self.saturation,
-            oversampling=int(self.oversampling),
+            oversampling=self.oversampling,
             simulate_finite_pixels=self.simulate_finite_pixels,
         )
 
@@ -567,15 +629,40 @@ class FancyPtycho(CDIModel):
 
         
     def center_probes(self, iterations=4):
-        """Centers the probes
+        """Centers the probes in real space
+
+        Takes the current guess of the illumination function and centers it
+        using a shift with periodic boundary conditions. It uses
+        cdtools.tools.image_processing.center internally to do the centering.
+        Multiple iterations of an algorithm are run, which is helpful if the
+        illumination is reconstructed near the corners and "wraps around" the
+        probe field of view.
+
+        Note that the centering is always performed in real space, even if
+        the probe array is defined in Fourier space.
         
-        Note that this does not compensate for the centering by adjusting
+        Note also that this does not compensate for the centering by adjusting
         the object, so it's a good idea to reset the object after centering
         the probes
+
+        Parameters
+        ----------
+        iterations : int
+            Default 4, how many iterations of the centering algorithm to run
         """
-        centered_probe = tools.image_processing.center(
-            self.probe.data.cpu(), iterations=iterations)
-        self.probe.data = centered_probe.to(device=self.probe.data.device)
+        if self.fourier_probe:
+            prs = tools.propagators.inverse_far_field(self.probe.detach()).cpu()
+        else:
+            prs = self.probe.detach().cpu()
+        
+        centered_prs = tools.image_processing.center(prs, iterations=iterations)
+
+        if self.fourier_probe:
+            self.probe.data = tools.propagators.far_field(
+                centered_prs.to(device=self.probe.data.device))
+        else:
+            self.probe.data = centered_prs.to(device=self.probe.data.device)
+
 
 
     def tidy_probes(self):
@@ -711,6 +798,28 @@ class FancyPtycho(CDIModel):
             **kwargs),
 
         
+    def plot_translations_and_originals(self, fig, dataset):
+        """Only used to make a plot for the plot list."""
+        p.plot_translations(
+            dataset.translations,
+            fig=fig,
+            units=self.units,
+            label='original translations',
+            color='#CCCCCC',
+            marker='o',
+        )
+        p.plot_translations(
+            self.corrected_translations(dataset),
+            fig=fig,
+            units=self.units,
+            clear_fig=False,
+            label='refined translations',
+            color='k',
+            marker='.'
+        )
+        plt.legend()
+        
+        
     plot_list = [
         ('',
          lambda self, fig, dataset: self.plot_wavefront_variation(
@@ -808,9 +917,12 @@ class FancyPtycho(CDIModel):
          lambda self: self.exponentiate_obj),
 
         ('Corrected Translations',
-         lambda self, fig, dataset: p.plot_translations(self.corrected_translations(dataset), fig=fig, units=self.units)),
+         lambda self, fig, dataset: self.plot_translations_and_originals(fig, dataset)),
         ('Background',
-         lambda self, fig: p.plot_amplitude(self.background**2, fig=fig))
+         lambda self, fig: p.plot_amplitude(self.background**2, fig=fig)),
+        ('Quantum Efficiency Mask',
+         lambda self, fig: p.plot_amplitude(self.qe_mask, fig=fig),
+         lambda self: (hasattr(self, 'qe_mask') and self.qe_mask is not None))
     ]
     
     

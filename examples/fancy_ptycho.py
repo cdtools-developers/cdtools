@@ -19,19 +19,27 @@ device = 'cuda'
 model.to(device=device)
 dataset.get_as(device=device)
 
+# For this script, we use a slightly different pattern where we explicitly
+# create a `Reconstructor` class to orchestrate the reconstruction. The
+# reconstructor will store the model and dataset and create an appropriate
+# optimizer. This allows the optimizer to persist between loops, along with
+# e.g. estimates of the moments of individual parameters
+recon = cdtools.reconstructors.AdamReconstructor(model, dataset)
+
 # The learning rate parameter sets the alpha for Adam.
 # The beta parameters are (0.9, 0.999) by default
 # The batch size sets the minibatch size
-for loss in model.Adam_optimize(50, dataset, lr=0.02, batch_size=10):
+for loss in recon.optimize(50, lr=0.02, batch_size=10):
     print(model.report())
     # Plotting is expensive, so we only do it every tenth epoch
     if model.epoch % 10 == 0:
         model.inspect(dataset)
 
 # It's common to chain several different reconstruction loops. Here, we
-# started with an aggressive refinement to find the probe, and now we
-# polish the reconstruction with a lower learning rate and larger minibatch
-for loss in model.Adam_optimize(50, dataset,  lr=0.005, batch_size=50):
+# started with an aggressive refinement to find the probe in the previous
+# loop, and now we polish the reconstruction with a lower learning rate
+# and larger minibatch
+for loss in recon.optimize(50, lr=0.005, batch_size=50):
     print(model.report())
     if model.epoch % 10 == 0:
         model.inspect(dataset)

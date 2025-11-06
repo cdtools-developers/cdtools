@@ -1,7 +1,7 @@
 numpy>=1.0
 scipy>=1.0
 matplotlib>=2.0  # 2.0 introduces better colormaps which are used by default
-pytorch>=1.9.0 #1.9.0 implements support for autograd on indexed complex tensors
+torch>=1.9.0 #1.9.0 implements support for autograd on indexed complex tensors
 h5py>=2.1
 python-dateutil
 pytest
