@@ -227,7 +227,7 @@ def setup(rank: int = None,
                 'these parameters have been explicitly defined, or ',
                 'alternatively launch the multi-GPU job with torchrun.'
             )
-        else:
+        elif init_method == 'env://':
             # Set up the environment variables
             os.environ['MASTER_ADDR'] = master_addr
             os.environ['MASTER_PORT'] = master_port
@@ -240,13 +240,13 @@ def setup(rank: int = None,
     t.cuda.set_device(rank)
     if rank == 0:
         print('[INFO]: Initializing process group.')
-    
+
     dist.init_process_group(rank=rank,
                             world_size=world_size,
                             backend=backend,
                             init_method=init_method,
                             timeout=datetime.timedelta(timeout))
-    
+
     if rank == 0:
         print('[INFO]: Process group initialized.')
 
