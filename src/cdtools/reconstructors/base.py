@@ -243,7 +243,7 @@ class Reconstructor:
                     sim_patterns = self.model.forward(*inp)
 
                     # Calculate the loss
-                    if hasattr(self, 'mask'):
+                    if hasattr(self.model, 'mask'):
                         loss = self.model.loss(pats,
                                                sim_patterns,
                                                mask=self.model.mask)

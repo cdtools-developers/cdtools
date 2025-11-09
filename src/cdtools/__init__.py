@@ -6,6 +6,8 @@ warnings.filterwarnings("ignore",
 
 __all__ = ['tools', 'datasets', 'models', 'reconstructors']
 
+from ._version import __version__
+
 from cdtools import tools
 from cdtools import datasets
 from cdtools import models

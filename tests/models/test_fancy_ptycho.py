@@ -52,6 +52,10 @@ def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
     print('\nTesting performance on the standard transmission ptycho dataset')
     dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(lab_ptycho_cxi)
 
+    # Test the masking system
+    dataset.mask[110:115,65:70] = 0
+    dataset.patterns[...,~dataset.mask] = t.max(dataset.patterns)
+    
     model = cdtools.models.FancyPtycho.from_dataset(
         dataset,
         n_modes=3,
