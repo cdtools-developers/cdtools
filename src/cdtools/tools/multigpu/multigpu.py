@@ -219,10 +219,15 @@ def setup(rank: int = None,
     """
     # Make sure that the user explicitly defines parameters if spawn is used
     if get_launch_method() == 'spawn':
-        if init_method == 'env://' and None in (master_addr, master_port):
-            # We'll check if the master address/port is in the env variable
-            master_addr = os.environ.get('MASTER_ADDR')
-            master_port = os.environ.get('MASTER_PORT')
+        if init_method == 'env://':
+            if None in (master_addr, master_port):
+                # We'll check if the master address/port is in the env variable
+                master_addr = os.environ.get('MASTER_ADDR')
+                master_port = os.environ.get('MASTER_PORT')
+            else:
+                # Set up the environment variables
+                os.environ['MASTER_ADDR'] = master_addr
+                os.environ['MASTER_PORT'] = master_port
 
         if None in (rank, world_size, master_addr, master_port):
             raise RuntimeError(
@@ -233,10 +238,6 @@ def setup(rank: int = None,
                 'MASTER_ADDR/MASTER_PORT have been defined as environment \n'
                 'variables, or launch the multi-GPU job with torchrun.\n'
             )
-        elif init_method == 'env://':
-            # Set up the environment variables
-            os.environ['MASTER_ADDR'] = master_addr
-            os.environ['MASTER_PORT'] = master_port
 
     if rank is None:
         rank = get_rank()
