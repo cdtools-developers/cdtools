@@ -211,7 +211,7 @@ def setup(rank: int = None,
             backend, which is the only supported backend for CDTools.
         timeout: int
             Timeout for operations executed against the process group in
-            seconds. Default is 30 seconds. 
+            seconds. Default is 30 seconds.
         seed: int
             Optional. The random number generator seed.
         verbose: bool
@@ -376,7 +376,7 @@ def run_speed_test(fn: Callable,
         time_mean = t.tensor(time_list).mean(dim=0)/60
         time_std = t.tensor(time_list).std(dim=0)/60
 
-        if gpus == 1: # Assumes 1 GPU is used first in the test
+        if gpus == 1:  # Assumes 1 GPU is used first in the test
             time_1gpu = time_mean[-1]
             std_1gpu = time_std[-1]
 
