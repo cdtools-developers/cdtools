@@ -221,11 +221,11 @@ def setup(rank: int = None,
     if get_launch_method() == 'spawn':
         if None in (rank, world_size, master_addr, master_port):
             raise RuntimeError(
-                'torch.multiprocessing.spawn was detected as the launching ',
-                'method, but either rank, world_size, master_addr, or ',
-                'master_port has not been explicitly defined. Please ensure ',
-                'these parameters have been explicitly defined, or ',
-                'alternatively launch the multi-GPU job with torchrun.'
+                'torch.multiprocessing.spawn was detected as the launching \n'
+                'method, but either rank, world_size, master_addr, or \n'
+                'master_port has not been explicitly defined. Please ensure \n'
+                'these parameters have been explicitly defined, or \n'
+                'alternatively launch the multi-GPU job with torchrun.\n'
             )
         elif init_method == 'env://':
             # Set up the environment variables
