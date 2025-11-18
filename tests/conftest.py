@@ -32,20 +32,31 @@ def pytest_addoption(parser):
         default=False,
         help="run slow tests, primarily full reconstruction tests."
     )
+    parser.addoption(
+        "--runmultigpu",
+        action="store_true",
+        default=False,
+        help="Runs tests using 2 NVIDIA CUDA GPUs."
+    )
 
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: mark test as slow to run")
+    config.addinivalue_line("markers", "multigpu: run the multigpu test using 2 NVIDIA GPUs")
 
 
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--runslow"):
-        # --runslow given in cli: do not skip slow tests
-        return
+    # Skip the slow and/or multigpu tests if --runslow and/or --multigpu
+    # is given in cli.
     skip_slow = pytest.mark.skip(reason="need --runslow option to run")
+    skip_multigpu = pytest.mark.skip(reason='need --runmultigpu option to run')
+
     for item in items:
-        if "slow" in item.keywords:
+        if "slow" in item.keywords and not config.getoption("--runslow"):
             item.add_marker(skip_slow)
+
+        if "multigpu" in item.keywords and not config.getoption("--runmultigpu"):
+            item.add_marker(skip_multigpu)
 
 
 @pytest.fixture
@@ -415,3 +426,9 @@ def example_nested_dicts(pytestconfig):
     }
 
     return [test_dict_1, test_dict_2, test_dict_3]
+
+
+@pytest.fixture(scope='module')
+def multigpu_script(pytestconfig):
+    return str(pytestconfig.rootpath) + \
+        '/tests/multi_gpu/multi_gpu_script_plot_and_save.py'
