@@ -522,7 +522,7 @@ def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', **kwargs):
                       units=units, show_cbar=False, **kwargs)
 
 
-def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, invert_xaxis=True, **kwargs):
+def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, invert_xaxis=True, clear_fig=True, label=None, color=None, marker='.', **kwargs):
     """Plots a set of probe translations in a nicely formatted way
 
     Parameters
@@ -537,6 +537,14 @@ def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, inver
         Whether to plot lines indicating the path taken
     invert_xaxis : bool
         Default is True. This flips the x axis to match the convention from .cxi files of viewing the image from the beam's perspective
+    clear_fig : bool
+        Default is True. Whether to clear the figure before plotting.
+    label : str
+        Default is None. A label to give the plotted markers for a legend.
+    color : str
+        Default is None. The color to plot the markers in. By default, will follow the matplotlib color cycle.
+    color : str
+        Default is '.'. The marker style to plot with.
     \\**kwargs
         All other args are passed to fig.add_subplot(111, \\**kwargs)
 
@@ -554,18 +562,28 @@ def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, inver
         ax = fig.add_subplot(111, **kwargs)
     else:
         plt.figure(fig.number)
-        plt.gcf().clear()
+        if clear_fig:
+            plt.gcf().clear()
 
     if isinstance(translations, t.Tensor):
         translations = translations.detach().cpu().numpy()
 
     translations = translations * factor
-    plt.plot(translations[:,0], translations[:,1],'k.')
+
+    linestyle = '-' if lines else 'None'
+    linewidth = 1 if lines else 0
+    plt.plot(translations[:,0], translations[:,1],
+             marker=marker, linestyle=linestyle,
+             label=label, color=color, 
+             linewidth=linewidth)
+    
     if invert_xaxis:
-        plt.gca().invert_xaxis()
+        ax = plt.gca()
+        x_min, x_max = ax.get_xlim()
+        # Protect against flipping twice if plotting on top of existing graph
+        if x_min <= x_max:
+            ax.invert_xaxis()
         
-    if lines:
-        plt.plot(translations[:,0], translations[:,1],'b-', linewidth=0.5)
     plt.xlabel('X (' + units + ')')
     plt.ylabel('Y (' + units + ')')
 

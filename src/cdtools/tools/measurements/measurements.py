@@ -155,7 +155,18 @@ def incoherent_sum(wavefields, detector_slice=None, epsilon=1e-7, saturation=Non
         return t.clamp(output + epsilon,0,saturation)
 
 
-def quadratic_background(wavefield, background, *args, detector_slice=None, measurement=intensity, epsilon=1e-7, saturation=None, oversampling=1, simulate_finite_pixels=False):
+def quadratic_background(
+        wavefield,
+        background,
+        *args,
+        detector_slice=None,
+        measurement=intensity,
+        epsilon=1e-7,
+        qe_mask=None,
+        saturation=None,
+        oversampling=1,
+        simulate_finite_pixels=False
+):
     """Returns the intensity of a wavefield plus a background
     
     The intensity is calculated via the given measurment function 
@@ -173,6 +184,8 @@ def quadratic_background(wavefield, background, *args, detector_slice=None, meas
         Optional, a slice or tuple of slices defining a section of the simulation to return
     measurement : function
         Default is measurements.intensity, the measurement function to use.
+    qe_mask : torch.Tensor
+        A tensor storing the per-pixel quantum efficiency (up to an unknown global scaling factor)
     saturation : float
         Optional, a maximum saturation value to clamp the resulting intensities to
     oversampling : int
@@ -184,17 +197,20 @@ def quadratic_background(wavefield, background, *args, detector_slice=None, meas
         A real MxN array storing the wavefield's intensities
     """
     
-    if detector_slice is None:
-        output = measurement(wavefield, *args, epsilon=epsilon,
-                             oversampling=oversampling,
-                             simulate_finite_pixels=simulate_finite_pixels) \
-                             + background**2
-    else:
-        output = measurement(wavefield, *args, detector_slice=detector_slice,
-                             epsilon=epsilon, oversampling=oversampling,
-                             simulate_finite_pixels=simulate_finite_pixels) \
-                            + background**2
+    raw_intensity = measurement(
+        wavefield,
+        *args,
+        detector_slice=detector_slice,
+        epsilon=epsilon,
+        oversampling=oversampling,
+        simulate_finite_pixels=simulate_finite_pixels
+    )
 
+    if qe_mask is None:
+        output = raw_intensity + background**2
+    else:
+        output = (qe_mask * raw_intensity) + background**2
+        
     # This has to be done after the background is added, hence we replicate
     # it here
     if saturation is None:

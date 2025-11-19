@@ -14,6 +14,7 @@ from scipy import linalg as sla
 from scipy import special
 from scipy import optimize as opt
 from scipy import spatial
+import warnings
 
 __all__ = [
     'product_svd',
@@ -1443,6 +1444,13 @@ def calc_spectral_info(dataset, nbins=50):
     the scan pattern whose area matches one detector conjugate field of
     view.
 
+    This estimation will start to deviate from the truth if the scan area
+    is not significantly larger than the illumination function, because
+    the nonzero size of the illumination function is not taken into account.
+    Furthermore, in the edge case where all the scan points are colinear,
+    the estimate will fail, and the mean diffraction pattern will be returned
+    instead
+
     Parameters
     ----------
     dataset : Ptycho2DDataset
@@ -1461,10 +1469,12 @@ def calc_spectral_info(dataset, nbins=50):
     
     """
 
-    scan_hull = spatial.ConvexHull(dataset.translations[:,:2].cpu().numpy())
-    
-    scan_area = scan_hull.volume
-
+    try:
+        scan_hull = spatial.ConvexHull(dataset.translations[:,:2].cpu().numpy())
+        scan_area = scan_hull.volume
+    except spatial._qhull.QhullError as e:
+        scan_area = None
+        
     ewg = cdtools.tools.initializers.exit_wave_geometry
     obj_basis = ewg(
         dataset.detector_geometry['basis'],
@@ -1477,8 +1487,12 @@ def calc_spectral_info(dataset, nbins=50):
         np.cross(obj_basis[:,0]*dataset.patterns.shape[-2],
                  obj_basis[:,1]*dataset.patterns.shape[-1])
     )
-    scale_factor = det_conj_fov_area / scan_area
 
+    if scan_area is not None:
+        scale_factor = det_conj_fov_area / scan_area
+    else:
+        warnings.warn("The scan points in this dataset are all colinear. The mean pattern will be calculated rather than a scaled mean based on the scanned area.")
+        scale_factor = 1/len(dataset)
 
     mask = dataset.mask.cpu().numpy().astype(int)
     sum_pattern = dataset.mask * t.sum(dataset.patterns, dim=0) * scale_factor

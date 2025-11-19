@@ -28,6 +28,7 @@ class FancyPtycho(CDIModel):
                  probe_fourier_shifts=None,
                  mask=None,
                  weights=None,
+                 qe_mask=None,
                  translation_scale=1,
                  saturation=None,
                  probe_support=None,
@@ -109,7 +110,18 @@ class FancyPtycho(CDIModel):
         else:
             self.register_buffer('mask',
                                  t.as_tensor(mask, dtype=t.bool))
-        
+
+
+        if qe_mask is None:
+            self.qe_mask = None
+        else:
+            self.qe_mask = t.nn.Parameter(
+                t.as_tensor(qe_mask, dtype=dtype))
+            # I want the ability to optimize over this, but experience shows
+            # that it is wildly unstable, so I think it's best to keep
+            # gradients turned off by default
+            self.qe_mask.requires_grad=False
+            
         probe_guess = t.as_tensor(probe_guess, dtype=t.complex64)
         obj_guess = t.as_tensor(obj_guess, dtype=t.complex64)
 
@@ -224,6 +236,7 @@ class FancyPtycho(CDIModel):
                      dm_rank=None,
                      translation_scale=1,
                      saturation=None,
+                     use_qe_mask=False,
                      probe_support_radius=None,
                      probe_fourier_crop=None,
                      propagation_distance=None,
@@ -454,6 +467,14 @@ class FancyPtycho(CDIModel):
         else:
             mask = None
 
+        if use_qe_mask:
+            if hasattr(dataset, 'qe_mask') and dataset.qe_mask is not None:
+                qe_mask = t.as_tensor(dataset.qe_mask, dtype=t.float32)
+            else:
+                qe_mask = t.ones(dataset.patterns.shape[-2:], dtype=t.float32)
+        else:
+            qe_mask = None
+            
         if probe_support_radius is not None:
             probe_support = t.zeros(probe[0].shape, dtype=t.bool)
             xs, ys = np.mgrid[:probe.shape[-2], :probe.shape[-1]]
@@ -479,13 +500,15 @@ class FancyPtycho(CDIModel):
             weights=Ws,
             mask=mask,
             background=background,
+            qe_mask=qe_mask,
             translation_scale=translation_scale,
             saturation=saturation,
             probe_basis=probe_basis,
             probe_support=probe_support,
             fourier_probe=fourier_probe,
             oversampling=oversampling,
-            loss=loss, units=units,
+            loss=loss,
+            units=units,
             probe_fourier_shifts=probe_fourier_shifts,
             simulate_probe_translation=simulate_probe_translation,
             simulate_finite_pixels=simulate_finite_pixels,
@@ -620,6 +643,7 @@ class FancyPtycho(CDIModel):
             wavefields,
             self.background,
             measurement=tools.measurements.incoherent_sum,
+            qe_mask=self.qe_mask,
             saturation=self.saturation,
             oversampling=self.oversampling,
             simulate_finite_pixels=self.simulate_finite_pixels,
@@ -696,15 +720,40 @@ class FancyPtycho(CDIModel):
 
         
     def center_probes(self, iterations=4):
-        """Centers the probes
+        """Centers the probes in real space
+
+        Takes the current guess of the illumination function and centers it
+        using a shift with periodic boundary conditions. It uses
+        cdtools.tools.image_processing.center internally to do the centering.
+        Multiple iterations of an algorithm are run, which is helpful if the
+        illumination is reconstructed near the corners and "wraps around" the
+        probe field of view.
+
+        Note that the centering is always performed in real space, even if
+        the probe array is defined in Fourier space.
         
-        Note that this does not compensate for the centering by adjusting
+        Note also that this does not compensate for the centering by adjusting
         the object, so it's a good idea to reset the object after centering
         the probes
+
+        Parameters
+        ----------
+        iterations : int
+            Default 4, how many iterations of the centering algorithm to run
         """
-        centered_probe = tools.image_processing.center(
-            self.probe.data.cpu(), iterations=iterations)
-        self.probe.data = centered_probe.to(device=self.probe.data.device)
+        if self.fourier_probe:
+            prs = tools.propagators.inverse_far_field(self.probe.detach()).cpu()
+        else:
+            prs = self.probe.detach().cpu()
+        
+        centered_prs = tools.image_processing.center(prs, iterations=iterations)
+
+        if self.fourier_probe:
+            self.probe.data = tools.propagators.far_field(
+                centered_prs.to(device=self.probe.data.device))
+        else:
+            self.probe.data = centered_prs.to(device=self.probe.data.device)
+
 
 
     def tidy_probes(self):
@@ -840,6 +889,28 @@ class FancyPtycho(CDIModel):
             **kwargs),
 
         
+    def plot_translations_and_originals(self, fig, dataset):
+        """Only used to make a plot for the plot list."""
+        p.plot_translations(
+            dataset.translations,
+            fig=fig,
+            units=self.units,
+            label='original translations',
+            color='#CCCCCC',
+            marker='o',
+        )
+        p.plot_translations(
+            self.corrected_translations(dataset),
+            fig=fig,
+            units=self.units,
+            clear_fig=False,
+            label='refined translations',
+            color='k',
+            marker='.'
+        )
+        plt.legend()
+        
+        
     plot_list = [
         ('',
          lambda self, fig, dataset: self.plot_wavefront_variation(
@@ -937,9 +1008,12 @@ class FancyPtycho(CDIModel):
          lambda self: self.exponentiate_obj),
 
         ('Corrected Translations',
-         lambda self, fig, dataset: p.plot_translations(self.corrected_translations(dataset), fig=fig, units=self.units)),
+         lambda self, fig, dataset: self.plot_translations_and_originals(fig, dataset)),
         ('Background',
-         lambda self, fig: p.plot_amplitude(self.background**2, fig=fig))
+         lambda self, fig: p.plot_amplitude(self.background**2, fig=fig)),
+        ('Quantum Efficiency Mask',
+         lambda self, fig: p.plot_amplitude(self.qe_mask, fig=fig),
+         lambda self: (hasattr(self, 'qe_mask') and self.qe_mask is not None))
     ]
     
     

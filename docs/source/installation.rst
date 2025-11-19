@@ -1,79 +1,116 @@
 Installation
 ============
 
-Step 1: Download
-----------------
+CDTools supports python >=3.9 and can be installed via pip as the the `cdtools-py`_ package on `PyPI`_. If you plan to contribute to the code or need a custom environment, installation from source is also possible.
 
-The source code for CDTools is hosted on `Github`_. At the moment, the repository remains private while we decide on licensing. Access can be granted upon request by contacting `Abe Levitan <alevitan@mit.edu>`_.
+.. _`cdtools-py`: https://pypi.org/project/cdtools-py/
+.. _`PyPI`: https://pypi.org/
 
-.. _`Github`: https://github.com/cdtools-developers/cdtools
+Option 1: Installation from PyPI
+--------------------------------
 
-The repository remains under active development as of early 2025.
-
-Step 2: Install Dependencies
-----------------------------
-
-CDTools is regularly tested with Python versions 3.8 to 3.12, so it is recommended to use one of these versions. In general, CDTools requires Python 3.7 or higher.
-
-The major dependency for CDTools is pytorch (version 1.9.0 or greater). Because the details of the installation can vary depending on platform, GPU availability, etc, it is recommended that you follow the install instructions on `the pytorch site`_ to install pytorch before installing the remaining dependencies.
-
-.. _`the pytorch site`: https://pytorch.org/get-started/locally/
-
-pytorch stopped supporting installation using conda for installation, so it is recommended continue the installation using pip.
+To install from `PyPI`_, run:
 
 .. code:: bash
 	  
-   $ pip install -r requirements.txt
+   $ pip install cdtools-py
 
-This will install all required dependencies and verify that they meet the pytorch version requirements. Additionally, several optional dependencies used for testing and documentation will also be installed. The full set of dependencies and minimum requirements are listed below is listed below.
+or you can use `uv`_ for a faster installation:
 
-CDTools is reguarly tested with the latest versions of the packages shown below.   
+.. _`uv`: https://github.com/astral-sh/uv
 
-Required dependencies:
+.. code:: bash
+
+   $ uv pip install cdtools-py
+
+Pytorch, a major dependence of CDTools, often needs to be installed with a specific CUDA version for machine compatability. If you run into issues with pytorch, consider first installing pytorch into your environment using the instructions on `the pytorch site`_.
+
+.. _`the pytorch site`: https://pytorch.org/get-started/locally/
+
+Option 2: Installation from source
+----------------------------------
+
+
+Step 1: Download
+^^^^^^^^^^^^^^^^
+
+The source code for CDTools is hosted on `Github`_.
+
+.. _`Github`: https://github.com/cdtools-developers/cdtools
+
+
+To download the source code, you can either clone the repository using git:
+
+.. code:: bash
+
+   $ git clone https://github.com/cdtools-developers/cdtools.git
+
+or you can download a zip file of the repository from the `releases page`_.
+
+.. _`releases page`: https://github.com/cdtools-developers/cdtools/releases
+
+
+Step 2: Install
+^^^^^^^^^^^^^^^
+
+Move to the directory where you downloaded the source code. It is recommended that you create a new python virtual environment to install CDTools into.
+
+Installation using pip and uv. Editable mode is recommended for development purposes and is added with the `-e` flag.
+
+.. code:: bash
+
+   $ pip install -e .
+
+or using uv:
+
+.. code:: bash
+
+   $ uv pip install -e .
+
+
+To install the required test and documentation dependencies as well, use:
+
+.. code:: bash
+
+   $ pip install -e ."[tests,docs]"
+
+or using uv:
+
+.. code:: bash
+
+   $ uv pip install -e ."[tests,docs]"
+
+CDTools is reguarly tested with the latest versions of these packages and with python 3.9 through 3.14.
+
+
+Required dependencies (see pyproject.toml for all details):
 
    * `numpy <http://www.numpy.org>`_ >= 1.0
    * `scipy <http://www.scipy.org>`_ >= 1.0
    * `matplotlib <https://matplotlib.org>`_ >= 2.0
-   * `pytorch <https://pytorch.org>`_ >= 1.9.0
+   * `pytorch <https://pytorch.org>`_ >= 2.3.0
    * `python-dateutil <https://github.com/dateutil/dateutil/>`_
    * `h5py <https://www.h5py.org/>`_ >= 2.1
 
-Optional dependencies:
+Optional dependencies for running tests:
 
    * `pytest <https://docs.pytest.org/>`_
    * `pooch <https://www.fatiando.org/pooch/latest/>`_
+
+Optional dependencies for building docs:
+
    * `sphinx <https://www.sphinx-doc.org/>`_ >= 4.3.0
    * `sphinx-argparse <https://sphinx-argparse.readthedocs.io>`_
    * `sphinx_rtd_theme <https://sphinx-rtd-theme.readthedocs.io/en/stable/>`_ >= 0.5.1
 
-The file "example_environment.yml", included in the repository's top level directory, contains an example of an environment with all dependencies properly installed on a linux machine with a GPU, circa early 2024.
 
+Optional step 4: Run The Tests
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Step 3: Install
----------------
-
-To install CDTools, run the following command from the top level directory (the directory including the setup.py file).
-
-.. code:: bash
-	  
-   $ pip install . --no-deps
-
-   
-This will install a copy of the code, as it exists at the moment of installation. If you would prefer for changes to the code to propagate to the installed version without reinstalling, install the package in developer mode:
-
-.. code:: bash
-	  
-   $ pip install -e . --no-deps
-   
-  
-Step 4: Run The Tests
----------------------
-
-To ensure that the installation has worked correctly, it is recommended that you run the unit tests. After ensuring that pytest is installed, run the following command from the top level directory:
+To ensure that the installation has worked correctly, it is recommended that you run the unit tests. Execute the following command from the top level directory of the git repository:
 
 .. code:: bash
 
-   $ pytest
+   $ python -m pytest
 
-
-If any tests fail, make sure that you have all the noted dependencies properly installed. If you do, and things still aren't working, `send me (Abe Levitan) an email <alevitan@mit.edu>`_  and we'll get to the bottom of it. CDTools has been tested on linux and mac, on CPU, CUDA, and MPS.
+If any tests fail, make sure that you have all the noted dependencies properly installed. If you do, and things still aren't working, `open an issue on the github page <https://github.com/cdtools-developers/cdtools/issues>`_ and we'll get to the bottom of it.

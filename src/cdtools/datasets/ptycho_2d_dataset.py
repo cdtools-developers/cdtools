@@ -1,15 +1,16 @@
+import warnings
+from copy import copy, deepcopy
+import pathlib
+
+import h5py
 import numpy as np
 import torch as t
-from copy import copy
-import h5py
-import pathlib
+
 from cdtools.datasets import CDataset
 from cdtools.datasets.random_selection import random_selection
 from cdtools.tools import data as cdtdata
 from cdtools.tools import plotting
-from matplotlib import pyplot as plt
 from cdtools.tools import analysis
-from copy import deepcopy
 
 __all__ = ['Ptycho2DDataset']
 
@@ -77,6 +78,7 @@ class Ptycho2DDataset(CDataset):
             self.intensities = t.as_tensor(intensities, dtype=t.float32)
         else:
             self.intensities = None
+
             
     def __len__(self):
         return self.patterns.shape[0]
@@ -123,9 +125,9 @@ class Ptycho2DDataset(CDataset):
         self.translations = self.translations.to(*args, **kwargs)
         self.patterns = self.patterns.to(*args, **kwargs)
 
-
     # It sucks that I can't reuse the base factory method here,
     # perhaps there is a way but I couldn't figure it out.
+
     @classmethod
     def from_cxi(cls, cxi_file, cut_zeros=True, load_patterns=True):
         """Generates a new Ptycho2DDataset from a .cxi file directly
@@ -147,7 +149,7 @@ class Ptycho2DDataset(CDataset):
         """
         # If a bare string is passed
         if isinstance(cxi_file, str) or isinstance(cxi_file, pathlib.Path):
-            with h5py.File(cxi_file,'r') as f:
+            with h5py.File(cxi_file, 'r') as f:
                 return cls.from_cxi(f, cut_zeros=cut_zeros, load_patterns=load_patterns)
 
         # Generate a base dataset
@@ -163,10 +165,15 @@ class Ptycho2DDataset(CDataset):
             patterns, axes = cdtdata.get_data(cxi_file, cut_zeros=cut_zeros)
             dataset.patterns = t.as_tensor(patterns)
             if dataset.patterns.dtype == t.float64:
-                raise NotImplementedError('64-bit floats are not supported and precision will not be retained in reconstructions! Please explicitly convert your data to 32-bit or submit a pull request')
-            
+                # If the data is 64-bit, we need to convert it to 32-bit
+                # because 64-bit floats are not supported in reconstructions
+                dataset.patterns = dataset.patterns.to(dtype=t.float32)
+                warnings.warn(
+                    "64-bit floats are not supported and precision will not be retained in reconstructions and were converted to t.float32! "
+                    "If you would like to have 64-bit support, please open an issue or submit a pull request."
+                )
             dataset.axes = axes
-            
+
             if dataset.mask is None:
                 dataset.mask = t.ones(dataset.patterns.shape[-2:]).to(dtype=t.bool)
 
@@ -175,9 +182,8 @@ class Ptycho2DDataset(CDataset):
             dataset.intensities = t.as_tensor(intensities, dtype=t.float32)
         except KeyError:
             dataset.intensities = None
-            
-        return dataset
 
+        return dataset
 
     def to_cxi(self, cxi_file):
         """Saves out a Ptycho2DDataset as a .cxi file
@@ -269,8 +275,11 @@ class Ptycho2DDataset(CDataset):
         """Plots the mean diffraction pattern across the dataset
 
         The output is normalized so that the summed intensity on the
-        detector is equal to the total intensity of light that passed
+        detector is roughly equal to the total intensity of light that passed
         through the sample within each detector conjugate field of view.
+
+        If the scan points are colinear (which causes issues for this
+        estimation), the mean pattern is displayed unscaled.
 
         The plot is plotted as log base 10 of the output plus log_offset.
         By default, log_offset is set equal to 1, which is a good level for
@@ -372,10 +381,19 @@ class Ptycho2DDataset(CDataset):
         equal to the sum of a <factor> x <factor> region of pixels in the
         input pattern. This summation is done by pytorch.functional.avg_pool2d.
         
-        Any mask and background data which is stored with the dataset is
-        downsampled with the data. The background is downsampled using the same
-        method as the data. The mask is expanded so that any output pixel
-        containing a masked pixel will be masked.
+        Any mask, quantum efficiency, and background data which is stored with
+        the dataset is downsampled with the data. The background is downsampled
+        using the same method as the data.
+
+        If there is no quantum efficiency mask, then the mask is downsampled so
+        that any output pixel containing a masked pixel will be masked. If there
+        is a quantum efficiency mask, then the quantum efficiency mask is
+        downsampled using the same method as the data, and the mask is
+        downsampled to include any pixels for which there is at least one valid
+        pixel.
+
+        To avoid leakage of data from masked pixels, the data is first
+        multiplied by the mask before downsampling.
         
         Parameters
         ----------
@@ -383,17 +401,41 @@ class Ptycho2DDataset(CDataset):
             Default 2, the factor to downsample by
 
         """
-        self.patterns = t.nn.functional.avg_pool2d(
-            self.patterns.unsqueeze(0), factor, divisor_override=1)[0]
-        self.mask = t.logical_not(t.nn.functional.max_pool2d(
-            (1-self.mask.to(dtype=t.uint8)).unsqueeze(0).unsqueeze(0),
-            factor
-        )[0,0].to(dtype=t.bool))
+        if hasattr(self, 'mask') and self.mask is not None:
+            self.patterns = t.nn.functional.avg_pool2d(
+                (self.mask * self.patterns).unsqueeze(0),
+                factor, divisor_override=1)[0]
+        else:
+            self.patterns = t.nn.functional.avg_pool2d(
+                self.patterns.unsqueeze(0),
+                factor, divisor_override=1)[0]
+            
+
+        # If we have a QE mask, we want to include all pixels for which at
+        # least one of the input pixels was unmasked, because we can account
+        # for the masked pixels through quantum efficiency
+        if hasattr(self, 'qe_mask') and self.qe_mask is not None:
+            self.qe_mask = t.nn.functional.avg_pool2d(
+                (self.mask * self.qe_mask).unsqueeze(0).unsqueeze(0),
+                factor)[0,0]
+            self.mask = t.nn.functional.max_pool2d(
+                self.mask.to(dtype=t.uint8).unsqueeze(0).unsqueeze(0),
+                factor)[0,0].to(dtype=t.bool)
+            
+        # But if there is no QE mask, we need to only preserve pixels for
+        # which all input pixels were unmasked
+        elif hasattr(self, 'mask') and self.mask is not None:
+            self.mask = t.logical_not(t.nn.functional.max_pool2d(
+                (1-self.mask.to(dtype=t.uint8)).unsqueeze(0).unsqueeze(0),
+                factor
+            )[0,0].to(dtype=t.bool))
         
         self.detector_geometry['basis'] = \
             self.detector_geometry['basis'] * factor
 
-        if self.background is not None:
+
+        
+        if hasattr(self, 'background') and self.background is not None:
             self.background = t.nn.functional.avg_pool2d(
                 self.background.unsqueeze(0).unsqueeze(0),
                 factor,

@@ -44,7 +44,6 @@ The high-level interface to CDTools - datasets and models - is built on a set of
 - functions for accessing stored data in .cxi files
 - plotting tools to visualize data and reconstructions
 - basic operations, like light propagators, needed for coherent diffraction
-- tools that implement basic operations - such as light propagation - relevant to coherent diffraction.
 - analysis functions for assessing the quality of reconstructions
 
 

@@ -22,6 +22,7 @@ __all__ = ['get_entry_info',
            'get_wavelength',
            'get_detector_geometry',
            'get_mask',
+           'get_qe_mask',
            'get_dark',
            'get_data',
            'get_shot_to_shot_info',
@@ -32,6 +33,7 @@ __all__ = ['get_entry_info',
            'add_source',
            'add_detector',
            'add_mask',
+           'add_qe_mask',
            'add_dark',
            'add_data',
            'add_shot_to_shot_info',
@@ -296,6 +298,42 @@ def get_mask(cxi_file):
         mask_on = np.equal(mask,np.uint32(0))
         mask_has_signal = np.equal(mask,np.uint32(0x00001000))
         return np.logical_or(mask_on,mask_has_signal).astype(bool)
+    else:
+        return None
+
+
+def get_qe_mask(cxi_file):
+    """Returns the quantum efficiency mask defined in the cxi file object
+
+    There is no way to store a quantum efficiency mask (a.k.a. a flat-field
+    image) in the .cxi file specification, but experience has indicated that
+    this is often a valuable thing to store, because just correcting for a
+    flatfield with e.g. a division will mess up the photon counting statistics.
+
+    Because there is no specification, I have simply chosen to store the
+    quantum efficiency mask as a float32 array in the same location as the
+    mask is, i.e. `entry_1/instrument_1/detector_1/qe_mask`.
+    
+    The stored quantum efficiency mask should be defined as the mask that
+    a simulated intensity pattern needs to be multiplied by to realize the
+    measured image. In other words, it should be a flat-field image, not the
+    inverse of a flat-field image.
+    
+    Parameters
+    ----------
+    cxi_file : h5py.File
+        A file object to be read
+
+    Returns
+    -------
+    qe_mask : np.array
+        A float32 array storing the quantum efficiency mask from the cxi file
+    """
+
+    i1 = cxi_file['entry_1/instrument_1']
+    if 'detector_1/qe_mask' in i1:
+        qe_mask = i1['detector_1/qe_mask'][()].astype(np.float32)
+        return qe_mask
     else:
         return None
 
@@ -633,6 +671,43 @@ def add_mask(cxi_file, mask):
     mask_to_save = np.zeros(mask.shape).astype(np.uint32)
     mask_to_save[mask == 0] = 1
     d1.create_dataset('mask',data=mask_to_save)
+
+
+def add_qe_mask(cxi_file, qe_mask):
+    """Adds the specified quantum efficiency mask to the cxi file
+
+    There is no way to store a quantum efficiency mask (a.k.a. a flat-field
+    image) in the .cxi file specification, but experience has indicated that
+    this is often a valuable thing to store, because just correcting for a
+    flatfield with e.g. a division will mess up the photon counting statistics.
+
+    Because there is no specification, I have simply chosen to store the
+    quantum efficiency mask as an array in the same location as the
+    mask is, i.e. `entry_1/instrument_1/detector_1/qe_mask`.
+    
+    The stored quantum efficiency mask should be defined as the mask that
+    a simulated intensity pattern needs to be multiplied by to realize the
+    measured image. In other words, it should be a flat-field image, not the
+    inverse of a flat-field image.
+
+    Parameters
+    ----------
+    cxi_file : h5py.File
+        The file to add the mask to
+    qe_mask : array
+        The quantum efficiency mask to save out to the file
+    """
+
+    if 'entry_1/instrument_1' not in cxi_file:
+        cxi_file['entry_1'].create_group('instrument_1')
+    i1 = cxi_file['entry_1/instrument_1']
+    if 'detector_1' not in i1:
+        i1.create_group('detector_1')
+    d1 = i1['detector_1']
+    if isinstance(qe_mask, t.Tensor):
+        qe_mask = qe_mask.detach().cpu().numpy()
+
+    d1.create_dataset('qe_mask',data=qe_mask)
 
 
 def add_dark(cxi_file, dark):

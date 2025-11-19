@@ -36,15 +36,18 @@ for label, dataset in zip(labels, datasets):
     model.to(device=device)
     dataset.get_as(device=device)
 
+    # Create the reconstructor
+    recon = cdtools.reconstructors.AdamReconstructor(model, dataset)
+
     # For batched reconstructions like this, there's no need to live-plot
     # the progress
-    for loss in model.Adam_optimize(20, dataset, lr=0.005, batch_size=50):
+    for loss in recon.optimize(20, lr=0.005, batch_size=50):
         print(model.report())
 
-    for loss in model.Adam_optimize(50, dataset, lr=0.002, batch_size=100):
+    for loss in recon.optimize(50, lr=0.002, batch_size=100):
         print(model.report())
 
-    for loss in model.Adam_optimize(100, dataset, lr=0.001, batch_size=100,
+    for loss in recon.optimize(100, lr=0.001, batch_size=100,
                                     schedule=True):
         print(model.report())
 
