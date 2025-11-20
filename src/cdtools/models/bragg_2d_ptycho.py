@@ -258,6 +258,7 @@ class Bragg2DPtycho(CDIModel):
             obj_padding=200,
             obj_view_crop=None,
             units='um',
+            surface_normal=np.array([0., 0., 1.])
     ):
         wavelength = dataset.wavelength
         det_basis = dataset.detector_geometry['basis']
@@ -278,16 +279,7 @@ class Bragg2DPtycho(CDIModel):
                         distance,
                         oversampling=oversampling)
         
-        # now we grab the sample surface normal
-        if hasattr(dataset, 'sample_info') and \
-           dataset.sample_info is not None and \
-           'orientation' in dataset.sample_info:
-            surface_normal = dataset.sample_info['orientation'][2]
-        else:
-            surface_normal = np.array([0.,0.,1.])
-            
-        # If this information is supplied when the function is called,
-        # then we override the information in the .cxi file
+        # Now we define the surface normal
         if scattering_mode in {'t', 'transmission'}:
             surface_normal = np.array([0.,0.,1.])
         elif scattering_mode in {'r', 'reflection'}:
@@ -295,6 +287,13 @@ class Bragg2DPtycho(CDIModel):
             outgoing_dir /= np.linalg.norm(outgoing_dir)
             surface_normal = outgoing_dir + np.array([0.,0.,1.])
             surface_normal /= np.linalg.norm(outgoing_dir)
+        else:
+            # If the scattering_mode has not been defined, we grab
+            # this from the cxi file if its present.
+            if hasattr(dataset, 'sample_info') and \
+                    dataset.sample_info is not None and \
+                    'orientation' in dataset.sample_info:
+                surface_normal = dataset.sample_info['orientation'][2]
 
         # and we use that to generate the probe basis
 
