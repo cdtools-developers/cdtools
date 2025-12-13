@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 import torch as t
 
-
 #
 #
 # The following few fixtures define some standard data files
@@ -379,6 +378,18 @@ def gold_ball_cxi(pytestconfig):
 def lab_ptycho_cxi(pytestconfig):
     return str(pytestconfig.rootpath) + \
         '/examples/example_data/lab_ptycho_data.cxi'
+
+
+@pytest.fixture(scope='module')
+def optical_data_ss_cxi(pytestconfig):
+    return str(pytestconfig.rootpath) + \
+        '/examples/example_data/Optical_Data_ss.cxi'
+
+
+@pytest.fixture(scope='module')
+def optical_ptycho_incoherent_pickle(pytestconfig):
+    return str(pytestconfig.rootpath) + \
+        '/examples/example_data/Optical_ptycho_incoherent.pickle'
 
 
 @pytest.fixture(scope='module')

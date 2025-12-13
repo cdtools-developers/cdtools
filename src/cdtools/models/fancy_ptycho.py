@@ -798,6 +798,28 @@ class FancyPtycho(CDIModel):
             **kwargs),
 
         
+    def plot_translations_and_originals(self, fig, dataset):
+        """Only used to make a plot for the plot list."""
+        p.plot_translations(
+            dataset.translations,
+            fig=fig,
+            units=self.units,
+            label='original translations',
+            color='#CCCCCC',
+            marker='o',
+        )
+        p.plot_translations(
+            self.corrected_translations(dataset),
+            fig=fig,
+            units=self.units,
+            clear_fig=False,
+            label='refined translations',
+            color='k',
+            marker='.'
+        )
+        plt.legend()
+        
+        
     plot_list = [
         ('',
          lambda self, fig, dataset: self.plot_wavefront_variation(
@@ -895,7 +917,7 @@ class FancyPtycho(CDIModel):
          lambda self: self.exponentiate_obj),
 
         ('Corrected Translations',
-         lambda self, fig, dataset: p.plot_translations(self.corrected_translations(dataset), fig=fig, units=self.units)),
+         lambda self, fig, dataset: self.plot_translations_and_originals(fig, dataset)),
         ('Background',
          lambda self, fig: p.plot_amplitude(self.background**2, fig=fig)),
         ('Quantum Efficiency Mask',

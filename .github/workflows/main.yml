@@ -7,11 +7,11 @@ on:
     branches: [ master ]
 
 jobs:
-  test:
+  test-uv-pip-install:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
     continue-on-error: true
 
     steps:
@@ -22,14 +22,43 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
+      - name: Install uv
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e . --no-deps
+          pip install uv
+
+      - name: Create virtual environment
+        run: |
+          uv venv
+
+      - name: Install dependencies with uv
+        run: |
+          uv pip install ."[tests]"
 
       - name: Run tests
-        run: pytest
+        run: |
+          uv run pytest
+  
+  test-pip-install:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.14']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies with pip
+        run: |
+          pip install ."[tests]"
+
+      - name: Run tests
+        run: |
+          pytest
 
   build-docs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
@@ -52,17 +81,21 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install dependencies
+      - name: Install uv
         run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install sphinx sphinx_rtd_theme sphinx-argparse
-          pip install -e . --no-deps
+          pip install uv
+      
+      - name: Create virtual environment
+        run: |
+          uv venv
+      
+      - name: Install dependencies with uv
+        run: |
+          uv pip install ."[docs]"
 
       - name: Build docs
-        working-directory: docs
         run: |
-          make html
+          uv run python -m sphinx -b html docs/source docs/build/html
 
       - name: List files in docs/build/html
         run: |

@@ -1,3 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cdtools-py"
+description = "Tools for coherent diffractive imaging and ptychography"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE.txt" }
+authors = [
+	{ name = "Abe Levitan", email = "abraham.levitan@psi.ch" },
+	{ name = "Dayne Y. Sasaki" },
+	{ name = "Damian Guenzing" },
+	{ name = "Madelyn Cain" },
+	{ name = "Anastasiia Kutakh" }
+]
+maintainers = [
+	{ name = "Abe Levitan", email = "abraham.levitan@psi.ch" }
+]
+keywords = ["ptychography", "CDI", "imaging", "torch", "differentiable"]
+classifiers = [
+	"Programming Language :: Python :: 3",
+	"Operating System :: OS Independent",
+	"License :: OSI Approved :: MIT License"
+]
+urls = { "Homepage" = "https://github.com/cdtools-developers/cdtools", "Documentation" = "https://cdtools-developers.github.io/cdtools/" }
+dependencies = [
+	"numpy>=1.0",
+	"scipy>=1.0",
+	"matplotlib>=2.0",
+	"torch>=2.3.0",
+	"h5py>=2.1",
+	"python-dateutil",
+]
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = {attr = "cdtools._version.__version__"}
+
+[project.optional-dependencies]
+tests = [
+	"pytest",
+	"pooch"
+]
+docs = [
+	"sphinx>=4.3.0",
+	"sphinx-argparse",
+	"sphinx_rtd_theme>=0.5.1"
+]
+
 [tool.ruff]
-# Decrease the maximum line length to 79 characters.
 line-length = 79
