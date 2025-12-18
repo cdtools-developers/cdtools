@@ -173,7 +173,7 @@ def setup(rank: int = None,
           master_addr: str = None,
           master_port: str = None,
           backend: str = 'nccl',
-          timeout: int = 60,
+          timeout: int = 30,
           seed: int = None,
           verbose: bool = False):
     """
@@ -252,7 +252,7 @@ def setup(rank: int = None,
                             world_size=world_size,
                             backend=backend,
                             init_method=init_method,
-                            timeout=datetime.timedelta(timeout))
+                            timeout=datetime.timedelta(seconds=timeout))
 
     if rank == 0:
         print('[INFO]: Process group initialized.')
