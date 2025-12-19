@@ -33,9 +33,18 @@ class AdamReconstructor(Reconstructor):
         The dataset to reconstruct against.
     subset : list(int) or int
         Optional, a pattern index or list of pattern indices to use.
-    schedule : bool
-        Optional, create a learning rate scheduler
-        (torch.optim.lr_scheduler._LRScheduler).
+    rank : int
+        Optional, GPU rank assigned during multi-GPU operations. If this
+        parameter is None, it will be redefined based on the `RANK`
+        environment variable. If this environment variable doesn't exist,
+        single-GPU operation will be assumed and a rank of 0 will
+        automatically be assigned.
+    world_size : int
+        Optional, the number of participating GPUs during multi-GPU
+        operations. If this parameter is None, it will be redefined based on
+        the `WORLD_SIZE` environment variable. If this environment variable
+        doesn't exist,single-GPU operation will be assumed and a world_size of
+        1 will automatically be assigned.
 
     Important attributes:
     - **model** -- Always points to the core model used.
@@ -49,12 +58,15 @@ class AdamReconstructor(Reconstructor):
     def __init__(self,
                  model: CDIModel,
                  dataset: Ptycho2DDataset,
-                 subset: List[int] = None):
+                 subset: List[int] = None,
+                 rank: int = None,
+                 world_size: int = None):
 
         # Define the optimizer for use in this subclass
         optimizer = t.optim.Adam(model.parameters())
 
-        super().__init__(model, dataset, optimizer, subset=subset)
+        super().__init__(model, dataset, optimizer,
+                         subset=subset, rank=rank, world_size=world_size)
 
 
 

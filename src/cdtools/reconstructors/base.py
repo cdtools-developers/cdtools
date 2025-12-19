@@ -17,11 +17,13 @@ import threading
 import queue
 import time
 from typing import List, Union
+from cdtools.tools import multigpu
+from torch.utils.data.distributed import DistributedSampler
 
 if TYPE_CHECKING:
     from cdtools.models import CDIModel
     from cdtools.datasets import CDataset
-    
+
 
 __all__ = ['Reconstructor']
 
@@ -44,6 +46,18 @@ class Reconstructor:
         The optimizer to use for the reconstruction
     subset : list(int) or int
         Optional, a pattern index or list of pattern indices to use
+    rank : int
+        Optional, GPU rank assigned during multi-GPU operations. If this
+        parameter is None, it will be redefined based on the `RANK`
+        environment variable. If this environment variable doesn't exist,
+        single-GPU operation will be assumed and a rank of 0 will
+        automatically be assigned.
+    world_size : int
+        Optional, the number of participating GPUs during multi-GPU
+        operations. If this parameter is None, it will be redefined based on
+        the `WORLD_SIZE` environment variable. If this environment variable
+        doesn't exist,single-GPU operation will be assumed and a world_size of
+        1 will automatically be assigned.
 
     Attributes
     ----------
@@ -60,8 +74,22 @@ class Reconstructor:
                  model: CDIModel,
                  dataset: CDataset,
                  optimizer: t.optim.Optimizer,
-                 subset: Union[int, List[int]] = None):
-        
+                 subset: Union[int, List[int]] = None,
+                 rank: int = None,
+                 world_size: int = None):
+
+        # If we're running multi-GPU jobs, we need to grab some
+        # information that should be stored as environment variables.
+        self.rank = rank if rank is not None else multigpu.get_rank()
+        self.world_size = world_size if world_size is not None \
+            else multigpu.get_world_size()
+        self.multi_gpu_used = int(self.world_size) > 1
+
+        # Make sure the model and dataset live on the assigned GPUs
+        if self.multi_gpu_used:
+            model.to(f'cuda:{self.rank}')
+            dataset.get_as(f'cuda:{self.rank}')
+
         # Store parameters as attributes of Reconstructor
         self.model = model
         self.optimizer = optimizer
@@ -79,7 +107,6 @@ class Reconstructor:
         self.scheduler = None
         self.data_loader = None
 
-
     def setup_dataloader(self,
                          batch_size: int = None,
                          shuffle: bool = True):
@@ -94,14 +121,31 @@ class Reconstructor:
             Optional, enable/disable shuffling of the dataset. This option
             is intended for diagnostic purposes and should be left as True.
         """
-        if batch_size is not None:
-            self.data_loader = td.DataLoader(self.dataset,
-                                             batch_size=batch_size,
-                                             shuffle=shuffle)
-        else:
-            self.data_loader = td.Dataloader(self.dataset)
+        if self.multi_gpu_used:
+            self.sampler = \
+                DistributedSampler(self.dataset,
+                                   num_replicas=self.world_size,
+                                   rank=self.rank,
+                                   shuffle=shuffle,
+                                   drop_last=False)
 
-            
+            # Creating extra threads in children processes may cause problems.
+            # Leave num_workers at 0.
+            self.data_loader = \
+                td.DataLoader(self.dataset,
+                              batch_size=batch_size//self.world_size,
+                              num_workers=0,
+                              drop_last=False,
+                              pin_memory=False,
+                              sampler=self.sampler)
+        else:
+            if batch_size is not None:
+                self.data_loader = td.DataLoader(self.dataset,
+                                                 batch_size=batch_size,
+                                                 shuffle=shuffle)
+            else:
+                self.data_loader = td.Dataloader(self.dataset)
+
     def adjust_optimizer(self, **kwargs):
         """
         Change hyperparameters for the utilized optimizer.
@@ -111,11 +155,10 @@ class Reconstructor:
         """
         raise NotImplementedError()
 
-    
     def run_epoch(self,
-                   stop_event: threading.Event = None,
-                   regularization_factor: Union[float, List[float]] = None,
-                   calculation_width: int = 10):
+                  stop_event: threading.Event = None,
+                  regularization_factor: Union[float, List[float]] = None,
+                  calculation_width: int = 10):
         """
         Runs one full epoch of the reconstruction. Intended to be called
         by Reconstructor.optimize.
@@ -150,8 +193,18 @@ class Reconstructor:
                 'Reconstructor.run_epoch(), or use Reconstructor.optimize(), '
                 'which does it automatically.'
             )
-        
-        
+
+        # If we're using DistributedSampler (i.e., multi-GPU useage), we need
+        # to tell it which epoch we're on. Otherwise data shuffling will not
+        # work properly
+        if self.multi_gpu_used:
+            self.data_loader.sampler.set_epoch(self.model.epoch)
+
+            # This prevent other GPU rank processes from initializing
+            # rank 0's GPU (i.e., helps avoid unnecessary memory consumption)
+            if t.cuda.current_device != self.rank:
+                t.cuda.set_device(self.rank)
+
         # Initialize some tracking variables
         normalization = 0
         loss = 0
@@ -201,8 +254,14 @@ class Reconstructor:
                     # And accumulate the gradients
                     loss.backward()
 
+                    # Average and sync gradients + losses for multi-GPU jobs
+                    if self.multi_gpu_used:
+                        multigpu.sync_and_avg_grads(model=self.model,
+                                                    world_size=self.world_size)
+                        multigpu.sync_loss(loss)
+
                     # Normalize the accumulating total loss
-                    total_loss += loss.detach()
+                    total_loss += loss.detach() / self.world_size
 
                 # If we have a regularizer, we can calculate it separately,
                 # and the gradients will add to the minibatch gradient
@@ -212,18 +271,26 @@ class Reconstructor:
                     loss = self.model.regularizer(regularization_factor)
                     loss.backward()
 
+                    # Avg and sync gradients for multi-GPU jobs
+                    if self.multi_gpu_used:
+                        multigpu.sync_and_avg_grads(model=self.model,
+                                                    world_size=self.world_size)
                 return total_loss
 
             # This takes the step for this minibatch
             loss += self.optimizer.step(closure).detach().cpu().numpy()
 
         loss /= normalization
-
         # We step the scheduler after the full epoch
         if self.scheduler is not None:
             self.scheduler.step(loss)
 
+            if self.multi_gpu_used:
+                multigpu.sync_lr(rank=self.rank,
+                                 optimizer=self.optimizer)
+
         self.model.loss_history.append(loss)
+        self.model.loss_times.append(time.time() - self.model.INITIAL_TIME)
         self.model.epoch = len(self.model.loss_history)
         self.model.latest_iteration_time = time.time() - t0
         self.model.training_history += self.model.report() + '\n'
