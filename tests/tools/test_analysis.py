@@ -1,9 +1,11 @@
 import numpy as np
+import pytest
 import torch as t
 from scipy import linalg as la
 from scipy.sparse import linalg as spla
 
 from cdtools.tools import analysis, initializers
+from cdtools.tools.analysis import line_based_frc
 
 
 def test_product_svd():
@@ -559,6 +561,107 @@ def test_calc_generalized_rms_error():
     fields_2 = t.rand(3, 1, 17, dtype=t.complex128)
     fields_3 = fields_2.flip(0)
 
-    assert analysis.calc_generalized_rms_error(
-        fields_1, fields_2, dims=1
-    ).shape == t.Size([3])
+
+    assert (analysis.calc_generalized_rms_error(fields_1, fields_2, dims=1).shape == t.Size([3]))
+
+
+def test_line_based_frc():
+    # First test some basic input with two fields of the same size
+    field_1 = t.rand(30, 17, dtype=t.complex128)
+    field_2 = t.rand(30, 17, dtype=t.complex128)
+
+    # Compute FRC
+    freq, frc, res_dict = line_based_frc(field_1, field_2,
+                                         axis=1, n_bins=50,
+                                         thresholds={"1/7": 1/7},
+                                         )
+
+    # check if length of frc is longer than 0
+    assert len(frc) > 0
+    # check if freq is same length as frc
+    assert len(freq) == len(frc)
+    # check if res_dict is a dictionary
+    assert isinstance(res_dict, dict)
+
+    # Now check if it works with numpy arrays
+    field_1_np = field_1.numpy()
+    field_2_np = field_2.numpy()
+
+    freq_np, frc_np, res_dict_np = line_based_frc(field_1_np, field_2_np)
+
+    # Do the same checks as above
+    assert len(frc_np) > 0
+    assert len(freq_np) == len(frc_np)
+    assert isinstance(res_dict_np, dict)
+
+    # Create test images from the provided example
+    def create_stripe_test_pattern(shape, stripe_spacing, noise_level=0.1):
+        """Create test pattern with anisotropic stripes"""
+        h, w = shape
+
+        # Create vertical stripes (varying along x-axis)
+        x = np.arange(w)
+        pattern = np.sin(2 * np.pi * x / stripe_spacing)
+
+        # Broadcast to full image
+        image = np.tile(pattern, (h, 1))
+
+        # Add some modulation along y-axis for realism
+        y = np.arange(h)
+        y_mod = 1 + 0.3 * np.sin(2 * np.pi * y / (h // 3))
+        image = image * y_mod[:, np.newaxis]
+
+        # make the lower part 0
+        image[7 * h // 8:] = 0
+
+        # Add noise
+        image += noise_level * np.random.randn(h, w)
+
+        return image
+
+    shape = (200, 300)
+    stripe_spacing = 8  # pixels
+
+    unit = "nm"
+    pixel_size = 19.0  # nm, for example
+
+    # Create two slightly different versions to simulate repeated measurements
+    np.random.seed(42)
+    image1 = create_stripe_test_pattern(
+        shape,
+        stripe_spacing,
+        noise_level=0.05,
+    )
+
+    np.random.seed(43)  # Different seed for second image
+    image2 = create_stripe_test_pattern(
+        shape,
+        stripe_spacing,
+        noise_level=0.05,
+    )
+
+    frc_thresholds = {"1/2": 0.5, "1/4": 0.25, "1/7": 1 / 7}
+
+    # Compute binned FRC
+    frequencies, frc_curve, res_dict = line_based_frc(
+        image1, image2, axis=1, n_bins=100, thresholds=frc_thresholds,
+        pixel_size=pixel_size, unit=unit
+    )
+
+    # run through the above checks
+    assert len(frc) > 0
+    assert len(freq) == len(frc)
+    assert isinstance(res_dict, dict)
+
+    # check if the values are within expected ranges
+    assert res_dict["1/2"] > 70.0 and res_dict["1/2"] < 75.0
+    assert res_dict["1/4"] > 52.0 and res_dict["1/4"] < 57.0
+    assert res_dict["1/7"] > 45.0 and res_dict["1/7"] < 48.0
+
+    # Now lets check if we catch some errors correctly
+    # Check if it raises an error for non-2D input
+    with pytest.raises(ValueError):
+        line_based_frc(np.random.rand(30, 17, 3), np.random.rand(30, 17, 3))
+        line_based_frc(np.random.rand(30, 17, 3), np.random.rand(30, 17))
+        line_based_frc("string", np.random.rand(30, 17))
+
