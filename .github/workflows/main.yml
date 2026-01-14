@@ -94,9 +94,8 @@ jobs:
           uv pip install ."[docs]"
 
       - name: Build docs
-        working-directory: docs
         run: |
-          make html
+          uv run python -m sphinx -b html docs/source docs/build/html
 
       - name: List files in docs/build/html
         run: |
