@@ -16,10 +16,17 @@ from torch.nn.functional import pad
 import numpy as np
 from functools import *
 
-__all__ = ['exit_wave_geometry', 'calc_object_setup', 'gaussian',
-           'gaussian_probe', 'SHARP_style_probe', 'STEM_style_probe',
-           'RPI_spectral_init',
-           'generate_subdominant_modes']
+__all__ = [
+    'exit_wave_geometry',
+    'calc_object_setup',
+    'gaussian',
+    'gaussian_probe',
+    'SHARP_style_probe',
+    'SHARP_style_near_field_probe',
+    'STEM_style_probe',
+    'RPI_spectral_init',
+    'generate_subdominant_modes'
+    ]
 
 def exit_wave_geometry(det_basis, det_shape, wavelength, distance, oversampling=1):
     """Returns an exit wave basis and shape, as well as a detector slice for the given detector geometry
@@ -317,10 +324,20 @@ def SHARP_style_probe(dataset, propagation_distance=None, oversampling=1):
     probe_fft = t.tensor(np.sqrt(intensities)).to(dtype=t.complex64)
     probe_guess = inverse_far_field(probe_fft)
 
+    # Finally, place this probe in a full-sized array if there is oversampling
+    full_shape = [oversampling * s for s in shape]
+    large_probe_guess = t.zeros(full_shape, dtype=probe_guess.dtype)
+    left = full_shape[0]//2 - shape[0] // 2
+    top = full_shape[1]//2 - shape[1] // 2 
+    large_probe_guess[left : left + shape[0],
+                top : top + shape[1]] = probe_guess
+    
+    
     if propagation_distance is not None:
         # First generate the propagation array
 
         probe_shape = t.as_tensor(tuple(probe_guess.shape))
+        large_probe_shape = t.as_tensor(tuple(large_probe_guess.shape))
 
         # Start by recalculating the probe basis from the given information
         det_basis = t.as_tensor(dataset.detector_geometry['basis'])
@@ -331,26 +348,83 @@ def SHARP_style_probe(dataset, propagation_distance=None, oversampling=1):
 
         # Then package everything as it's needed
         probe_spacing = t.norm(probe_basis,dim=0).numpy()
-        probe_shape = probe_shape.numpy().astype(np.int32)
+        large_probe_shape = large_probe_shape.numpy().astype(np.int32)
 
         # And generate the propagator
         AS_prop = generate_angular_spectrum_propagator(
-            probe_shape,
+            large_probe_shape,
             probe_spacing,
             dataset.wavelength,
             propagation_distance)
 
-        probe_guess = near_field(probe_guess,AS_prop)
+        large_probe_guess = near_field(large_probe_guess,AS_prop)
 
-    # Finally, place this probe in a full-sized array if there is oversampling
-    full_shape = [oversampling * s for s in shape]
-    final_probe = t.zeros(full_shape, dtype=t.complex64)
-    left = full_shape[0]//2 - shape[0] // 2
-    top = full_shape[1]//2 - shape[1] // 2 
-    final_probe[left : left + shape[0],
-                top : top + shape[1]] = probe_guess
     
-    return final_probe
+    return large_probe_guess
+
+def SHARP_style_near_field_probe(dataset, backward_propagator, oversampling=1):
+    """Generates a SHARP style probe guess from a dataset
+
+    What we call the "SHARP" style probe guess is to take a mean of all
+    the diffraction patterns and use that as an initial guess of the
+    Fourier space distribution of the probe. We set all the phases to
+    zero, which would for many simple beams (like a zone plate) generate
+    a first guess of the probe that is very close to the focal spot of
+    the probe beam.
+        
+    Parameters
+    ----------
+    dataset : Ptycho_2D_Dataset
+        The dataset to work from
+    backward_propagator : function
+        A propagator (typically angular spectrum) used to map from the detector plane to the sample plane
+    oversampling : int 
+        Default 1, the width of the region of pixels in the wavefield to bin into a single detector pixel
+ 
+    Returns
+    -------
+    torch.Tensor
+        The complex-style tensor storing the probe guess
+    """
+
+    # NOTE: I don't love the way np and torch are mixed here, I think this
+    # function deserves some love.
+
+    shape = dataset.patterns.shape[-2:]
+    
+    # to use the mask or not?
+    intensities = np.zeros([dim for dim in shape])
+
+    # Eventually, do something with the recorded intensities, if they exist
+    factors = [1 for idx in range(len(dataset))]
+
+    for params, im in dataset:
+        if hasattr(dataset,'mask') and dataset.mask is not None:
+            intensities += (dataset.mask.cpu().numpy() * im.cpu().numpy()
+                            / factors[params[0]])
+        else:
+            intensities += im.cpu().numpy() / params[factors[0]]
+            
+    intensities /= len(dataset)
+
+    # Subtract off a known background if it's stored
+    if hasattr(dataset, 'background') and dataset.background is not None:
+        intensities = np.clip(
+            intensities - dataset.background.cpu().numpy(),
+            a_min=0,
+            a_max=None,
+        )
+
+    probe_guess_det_plane = t.tensor(np.sqrt(intensities)).to(dtype=t.complex64)
+    probe_guess = backward_propagator(probe_guess_det_plane)
+
+    if oversampling != 1:
+        probe_guess = image_processing.fourier_upsample(
+            probe_guess,
+            upsample_factor=oversampling, preserve_mean=False
+        )
+    
+    return probe_guess
 
 
 def STEM_style_probe(dataset, shape, det_slice, convergence_semiangle, propagation_distance=None, oversampling=1):

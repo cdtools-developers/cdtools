@@ -98,3 +98,40 @@ def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
     # If this fails, the reconstruction has gotten worse
     assert model.loss_history[-1] < 0.0013
 
+
+@pytest.mark.slow
+def test_near_field_ptycho(near_field_ptycho_cxi, reconstruction_device, show_plot):
+
+    print('\nTesting performance on the standard transmission ptycho dataset')
+    dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(near_field_ptycho_cxi)
+    
+    model = cdtools.models.FancyPtycho.from_dataset(
+        dataset,
+        n_modes=1,
+        near_field=True,
+        propagation_distance=3.65e-3, # 3.65 downstream from focus
+    )
+
+    print('Running reconstruction on provided reconstruction_device,',
+          reconstruction_device)
+    model.to(device=reconstruction_device)
+    dataset.get_as(device=reconstruction_device)
+
+    for loss in model.Adam_optimize(100, dataset, lr=0.04, batch_size=10):
+        print(model.report())
+        if show_plot and model.epoch % 10 == 0:
+            model.inspect(dataset)
+
+    for loss in model.Adam_optimize(50, dataset, lr=0.005, batch_size=50):
+        print(model.report())
+        if show_plot and model.epoch % 10 == 0:
+            model.inspect(dataset)
+
+    model.tidy_probes()
+
+    if show_plot:
+        model.inspect(dataset)
+        model.compare(dataset)
+
+    # If this fails, the reconstruction has gotten worse
+    assert model.loss_history[-1] < 0.005
