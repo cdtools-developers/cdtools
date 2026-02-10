@@ -229,7 +229,6 @@ class FancyPtycho(CDIModel):
     @classmethod
     def from_dataset(cls,
                      dataset,
-                     probe_shape=None,
                      randomize_ang=0,
                      n_modes=1,
                      n_obj_modes=1,
