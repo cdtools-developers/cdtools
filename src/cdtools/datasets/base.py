@@ -17,7 +17,7 @@ import torch as t
 from copy import copy
 import h5py
 import pathlib
-from cdtools.tools import data as cdtdata
+from cdtools.tools import data as cdtdata, multigpu
 from torch.utils import data as torchdata
 
 __all__ = ['CDataset']
@@ -91,6 +91,11 @@ class CDataset(torchdata.Dataset):
             self.background = None
 
         self.get_as(device='cpu')
+
+        # This is a flag related to multi-GPU operation which prevents
+        # saving/plotting functions from being executed on GPUs outside of
+        # rank 0
+        self.rank = multigpu.get_rank()
 
 
     def to(self, *args, **kwargs):

@@ -40,6 +40,7 @@ import time
 from scipy import io
 from contextlib import contextmanager
 from cdtools.tools.data import nested_dict_to_h5, h5_to_nested_dict, nested_dict_to_numpy, nested_dict_to_torch
+from cdtools.tools import multigpu
 from cdtools.reconstructors import AdamReconstructor, LBFGSReconstructor, SGDReconstructor
 from cdtools.datasets import CDataset
 from typing import List, Union, Tuple
@@ -64,6 +65,16 @@ class CDIModel(t.nn.Module):
         self.loss_history = []
         self.training_history = ''
         self.epoch = 0
+
+        # This is a flag related to multi-GPU operation which prevents
+        # saving/plotting functions from being executed on GPUs outside of
+        # rank 0. 
+        self.rank = multigpu.get_rank()
+
+        # Keep track of the time each loss history point was taken relative to
+        # the initialization of this model.
+        self.INITIAL_TIME = time.time()
+        self.loss_times = []    
 
     def from_dataset(self, dataset):
         raise NotImplementedError()
@@ -197,7 +208,9 @@ class CDIModel(t.nn.Module):
         *args
             Accepts any additional args that model.save_results needs, for this model
         """
-        return nested_dict_to_h5(filename, self.save_results(*args))
+        # FOR MULTI-GPU: Only run this method if it's called by the rank 0 GPU
+        if self.rank == 0:
+            return nested_dict_to_h5(filename, self.save_results(*args))
     
 
     @contextmanager
@@ -219,11 +232,16 @@ class CDIModel(t.nn.Module):
         """
         try:
             yield
-            self.save_to_h5(filename, *args)
+
+            # FOR MULTI-GPU: Only run this method if it's called by the rank 0 GPU
+            if self.rank == 0:
+                self.save_to_h5(filename, *args)
         except:
-            if exception_filename is None:
-                exception_filename = filename
-            self.save_to_h5(exception_filename, *args)
+            # FOR MULTI-GPU: Only run this method if it's called by the rank 0 GPU
+            if self.rank == 0:
+                if exception_filename is None:
+                    exception_filename = filename
+                self.save_to_h5(exception_filename, *args)
             raise
 
     @contextmanager
@@ -245,9 +263,11 @@ class CDIModel(t.nn.Module):
         try:
             yield
         except:
-            self.save_to_h5(filename, *args)
-            print('Intermediate results saved under name:')
-            print(filename, flush=True)
+            # FOR MULTI-GPU: Only run this method if it's called by the rank 0 GPU
+            if self.rank == 0:
+                self.save_to_h5(filename, *args)
+                print('Intermediate results saved under name:')
+                print(filename, flush=True)
             raise
 
 
@@ -270,6 +290,11 @@ class CDIModel(t.nn.Module):
             return False
 
     def save_checkpoint(self, *args, checkpoint_file=None):
+        # FOR MULTI-GPU: Dont run this block of code if it isn't
+        # called by the rank 0 GPU
+        if self.rank != 0:
+            return
+
         checkpoint = self.save_results(*args)
         if (hasattr(self, 'current_optimizer')
             and self.current_optimizer is not None):
@@ -332,7 +357,9 @@ class CDIModel(t.nn.Module):
             subset: Union[int, List[int]] = None,
             regularization_factor: Union[float, List[float]] = None,
             thread=True,
-            calculation_width=10
+            calculation_width=10,
+            rank=None,
+            world_size=None
     ):
         """
         Runs a round of reconstruction using the Adam optimizer from
@@ -373,14 +400,29 @@ class CDIModel(t.nn.Module):
             Default 10, how many translations to pass through at once for 
             each round of gradient accumulation. Does not affect the result, 
             only the calculation speed. 
-        
+        rank : int
+            Optional, GPU rank assigned during multi-GPU operations. If this
+            parameter is None, it will be redefined based on the `RANK`
+            environment variable. If this environment variable doesn't exist,
+            single-GPU operation will be assumed and a rank of 0 will
+            automatically be assigned.
+        world_size : int
+            Optional, the number of participating GPUs during multi-GPU
+            operations. If this parameter is None, it will be redefined based on
+            the `WORLD_SIZE` environment variable. If this environment variable
+            doesn't exist,single-GPU operation will be assumed and a world_size of
+            1 will automatically be assigned.
         """
+        self.rank = rank if rank is not None else multigpu.get_rank()
+
         reconstructor = AdamReconstructor(
             model=self,
             dataset=dataset,
             subset=subset,
+            rank=self.rank,
+            world_size=world_size
         )
-        
+
         # Run some reconstructions
         return reconstructor.optimize(
             iterations=iterations,
@@ -578,6 +620,11 @@ class CDIModel(t.nn.Module):
             Whether to update existing plots or plot new ones
 
         """
+        # FOR MULTI-GPU: Dont run this block of code if it isn't
+        # called by the rank 0 GPU
+        if self.rank != 0:
+            return
+
         # We find or create all the figures
         first_update = False
         if update and hasattr(self, 'figs') and self.figs:
@@ -660,7 +707,11 @@ class CDIModel(t.nn.Module):
         extention : strategy
             Default is .eps, the file extension to save with.
         """
-
+        # FOR MULTI-GPU: Dont run this block of code if it isn't
+        # called by the rank 0 GPU
+        if self.rank != 0:
+            return
+        
         if hasattr(self, 'figs') and self.figs:
             figs = self.figs
         else:
@@ -687,6 +738,10 @@ class CDIModel(t.nn.Module):
         logarithmic : bool, default: False
             Whether to plot the diffraction on a logarithmic scale
         """
+        # FOR MULTI-GPU: Dont run this block of code if it isn't
+        # called by the rank 0 GPU
+        if self.rank != 0:
+            return
 
         fig, axes = plt.subplots(1,3,figsize=(12,5.3))
         fig.tight_layout(rect=[0.02, 0.09, 0.98, 0.96])
