@@ -41,7 +41,10 @@ class FancyPtycho(CDIModel):
                  exponentiate_obj=False,
                  phase_only=False,
                  dtype=t.float32,
-                 obj_view_crop=0
+                 obj_view_crop=0,
+                 near_field=False,
+                 angular_spectrum_propagator=None,
+                 inv_angular_spectrum_propagator=None,
                  ):
 
         super(FancyPtycho, self).__init__()
@@ -79,6 +82,25 @@ class FancyPtycho(CDIModel):
 
         self.register_buffer('phase_only',
                              t.as_tensor(phase_only, dtype=bool))
+
+        self.register_buffer('near_field',
+                             t.as_tensor(near_field, dtype=bool))
+
+        if angular_spectrum_propagator is None:
+            self.angular_spectrum_propagator = None
+        else:
+            self.register_buffer(
+                'angular_spectrum_propagator',
+                t.as_tensor(angular_spectrum_propagator, dtype=t.complex64)
+            )
+
+        if inv_angular_spectrum_propagator is None:
+            self.inv_angular_spectrum_propagator = None
+        else:
+            self.register_buffer(
+                'inv_angular_spectrum_propagator',
+                t.as_tensor(inv_angular_spectrum_propagator, dtype=t.complex64)
+            )
 
         # Not sure how to make this a buffer...
         self.units = units
@@ -207,7 +229,6 @@ class FancyPtycho(CDIModel):
     @classmethod
     def from_dataset(cls,
                      dataset,
-                     probe_shape=None,
                      randomize_ang=0,
                      n_modes=1,
                      n_obj_modes=1,
@@ -230,6 +251,7 @@ class FancyPtycho(CDIModel):
                      phase_only=False,
                      obj_view_crop=None,
                      obj_padding=200,
+                     near_field=False,
                      ):
 
         wavelength = dataset.wavelength
@@ -247,16 +269,86 @@ class FancyPtycho(CDIModel):
 
         dataset.get_as(*get_as_args[0], **get_as_args[1])
 
-        # Then, generate the probe geometry from the dataset
-        ewg = tools.initializers.exit_wave_geometry
-        obj_basis = ewg(
-            det_basis,
-            det_shape,
-            wavelength,
-            distance,
-            oversampling=oversampling,
-        )
+        if not near_field:
+            # Then, generate the probe geometry from the dataset
+            ewg = tools.initializers.exit_wave_geometry
+            obj_basis = ewg(
+                det_basis,
+                det_shape,
+                wavelength,
+                distance,
+                oversampling=oversampling,
+            )
 
+            probe = tools.initializers.SHARP_style_probe(
+                dataset,
+                propagation_distance=propagation_distance,
+                oversampling=oversampling,
+            )
+            angular_spectrum_propagator=None
+            inv_angular_spectrum_propagator=None
+            
+        else:
+            if propagation_distance is None or propagation_distance==0:
+                # In this case, we assume that we're genuinely in a near
+                # field geometry, such that z_eff = z and there is no
+                # magnification
+                obj_basis = t.as_tensor(det_basis) / oversampling
+                angular_spectrum_propagator = \
+                    tools.propagators.generate_generalized_angular_spectrum_propagator(
+                    [d*oversampling for d in det_shape],
+                    obj_basis,
+                    wavelength,
+                    np.array([0,0,distance]),
+                )
+                inv_angular_spectrum_propagator = \
+                    t.conj(angular_spectrum_propagator)
+                inv_angular_spectrum_propagator_init = t.conj(
+                    tools.propagators.generate_generalized_angular_spectrum_propagator(
+                        det_shape,
+                        obj_basis,
+                        wavelength,
+                        np.array([0,0,distance]),
+                    )
+                )
+            else:
+                # In this case, we assume that we're in a projection geometry
+                # with a z_eff based on propagation_distance and a nonzero
+                # magnification
+                M = (propagation_distance + distance) / propagation_distance
+                z_eff = distance / M
+
+                obj_basis = t.as_tensor(det_basis) / (oversampling * M)
+                angular_spectrum_propagator = \
+                    tools.propagators.generate_generalized_angular_spectrum_propagator(
+                    [d * oversampling for d in det_shape],
+                    obj_basis,
+                    wavelength,
+                    np.array([0,0,z_eff]),
+                )
+                inv_angular_spectrum_propagator = t.conj(
+                    angular_spectrum_propagator)
+                inv_angular_spectrum_propagator_init = t.conj(
+                    tools.propagators.generate_generalized_angular_spectrum_propagator(
+                        det_shape,
+                        obj_basis,
+                        wavelength,
+                        np.array([0,0,z_eff]),
+                    )
+                )
+            
+            backward_propagator = lambda wavefields: \
+                tools.propagators.near_field(
+                    wavefields,
+                    inv_angular_spectrum_propagator_init
+                )
+
+            probe = tools.initializers.SHARP_style_near_field_probe(
+                dataset,
+                backward_propagator=backward_propagator,
+                oversampling=oversampling,
+            )
+                
         if hasattr(dataset, 'sample_info') and \
            dataset.sample_info is not None and \
            'orientation' in dataset.sample_info:
@@ -288,21 +380,6 @@ class FancyPtycho(CDIModel):
             pix_translations,
             padding=obj_padding,
         )
-
-        # Finally, initialize the probe and  object using this information
-        if probe_shape is None:
-            probe = tools.initializers.SHARP_style_probe(
-                dataset,
-                propagation_distance=propagation_distance,
-                oversampling=oversampling,
-            )
-        else:
-            probe = tools.initializers.gaussian_probe(
-                dataset,
-                obj_basis,
-                probe_shape,
-                propagation_distance=propagation_distance,
-            )
 
         if hasattr(dataset, 'background') and dataset.background is not None:
             background = t.sqrt(dataset.background)
@@ -436,7 +513,10 @@ class FancyPtycho(CDIModel):
             simulate_finite_pixels=simulate_finite_pixels,
             phase_only=phase_only,
             exponentiate_obj=exponentiate_obj,
-            obj_view_crop=obj_view_crop
+            obj_view_crop=obj_view_crop,
+            near_field=near_field,
+            angular_spectrum_propagator=angular_spectrum_propagator,
+            inv_angular_spectrum_propagator=inv_angular_spectrum_propagator,
         )
 
 
@@ -537,16 +617,26 @@ class FancyPtycho(CDIModel):
             probe_support=self.probe_support)
         
         return exit_waves
-
+    
 
     def forward_propagator(self, wavefields):
-        return tools.propagators.far_field(wavefields)
+        if self.near_field:
+            return tools.propagators.near_field(
+                wavefields, self.angular_spectrum_propagator
+            )
+        else:
+            return tools.propagators.far_field(wavefields)
 
 
     def backward_propagator(self, wavefields):
-        return tools.propagators.inverse_far_field(wavefields)
+        if self.near_field:
+            return tools.propagators.near_field(
+                wavefields, self.inverse_angular_spectrum_propagator
+            )
+        else:
+            return tools.propagators.inverse_far_field(wavefields)
 
-
+    
     def measurement(self, wavefields):
         return tools.measurements.quadratic_background(
             wavefields,
@@ -792,7 +882,7 @@ class FancyPtycho(CDIModel):
             values=values,
             fig=fig,
             units=self.units,
-            basis=self.obj_basis,
+            basis=self.probe_basis,
             nanomap_colorbar_title='Total Probe Intensity',
             cmap=cmap,
             **kwargs),

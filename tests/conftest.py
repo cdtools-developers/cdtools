@@ -390,6 +390,11 @@ def lab_ptycho_cxi(pytestconfig):
     return str(pytestconfig.rootpath) + \
         '/examples/example_data/lab_ptycho_data.cxi'
 
+@pytest.fixture(scope='module')
+def near_field_ptycho_cxi(pytestconfig):
+    return str(pytestconfig.rootpath) + \
+        '/examples/example_data/PETRAIII_P25_Near_Field_Ptycho.cxi'
+
 
 @pytest.fixture(scope='module')
 def optical_data_ss_cxi(pytestconfig):

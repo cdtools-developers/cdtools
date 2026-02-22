@@ -192,13 +192,20 @@ def generate_high_NA_k_intensity_map(sample_basis, det_basis,det_shape,distance,
         
     k0 = 2*np.pi/wavelength
     
-    Ks = k0 * Rs / np.linalg.norm(Rs, axis=0)
+    R_magnitudes = np.linalg.norm(Rs, axis=0)
+    Ks = k0 * Rs / R_magnitudes
 
     # My attempt at seeing what happens if I flip the Ks
     #Ks *= -1
+
     
     # This is the cosine of the angle with the detector normal
     intensity_map = np.tensordot(samp_det_vec/(k0*distance),Ks,axes=1)
+
+    # And we add the factor of 1/R^2 which accounts for the increasing
+    # distance from the source
+    intensity_map = np.min(R_magnitudes)**2 * (intensity_map / R_magnitudes**2)
+    
     if lens:
         # Set the intensity map to be uniform if a lens is being used
         intensity_map = np.ones_like(intensity_map)

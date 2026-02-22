@@ -11,3 +11,14 @@ The dataset contained in the file:
 - AuBalls_700ms_30nmStep_3_6SS_filter.cxi
 
 is sourced from https://cxidb.org/id-65.html, and was made available by the original authors under the CC0 Public Domain Dedication Waiver. This data was deposited into the CXIDB by Stefano Marchesini.
+
+The dataset contained in the file:
+
+- PETRAIII_P25_Near_Field_Ptycho.cxi
+
+is sourced from from [this](http://dx.doi.org/10.5281/zenodo.17899482) Zenodo upload, and was collected at the P25 beamline of the PETRA III light source at DESY. The following list of experiment participants were involved:
+
+
+Nazanin Samadi,  Aknur Karabay, Pengju Sheng, Canrong Qiu, Kathryn Spiers, Wenhui Xu, Abraham Levitan, and Manuel Guizar-Sicairos.
+
+The dataset is made available under a CC BY 4.0 License, defined at https://creativecommons.org/licenses/by/4.0/.
