@@ -38,7 +38,11 @@ def test_Adam_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
         propagation_distance=2e-6,
         units='um',
         probe_fourier_crop=pad,
+<<<<<<< HEAD
         panel_plot_mode=False, # At least one check without panel plot mode
+=======
+        loss='intensity_mse',#NOTE: Only to check that it works.
+>>>>>>> f0f1577 (Add loss function coverage to slow reconstruction tests)
     )
 
     model.translation_offsets.data += 0.7 * \

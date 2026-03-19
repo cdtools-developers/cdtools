@@ -138,7 +138,11 @@ def test_near_field_ptycho(near_field_ptycho_cxi, reconstruction_device, show_pl
         n_modes=1,
         near_field=True,
         propagation_distance=3.65e-3, # 3.65 downstream from focus
+<<<<<<< HEAD
         panel_plot_mode=False, # test without panel plot mode
+=======
+        loss='poisson_nll',
+>>>>>>> f0f1577 (Add loss function coverage to slow reconstruction tests)
     )
 
     print('Running reconstruction on provided reconstruction_device,',
