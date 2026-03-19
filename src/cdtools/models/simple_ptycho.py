@@ -41,6 +41,10 @@ class SimplePtycho(CDIModel):
         self.probe = t.nn.Parameter(probe_guess / self.probe_norm)
         self.obj = t.nn.Parameter(obj_guess)
 
+        # We register a loss function and an appropriate normalization
+        self.loss = tools.losses.amplitude_mse
+        self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
+
 
     @classmethod
     def from_dataset(cls, dataset):
@@ -99,11 +103,9 @@ class SimplePtycho(CDIModel):
     def forward_propagator(self, wavefields):
         return tools.propagators.far_field(wavefields)
 
+    
     def measurement(self, wavefields):
         return tools.measurements.intensity(wavefields)
-
-    def loss(self, real_data, sim_data):
-        return tools.losses.amplitude_mse(real_data, sim_data)
 
 
     # This lists all the plots to display on a call to model.inspect()

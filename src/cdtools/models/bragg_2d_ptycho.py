@@ -237,7 +237,10 @@ class Bragg2DPtycho(CDIModel):
         # TODO: probably doesn't support non-float-32 dtypes
         self.register_buffer('universal_propagator',
                              universal_propagator)
-                            
+
+        # We register a loss function and an appropriate normalization
+        self.loss = tools.losses.amplitude_mse
+        self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
         
 
     @classmethod
@@ -532,10 +535,6 @@ class Bragg2DPtycho(CDIModel):
             saturation=self.saturation,
             oversampling=self.oversampling,
         )
-
-    
-    def loss(self, sim_data, real_data, mask=None):
-        return tools.losses.amplitude_mse(real_data, sim_data, mask=mask)
 
     
     def sim_to_dataset(self, args_list):

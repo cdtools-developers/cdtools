@@ -124,7 +124,7 @@ def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
         plt.close('all')
 
     # If this fails, the reconstruction has gotten worse
-    assert model.loss_history[-1] < 0.0013
+    assert model.loss_history[-1] < 0.38
 
 
 @pytest.mark.slow
@@ -165,4 +165,4 @@ def test_near_field_ptycho(near_field_ptycho_cxi, reconstruction_device, show_pl
         plt.close('all')
 
     # If this fails, the reconstruction has gotten worse
-    assert model.loss_history[-1] < 0.005
+    assert model.loss_history[-1] < 3.9

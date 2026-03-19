@@ -146,6 +146,10 @@ class RPI(CDIModel):
         self.register_buffer('prop_dir',
                              t.as_tensor([0, 0, 1], dtype=dtype))
 
+        # Define the loss
+        self.loss = tools.losses.amplitude_mse
+        self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
+
 
     @classmethod
     def from_dataset(
