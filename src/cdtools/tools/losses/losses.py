@@ -31,19 +31,16 @@ def amplitude_mse(intensities, sim_intensities, mask=None):
     loss.
     
     Note that this is actually, by defauly, a sum-squared error. In this
-    case, it is intended to be used with the loss normalization 
-    
-    
-    
-    in a ptychography model. This formulation makes it easier to compare
-    error calculations between reconstructions with different minibatch
-    size while keeping the loss function formally equivalent to the MSE.
+    case, it is intended to be used with the loss normalization strategy
+    in the base CDIModel class, which works well if the minibatch size
+    is not fixed.
 
     It can accept intensity and simulated intensity tensors of any shape
     as long as their shapes match, and the provided mask array can be
     broadcast correctly along them.
 
-    This is empirically the most useful loss function for most cases
+    This is empirically the most useful loss function for most cases where
+    a photon counting detector cannot be used.
 
     Parameters
     ----------
@@ -129,6 +126,9 @@ def intensity_mse(intensities, sim_intensities, mask=None):
     It can accept intensity and simulated intensity tensors of any shape
     as long as their shapes match, and the provided mask array can be
     broadcast correctly along them.
+    
+    This is rarely a good loss function for ptychography, but can occasionally
+    be useful.
 
     Parameters
     ----------
@@ -247,6 +247,9 @@ def poisson_nll(
 
     The default value of eps is 1e-6 - a nonzero value here helps avoid
     divergence of the log function near zero.
+    
+    This is generally the best loss metric to use for ptychography when
+    a photon counting detector is used.
 
     Parameters
     ----------
