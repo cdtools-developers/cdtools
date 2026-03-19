@@ -251,7 +251,11 @@ There is no requirement for what the arguments to the initialization function of
        self.probe = t.nn.Parameter(probe_guess / self.probe_norm)
        self.obj = t.nn.Parameter(obj_guess)
 
-       
+       # We register a loss function and an appropriate normalization
+       self.loss = tools.losses.amplitude_mse
+       self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
+
+
 The first thing to notice about this model is that all the fixed, geometric information is stored with the :code:`module.register_buffer()` function. This is what makes it possible to move all the relevant tensors between devices using a single call to :code:`module.to()`, for example. It stores thetensor as an object attribute, but it also registers it so that pytorch is aware that this attribute helps to encode the state of the model.
 
 The supporting information we need is the wavelength of the illumination, the basis of the probe array in real space, and an offset to define the zero point of the translation. 
@@ -267,6 +271,8 @@ One final note is that we actually store a scaled version of the probe. This is 
 The Adam optimizer is designed so that the learning rate sets the maximum stepsize which will be taken in any single iteration. Therefore, it is important to make sure that *all parameters of the model are of order unity*. To enable this, we scale the probe so that the typical pixel value within the probe array is of order 1.
 
 This is important to remember when adding additional error models. Rescaling all the parameters to have a typical amplitude near 1 is the best way to get well-behaved reconstructions.
+
+The final two lines assign a loss function and its associated normalizer. The loss function is stored as an instance attribute rather than defined as a method, which allows it to be swapped out at construction time. The normalizer is a stateful object that accumulates statistics over the first epoch and uses them to convert the raw summed loss into a normalized mean value. Here we use :code:`amplitude_mse` and its paired :code:`AmplitudeMSENormalizer`, which computes the mean squared error between the square roots of the simulated and measured intensities.
 
 
 Initialization from Dataset
@@ -347,7 +353,7 @@ Here, we take input in the form of an index and a translation. Note that this in
 
 We start by mapping the translation, given in real space, into pixel coordinates. Then, we use an "off-the-shelf" interaction model - :code:`ptycho_2d_round`, which models a standard 2D ptychography interaction, but rounds the translations to the nearest whole pixel (does not attempt subpixel translations).
 
-The next three definitions amount to just choosing an off-the-shelf function to simulate each step in the chain.
+The next two definitions amount to just choosing an off-the-shelf function to simulate each step in the chain.
 
 .. code-block:: python
 
@@ -357,11 +363,8 @@ The next three definitions amount to just choosing an off-the-shelf function to 
     def measurement(self, wavefields):
         return tools.measurements.intensity(wavefields)
 
-    def loss(self, sim_data, real_data):
-        return tools.losses.amplitude_mse(real_data, sim_data)
 
-
-The forward propagator maps the exit wave to the wave at the surface of the detector, here using a far-field propagator. The measurement maps that exit wave to a measured pixel value, and the loss defines a loss function to attempt to minimize. The loss function we've chosen - the amplitude mean squared error - is the most reliable one, and can also easily be overridden by an end user.
+The forward propagator maps the exit wave to the wave at the surface of the detector, here using a far-field propagator. The measurement maps that wavefield to a measured pixel value. The loss function was already assigned in :code:`__init__` as described above.
 
 
 Plotting
