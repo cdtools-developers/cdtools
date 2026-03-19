@@ -4,7 +4,6 @@ import cdtools
 import torch as t
 import numpy as np
 import pickle
-from matplotlib import pyplot as plt
 from copy import deepcopy
 
 
@@ -38,11 +37,8 @@ def test_Adam_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
         propagation_distance=2e-6,
         units='um',
         probe_fourier_crop=pad,
-<<<<<<< HEAD
         panel_plot_mode=False, # At least one check without panel plot mode
-=======
         loss='intensity_mse',#NOTE: Only to check that it works.
->>>>>>> f0f1577 (Add loss function coverage to slow reconstruction tests)
     )
 
     model.translation_offsets.data += 0.7 * \
@@ -127,6 +123,39 @@ def test_Adam_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
     # choosing a rough value. If it triggers this assertion error, something
     # changed to make the final quality worse!
     assert model_recon.loss_history[-1] < 0.09
+
+
+@pytest.mark.slow
+def test_intensity_MSE(gold_ball_cxi, reconstruction_device, show_plot):
+    """
+    This test checks that the intensity_mse loss function works end-to-end
+    with the AdamReconstructor, using the Au particle dataset.
+    """
+
+    print('\nTesting performance on the standard gold balls dataset ' +
+          'with intensity_mse loss')
+
+    dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(gold_ball_cxi)
+    model = cdtools.models.FancyPtycho.from_dataset(
+        dataset,
+        n_modes=1,
+        propagation_distance=-3e-6,
+        units='nm',
+        loss='intensity_mse',
+    )
+
+    model.to(device=reconstruction_device)
+    dataset.get_as(device=reconstruction_device)
+
+    recon = cdtools.reconstructors.AdamReconstructor(model=model,
+                                                     dataset=dataset)
+    t.manual_seed(0)
+
+    for loss in recon.optimize(5, lr=.05, batch_size=10):
+        print(model.report())
+
+    # Threshold to be updated after running on a GPU machine
+    assert model.loss_history[-1] < 91
 
 
 @pytest.mark.slow
