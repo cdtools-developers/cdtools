@@ -105,6 +105,7 @@ def plot_image(
         vmin=None,
         vmax=None,
         interpolation=None,
+        title=None,
         **kwargs
 ):
     """Plots an image with a colorbar and on an appropriate spatial grid
@@ -169,12 +170,13 @@ def plot_image(
     # stack of images, or the only image if only a single image has been
     # given
     def make_plot(idx):
-        #plt.figure(fig.number)
-        #title = plt.gca().get_title()
-        try:
-            title = fig.axes[0].get_title()
-        except IndexError:
-            title = ''
+        if title is not None:
+            ax_title = title
+        else:
+            try:
+                ax_title = fig.axes[0].get_title()
+            except IndexError:
+                ax_title = ''
 
         # If im only has two dimensions, this reshape will add a leading
         # dimension, and update will be called on index 0. If it has 3 or more
@@ -190,7 +192,6 @@ def plot_image(
         # By only updating the data, and not redrawing the fig, we
         # don't "reset" the home positions of the other
         if hasattr(fig, '_current_im'):
-            print('Just changing data')
             fig._current_im.set_data(to_plot)
             fig._current_im.autoscale()
             # We need to go to the "home" position before updating it
@@ -200,10 +201,11 @@ def plot_image(
             if fig.canvas.toolbar is not None:
                 fig.canvas.toolbar.home()
                 fig.canvas.toolbar.update()
-            # Replace existing mode number
-            for artist in fig.texts:
-                artist.set_text(f'Mode {fig.plot_idx}')
-            
+
+            if len(im.shape) >= 3:
+                base = title if title is not None else '('.join(ax_title.split('(')[:-1])[:-1]
+                fig.axes[0].set_title(base + f' ({fig.plot_idx+1} of {num_images})')
+
             return fig
             
         fig.clear()
@@ -291,10 +293,10 @@ def plot_image(
             ax.set_xlabel('j (pixels)')
             ax.set_ylabel('i (pixels)')
 
-        ax.set_title(title)
-
+        if title is not None:
+            ax.set_title(ax_title)
         if len(im.shape) >= 3:
-            fig.text(0.03, 0.03, f'Mode {fig.plot_idx}', fontsize=14)
+            ax.set_title(ax_title + f' ({fig.plot_idx+1} of {num_images})')
             
         if fig.canvas.toolbar is not None:
             fig.canvas.toolbar.update()
@@ -335,7 +337,7 @@ def plot_image(
     return result_fig
 
 
-def plot_real(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_label='Real Part (a.u.)', **kwargs):
+def plot_real(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_label='Real Part (a.u.)', title=None, **kwargs):
     """Plots the real part of a complex array with dimensions NxM
 
     If a figure is given explicitly, it will clear that existing figure and
@@ -369,11 +371,11 @@ def plot_real(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_
     plot_func = lambda x: np.real(x)
     return plot_image(im, plot_func=plot_func, fig=fig, basis=basis,
                       units=units, cmap=cmap, cmap_label=cmap_label,
-                      **kwargs)
+                      title=title, **kwargs)
 
 
 
-def plot_imag(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_label='Imaginary Part (a.u.)', **kwargs):
+def plot_imag(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_label='Imaginary Part (a.u.)', title=None, **kwargs):
     """Plots the imaginary part of a complex array with dimensions NxM
 
     If a figure is given explicitly, it will clear that existing figure and
@@ -407,10 +409,10 @@ def plot_imag(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_
     plot_func = lambda x: np.imag(x)
     return plot_image(im, plot_func=plot_func, fig=fig, basis=basis,
                       units=units, cmap=cmap, cmap_label=cmap_label,
-                      **kwargs)
+                      title=title, **kwargs)
 
 
-def plot_amplitude(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_label='Amplitude (a.u.)', **kwargs):
+def plot_amplitude(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_label='Amplitude (a.u.)', title=None, **kwargs):
     """Plots the amplitude of a complex array with dimensions NxM
 
     If a figure is given explicitly, it will clear that existing figure and
@@ -444,7 +446,7 @@ def plot_amplitude(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', 
     plot_func = lambda x: np.absolute(x)
     return plot_image(im, plot_func=plot_func, fig=fig, basis=basis,
                       units=units, cmap=cmap, cmap_label=cmap_label,
-                      **kwargs)
+                      title=title, **kwargs)
 
 
 def plot_phase(
@@ -456,6 +458,7 @@ def plot_phase(
         cmap_label='Phase (rad)',
         vmin=None,
         vmax=None,
+        title=None,
         **kwargs
 ):
     """ Plots the phase of a complex array with dimensions NxM
@@ -506,14 +509,14 @@ def plot_phase(
     
     return plot_image(im, plot_func=plot_func, fig=fig, basis=basis,
                       units=units, cmap=cmap, cmap_label=cmap_label,
-                      vmin=vmin,vmax=vmax,
+                      vmin=vmin, vmax=vmax, title=title,
                       **kwargs)
 
 
 def plot_amplitude_surfacenorm():
     pass
 
-def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', **kwargs):
+def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', title=None, **kwargs):
     """ Plots the colorized version of a complex array with dimensions NxM
 
     The darkness corresponds to the intensity of the image, and the color
@@ -545,7 +548,7 @@ def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', **kwargs):
     """
     plot_func = lambda x: colorize(x)
     return plot_image(im, plot_func=plot_func, fig=fig, basis=basis,
-                      units=units, show_cbar=False, **kwargs)
+                      units=units, show_cbar=False, title=title, **kwargs)
 
 
 def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, invert_xaxis=True, clear_fig=True, label=None, color=None, marker='.', **kwargs):
@@ -713,20 +716,19 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
     # mode, i.e. on a figure that already has this thing showing.
 
     if fig is None:
-        fig = plt.figure(figsize=(8,5.3))
+        fig = plt.figure(figsize=(20,4.5), constrained_layout=True)
     else:
-        plt.figure(fig.number)
-        plt.gcf().clear()
+        fig = plt.figure(fig.number, figsize=(20,4.5),  constrained_layout=True)
+        fig.clear()
         if hasattr(fig, 'nanomap_cids'):
             for cid in fig.nanomap_cids:
                 fig.canvas.mpl_disconnect(cid)
 
     # Does figsize work with the fig.subplots, or just for plt.subplots?
-    axes = fig.subplots(1,2)
+    gs = fig.add_gridspec(2, 2, height_ratios=[0.9,0.1], width_ratios=[1,1])
 
-    fig.tight_layout(rect=[0.04, 0.09, 0.98, 0.96])
-    plt.subplots_adjust(wspace=0.25) #avoids overlap of labels with plots
-    axslider = plt.axes([0.15,0.06,0.75,0.03])
+    axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
+    axslider = fig.add_subplot(gs[1, :])  # full width
 
     # This gets the set of sizes for the points in the nanomap
     def calculate_sizes(idx):
@@ -779,11 +781,12 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
     axes[0].set_facecolor('k')
     axes[0].set_xlabel('Translation x ('+nanomap_units+')', labelpad=1)
     axes[0].set_ylabel('Translation y ('+nanomap_units+')', labelpad=1)
+    axes[0].set_aspect('equal')
     cb1 = plt.colorbar(nanomap, ax=axes[0], orientation='horizontal',
                        format='%.2e',
-                       ticks=ticker.LinearLocator(numticks=5),
-                       pad=0.17,fraction=0.1)
-    cb1.ax.set_title(nanomap_colorbar_title, size="medium", pad=5)
+                       ticks=ticker.LinearLocator(numticks=5))#,
+                       #pad=0.17,fraction=0.1)
+    cb1.ax.set_title(nanomap_colorbar_title, size="medium")#, pad=5)
     cb1.ax.tick_params(labelrotation=20)
     if values is None:
         # This seems to do a good job of leaving the appropriate space
@@ -836,8 +839,8 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
 
     cb2 = plt.colorbar(meas, ax=axes[1], orientation='horizontal',
                        format='%.2e',
-                       ticks=ticker.LinearLocator(numticks=5),
-                       pad=0.17,fraction=0.1)
+                       ticks=ticker.LinearLocator(numticks=5))#,
+                       #pad=-0.17)#,fraction=0.1)
     cb2.ax.tick_params(labelrotation=20)
     cb2.ax.set_title(image_colorbar_title, size="medium", pad=5)
     cb2.ax.callbacks.connect('xlim_changed', lambda ax: update_colorbar(meas))

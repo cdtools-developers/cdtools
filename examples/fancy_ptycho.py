@@ -14,9 +14,7 @@ model = cdtools.models.FancyPtycho.from_dataset(
     propagation_distance=5e-3, # Propagate the initial probe guess by 5 mm
     units='mm', # Set the units for the live plots
     obj_view_crop=-50, # Expands the field of view in the object plot by 50 pix,
-    exponentiate_obj=False,
-    panel_plot_mode=True,
-    plot_level=2,
+    panel_plot_mode=True, # Organizes the live plots into panels
 )
 
 if t.cuda.is_available():
@@ -29,7 +27,6 @@ if t.cuda.is_available():
 # optimizer. This allows the optimizer to persist between loops, along with
 # e.g. estimates of the moments of individual parameters
 recon = cdtools.reconstructors.AdamReconstructor(model, dataset)
-
 
 # The learning rate parameter sets the alpha for Adam.
 # The beta parameters are (0.9, 0.999) by default

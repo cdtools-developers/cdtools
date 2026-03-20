@@ -675,6 +675,7 @@ class CDIModel(t.nn.Module):
                     if not condition(self, dataset):
                         continue
 
+            figsize = plot.get('figure_size', None)
             if self.has_inspect_been_called and \
                not replot_all and \
                not plt.fignum_exists(plot['title']):
@@ -682,22 +683,30 @@ class CDIModel(t.nn.Module):
 
             if not self.has_inspect_been_called:
                 fig = plt.figure(plot['title'],
+                                 figsize=figsize,
                                  constrained_layout=True)
             else:
                 with plt.rc_context({'figure.raise_window': False}):
                     fig = plt.figure(plot['title'],
+                                     figsize = panel_def.get('figure_size', None)
                                      constrained_layout=True)
 
             try:
                 plot['plot_func'](self, fig)
-                plt.title(plot['title'])
+                if plt.gca().get_title().strip() == '':
+                    plt.title(plot['title'])
             except TypeError:
                 if dataset is not None:
                     try:
                         plot['plot_func'](self, fig, dataset)
-                        plt.title(plot['title'])
+                        if plt.gca().get_title().strip() == '':
+                            plt.title(plot['title'])
+                    except KeyboardInterrupt:
+                        raise
                     except Exception:
                         pass
+            except KeyboardInterrupt:
+                raise
             except Exception:
                 pass
 
@@ -723,6 +732,15 @@ class CDIModel(t.nn.Module):
             panel_level = panel_def.get('plot_level', 1)
             if panel_level > self.plot_level:
                 continue  # skip entire panel
+            
+            panel_condition = panel_def.get('condition', None)
+            if panel_condition is not None:
+                try:
+                    if not panel_condition(self):
+                        continue
+                except TypeError:
+                    if not panel_condition(self, dataset):
+                        continue
 
             nrows, ncols = panel_def['grid']
             figsize = panel_def.get('figure_size', None)
@@ -767,16 +785,22 @@ class CDIModel(t.nn.Module):
 
                 try:
                     plot['plot_func'](self, subfig)
-                    plt.gca().set_title(plot['title'])
+                    if plt.gca().get_title().strip() == '':
+                            plt.title(plot['title'])
                 except TypeError:
                     if dataset is not None:
                         try:
                             plot['plot_func'](self, subfig, dataset)
-                            plt.gca().set_title(plot['title'])
-                        except TypeError:#Exception:
+                            if plt.gca().get_title().strip() == '':
+                                plt.title(plot['title'])
+                        except KeyboardInterrupt:
+                            raise
+                        except Exception:
                             pass
-                #except Exception:
-                #    pass
+                except KeyboardInterrupt:
+                    raise
+                except Exception:
+                    pass
                 
             rendered.append(fig)
             

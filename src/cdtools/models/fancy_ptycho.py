@@ -896,11 +896,35 @@ class FancyPtycho(CDIModel):
 
 
     def plot_illumination_intensity(self, fig, dataset):
-        if not hasattr(self, 'weights') or self.weights.ndim != 1:
-            raise NotImplementedError('Not yet implemented for OPRP')
+        if not hasattr(self, 'weights'):
+            raise NotImplementedError("I don't know how to handle having no weights")
+        elif self.weights.ndim == 1:
+            probe_intensities = self.weights.detach().cpu().numpy()**2
+        else:
+            # The big case, with OPRP
+            probe_matrix = np.zeros([self.probe.shape[0]]*2,
+                                    dtype=np.complex64)
+            np_probes = self.probe.detach().cpu().numpy()
+            for i in range(probe_matrix.shape[0]):
+                for j in range(probe_matrix.shape[0]):
+                    probe_matrix[i,j] = np.sum(np_probes[i]*np_probes[j].conj())
+
+            weights = self.weights.detach().cpu().numpy()
+
+            # The outer one is a sum, because the tensordot is what broadcasts the
+            # probe matrix along the shot dimension - the second one doesn't have to.
+            weighted_probe_matrices = np.sum(np.tensordot(weights, probe_matrix, axes=1)[...,None]
+                                            * weights.conj().transpose((0,2,1))[...,None,:,:], axis=-2)
+            
+            basis_probe_intensities = np.trace(probe_matrix, axis1=-2, axis2=-1)
+            probe_intensities = np.trace(weighted_probe_matrices, axis1=-2, axis2=-1)
+            
+            # Imaginary part is already essentially zero up to rounding error
+            probe_intensities = np.real(probe_intensities / basis_probe_intensities)
+
         p.plot_nanomap(
             self.corrected_translations(dataset),
-            self.weights**2,
+            probe_intensities,
             fig=fig,
             cmap='magma',
             cmap_label='Intensity (a.u.)',
@@ -908,7 +932,7 @@ class FancyPtycho(CDIModel):
             convention='probe',
             invert_xaxis=True
         )
-        
+    
 
     def plot_translations_and_originals(self, fig, dataset):
         """Only used to make a plot for the plot list."""
@@ -987,6 +1011,7 @@ class FancyPtycho(CDIModel):
                 (self.probe if not self.fourier_probe
                 else tools.propagators.inverse_far_field(self.probe)),
                 fig=fig,
+                title='Basis Probe',
                 basis=self.probe_basis,
                 units=self.units),
           },
@@ -997,6 +1022,7 @@ class FancyPtycho(CDIModel):
                 (self.probe if not self.fourier_probe
                 else tools.propagators.inverse_far_field(self.probe)),
                 fig=fig,
+                title='Basis Probe',
                 basis=self.probe_basis,
                 units=self.units),
           },
@@ -1014,7 +1040,9 @@ class FancyPtycho(CDIModel):
             'plot_func': lambda self, fig: p.plot_colorized(
                 (self.probe if self.fourier_probe
                 else tools.propagators.far_field(self.probe)),
-                fig=fig),
+                fig=fig,
+                title='Basis Probe, Fourier',
+            ),
           },
           {
             'title': 'Basis Probes, Fourier Amplitude',
@@ -1022,13 +1050,14 @@ class FancyPtycho(CDIModel):
             'plot_func': lambda self, fig: p.plot_amplitude(
                 (self.probe if self.fourier_probe
                 else tools.propagators.far_field(self.probe)),
-                fig=fig),
+                fig=fig,
+                title='Basis Probe, Fourier',
+            ),
           },
           {
             'title': 'Illumination Intensity',
             'subplot': (0,1),
             'plot_func': lambda self, fig, dataset: self.plot_illumination_intensity(fig, dataset),
-            'condition': lambda self: hasattr(self, 'weights') and self.weights.ndim == 1
           },
           {
             'title': 'Detector Background',
@@ -1047,11 +1076,48 @@ class FancyPtycho(CDIModel):
           },
         ],
       },
+      {
+        'title': 'Unstable Probe Refinement Details',
+        'plot_level': 2,
+        'figure_size': (9,3.5),
+        'grid': (1,2),
+        'condition': lambda self: len(self.weights.shape) >= 2,
+        'plots': [
+          {
+            'title': '% of Power in Top Mode',
+            'subplot': (0,0),
+            'plot_func': lambda self, fig, dataset: p.plot_nanomap(
+                 self.corrected_translations(dataset),
+                 100 * t.stack([
+                     analysis.calc_mode_power_fractions(
+                     self.probe.data,
+                     weight_matrix=self.weights.data[i])[0]
+                 for i in range(self.weights.shape[0])
+                 ], dim=0),
+                 fig=fig,
+                 units=self.units),
+            'condition': lambda self: len(self.weights.shape) >= 2
+          },
+          {
+            'title': 'Average Weight Matrix Amplitudes',
+            'subplot': (0,1),
+            'plot_func': lambda self, fig: p.plot_amplitude(
+                np.nanmean(np.abs(self.weights.data.cpu().numpy()), axis=0),
+                fig=fig),
+            'condition': lambda self: len(self.weights.shape) >= 2
+          },
+        ]
+      }
     ]
 
     plot_list = [
+        {'title': 'Quantum Efficiency Mask',
+         'plot_level': 2,
+         'plot_func': lambda self, fig: p.plot_amplitude(self.qe_mask, fig=fig),
+         'condition': lambda self: (hasattr(self, 'qe_mask') and self.qe_mask is not None)},
         {'title': 'Per-Exposure Probe Intensity',
          'plot_level': 3,
+         'figure_size': (8,5.3),
          'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
              dataset,
              fig=fig,
@@ -1061,6 +1127,7 @@ class FancyPtycho(CDIModel):
          'condition': lambda self: len(self.weights.shape) >= 2},
         {'title': 'Per-Exposure Probe Amplitudes',
          'plot_level': 3,
+         'figure_size': (8,5.3),
          'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
              dataset,
              fig=fig,
@@ -1070,6 +1137,7 @@ class FancyPtycho(CDIModel):
          'condition': lambda self: len(self.weights.shape) >= 2},
         {'title': 'Per-Exposure Probe Phases',
          'plot_level': 3,
+         'figure_size': (8,5.3),
          'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
              dataset,
              fig=fig,
@@ -1077,29 +1145,6 @@ class FancyPtycho(CDIModel):
              image_title='Probe Phases (scroll to view modes)',
              image_colorbar_title='Probe Phase'),
          'condition': lambda self: len(self.weights.shape) >= 2},
-        {'title': 'Average Weight Matrix Amplitudes',
-         'plot_level': 1,
-         'plot_func': lambda self, fig: p.plot_amplitude(
-             np.nanmean(np.abs(self.weights.data.cpu().numpy()), axis=0),
-             fig=fig),
-         'condition': lambda self: len(self.weights.shape) >= 2},
-        {'title': '% of Power in Top Mode',
-         'plot_level': 3,
-         'plot_func': lambda self, fig, dataset: p.plot_nanomap(
-             self.corrected_translations(dataset),
-             100 * t.stack([
-                 analysis.calc_mode_power_fractions(
-                     self.probe.data,
-                     weight_matrix=self.weights.data[i])[0]
-                 for i in range(self.weights.shape[0])
-             ], dim=0),
-             fig=fig,
-             units=self.units),
-         'condition': lambda self: len(self.weights.shape) >= 2},
-        {'title': 'Quantum Efficiency Mask',
-         'plot_level': 3,
-         'plot_func': lambda self, fig: p.plot_amplitude(self.qe_mask, fig=fig),
-         'condition': lambda self: (hasattr(self, 'qe_mask') and self.qe_mask is not None)},
     ]
     
     
