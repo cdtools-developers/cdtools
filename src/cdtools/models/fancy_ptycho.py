@@ -45,7 +45,7 @@ class FancyPtycho(CDIModel):
                  near_field=False,
                  angular_spectrum_propagator=None,
                  inv_angular_spectrum_propagator=None,
-                 panel_plot_mode=False,
+                 panel_plot_mode=True,
                  plot_level=2,
                  ):
 
@@ -255,7 +255,7 @@ class FancyPtycho(CDIModel):
                      obj_view_crop=None,
                      obj_padding=200,
                      near_field=False,
-                     panel_plot_mode=False,
+                     panel_plot_mode=True,
                      plot_level=2,
                      ):
 
@@ -846,6 +846,44 @@ class FancyPtycho(CDIModel):
         # We discard the U matrix and re-multiply S & Vh
         self.weights.data = S[:,:,None] * (Vh / probe_sqrt_intensities)
 
+
+    def get_probe_intensities(self):
+        if not hasattr(self, 'weights'):
+            raise NotImplementedError(
+                "I don't know how to handle having no weights")
+        elif self.weights.ndim == 1:
+            probe_intensities = self.weights.detach().cpu().numpy()**2
+        else:
+            # The big case, with OPRP
+            probe_matrix = np.zeros([self.probe.shape[0]]*2,
+                                    dtype=np.complex64)
+            np_probes = self.probe.detach().cpu().numpy()
+            for i in range(probe_matrix.shape[0]):
+                for j in range(probe_matrix.shape[0]):
+                    probe_matrix[i,j] = np.sum(np_probes[i]*np_probes[j].conj())
+            
+            weights = self.weights.detach().cpu().numpy()
+
+            # The outer one is a sum, because the tensordot is what broadcasts
+            # the probe matrix along the shot dimension - the second one
+            # doesn't have to.
+            weighted_probe_matrices = np.sum(
+                np.tensordot(weights, probe_matrix, axes=1)[...,None]
+                * weights.conj().transpose((0,2,1))[...,None,:,:],
+                axis=-2
+            )
+            
+            basis_probe_intensities = np.trace(
+                probe_matrix, axis1=-2, axis2=-1)
+            probe_intensities = np.trace(
+                weighted_probe_matrices, axis1=-2, axis2=-1)
+            
+            # Imaginary part is already essentially zero up to rounding error
+            probe_intensities = np.real(
+                probe_intensities / basis_probe_intensities)
+            
+        return probe_intensities
+
     
     def plot_wavefront_variation(self, dataset, fig=None, mode='amplitude', **kwargs):
         def get_probes(idx):
@@ -862,22 +900,8 @@ class FancyPtycho(CDIModel):
             if mode.lower() == 'phase':
                 return np.angle(ortho_probes.detach().cpu().numpy())
 
-        probe_matrix = np.zeros([self.probe.shape[0]]*2,
-                                dtype=np.complex64)
-        np_probes = self.probe.detach().cpu().numpy()
-        for i in range(probe_matrix.shape[0]):
-            for j in range(probe_matrix.shape[0]):
-                probe_matrix[i,j] = np.sum(np_probes[i]*np_probes[j].conj())
-
-        weights = self.weights.detach().cpu().numpy()
-
-        probe_intensities = np.sum(np.tensordot(weights, probe_matrix, axes=1)
-                                   * weights.conj(), axis=2)
-
-        # Imaginary part is already essentially zero up to rounding error
-        probe_intensities = np.real(probe_intensities)
-
-        values = np.sum(probe_intensities, axis=1)
+        values = self.get_probe_intensities()
+        
         if mode.lower() == 'amplitude' or mode.lower() == 'root_sum_intensity':
             cmap = 'viridis'
         else:
@@ -896,35 +920,9 @@ class FancyPtycho(CDIModel):
 
 
     def plot_illumination_intensity(self, fig, dataset):
-        if not hasattr(self, 'weights'):
-            raise NotImplementedError("I don't know how to handle having no weights")
-        elif self.weights.ndim == 1:
-            probe_intensities = self.weights.detach().cpu().numpy()**2
-        else:
-            # The big case, with OPRP
-            probe_matrix = np.zeros([self.probe.shape[0]]*2,
-                                    dtype=np.complex64)
-            np_probes = self.probe.detach().cpu().numpy()
-            for i in range(probe_matrix.shape[0]):
-                for j in range(probe_matrix.shape[0]):
-                    probe_matrix[i,j] = np.sum(np_probes[i]*np_probes[j].conj())
-
-            weights = self.weights.detach().cpu().numpy()
-
-            # The outer one is a sum, because the tensordot is what broadcasts the
-            # probe matrix along the shot dimension - the second one doesn't have to.
-            weighted_probe_matrices = np.sum(np.tensordot(weights, probe_matrix, axes=1)[...,None]
-                                            * weights.conj().transpose((0,2,1))[...,None,:,:], axis=-2)
-            
-            basis_probe_intensities = np.trace(probe_matrix, axis1=-2, axis2=-1)
-            probe_intensities = np.trace(weighted_probe_matrices, axis1=-2, axis2=-1)
-            
-            # Imaginary part is already essentially zero up to rounding error
-            probe_intensities = np.real(probe_intensities / basis_probe_intensities)
-
         p.plot_nanomap(
             self.corrected_translations(dataset),
-            probe_intensities,
+            self.get_probe_intensities(),
             fig=fig,
             cmap='magma',
             cmap_label='Intensity (a.u.)',
@@ -1011,7 +1009,7 @@ class FancyPtycho(CDIModel):
                 (self.probe if not self.fourier_probe
                 else tools.propagators.inverse_far_field(self.probe)),
                 fig=fig,
-                title='Basis Probe',
+                title='Basis Probes',
                 basis=self.probe_basis,
                 units=self.units),
           },
@@ -1022,7 +1020,7 @@ class FancyPtycho(CDIModel):
                 (self.probe if not self.fourier_probe
                 else tools.propagators.inverse_far_field(self.probe)),
                 fig=fig,
-                title='Basis Probe',
+                title='Basis Probes',
                 basis=self.probe_basis,
                 units=self.units),
           },
@@ -1041,7 +1039,7 @@ class FancyPtycho(CDIModel):
                 (self.probe if self.fourier_probe
                 else tools.propagators.far_field(self.probe)),
                 fig=fig,
-                title='Basis Probe, Fourier',
+                title='Basis Probes, Fourier',
             ),
           },
           {
@@ -1051,7 +1049,7 @@ class FancyPtycho(CDIModel):
                 (self.probe if self.fourier_probe
                 else tools.propagators.far_field(self.probe)),
                 fig=fig,
-                title='Basis Probe, Fourier',
+                title='Basis Probes, Fourier',
             ),
           },
           {

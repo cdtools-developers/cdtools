@@ -14,7 +14,6 @@ model = cdtools.models.FancyPtycho.from_dataset(
     propagation_distance=5e-3, # Propagate the initial probe guess by 5 mm
     units='mm', # Set the units for the live plots
     obj_view_crop=-50, # Expands the field of view in the object plot by 50 pix,
-    panel_plot_mode=True, # Organizes the live plots into panels
 )
 
 if t.cuda.is_available():
@@ -34,7 +33,7 @@ recon = cdtools.reconstructors.AdamReconstructor(model, dataset)
 for loss in recon.optimize(50, lr=0.02, batch_size=10):
     print(model.report())
     # Plotting is expensive, so we only do it every tenth epoch
-    if model.epoch % 2 == 0:
+    if model.epoch % 10 == 0:
         model.inspect(dataset)
 
 # It's common to chain several different reconstruction loops. Here, we

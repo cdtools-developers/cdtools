@@ -202,7 +202,7 @@ def plot_image(
                 fig.canvas.toolbar.home()
                 fig.canvas.toolbar.update()
 
-            if len(im.shape) >= 3:
+            if num_images > 1:
                 base = title if title is not None else '('.join(ax_title.split('(')[:-1])[:-1]
                 fig.axes[0].set_title(base + f' ({fig.plot_idx+1} of {num_images})')
 
@@ -295,7 +295,7 @@ def plot_image(
 
         if title is not None:
             ax.set_title(ax_title)
-        if len(im.shape) >= 3:
+        if num_images >= 3:
             ax.set_title(ax_title + f' ({fig.plot_idx+1} of {num_images})')
             
         if fig.canvas.toolbar is not None:

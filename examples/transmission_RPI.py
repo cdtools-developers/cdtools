@@ -19,7 +19,7 @@ dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(ss_filename)
 # Note that we explicitly as for two incoherent probe modes
 model = cdtools.models.RPI.from_dataset(dataset, probe, [500,500],
                                         background=background, n_modes=2,
-                                        initialization='random',panel_plot_mode=True)
+                                        initialization='random')
 
 
 # Let's do this reconstruction on the GPU, shall we? 

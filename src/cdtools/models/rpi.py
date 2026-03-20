@@ -58,7 +58,7 @@ class RPI(CDIModel):
             propagation_distance=0,
             units='um',
             dtype=t.float32,
-            panel_plot_mode=False,
+            panel_plot_mode=True,
             plot_level=1,
     ):
 
@@ -167,7 +167,7 @@ class RPI(CDIModel):
             phase_only=False,
             probe_threshold=0,
             dtype=t.float32,
-            panel_plot_mode=False,
+            panel_plot_mode=True,
             plot_level=1,
     ):
         complex_dtype = (t.ones([1], dtype=dtype) +
@@ -291,7 +291,7 @@ class RPI(CDIModel):
             phase_only=False,
             initialization='random',
             dtype=t.float32,
-            panel_plot_mode=False,
+            panel_plot_mode=True,
             plot_level=1,
     ):
         
