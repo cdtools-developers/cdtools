@@ -30,20 +30,20 @@ if t.cuda.is_available():
 # Note that the inspect step takes the vast majority of the time
 # The regularization is an L2 regularizer that empirically helps accelerate
 # convergence
-for loss in model.Adam_optimize(30, dataset, lr=0.4, regularization_factor=[0.05,0.05]):
-    model.inspect(dataset)
+for loss in model.LBFGS_optimize(30, dataset, lr=0.4, regularization_factor=[0.05,0.05]):
+    model.inspect(dataset, min_interval=5)
     print(model.report())
     
 
 # Now we use the regularizer to damp all but the top modes
 for loss in model.LBFGS_optimize(50, dataset, lr=0.4, regularization_factor=[0.001,0.1]):
-    #model.inspect(dataset)
+    model.inspect(dataset, min_interval=5)
     print(model.report())
 
-# Save results to a python dictionary
-results = model.save_results()
+# Save results to an h5 file
+model.save_to_h5('example_reconstructions/transmission_RPI.h5', dataset)
 
 # Finally, we plot the results
-model.inspect(dataset)
+model.inspect(dataset, replot_all=True)
 model.compare(dataset)
 plt.show()

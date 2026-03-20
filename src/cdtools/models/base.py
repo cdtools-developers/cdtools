@@ -69,6 +69,7 @@ class CDIModel(t.nn.Module):
         self.panel_plot_mode = panel_plot_mode
         self.plot_level = plot_level
         self.has_inspect_been_called = False
+        self.last_inspected_time = None
 
     def from_dataset(self, dataset):
         raise NotImplementedError()
@@ -557,7 +558,7 @@ class CDIModel(t.nn.Module):
     plot_list = []
 
 
-    def inspect(self, dataset=None, replot_all=False):
+    def inspect(self, dataset=None, replot_all=False, min_interval=None):
         """Plots all the plots defined in the model's plot_panel_list and plot_list attributes
 
         Updates any previously plotted figures that are still open. Figures
@@ -586,8 +587,17 @@ class CDIModel(t.nn.Module):
             Optional, a dataset matched to the model type
         replot_all : bool, default: False
             If True, recreate figures that were previously closed by the user.
+        min_interval : float, optional
+            If set, skip updating plots if fewer than this many seconds have
+            elapsed since the last call to inspect(). The time of the last
+            update is stored in self.last_inspected_time.
 
         """
+        if (min_interval is not None
+                and self.last_inspected_time is not None
+                and time.time() - self.last_inspected_time < min_interval):
+            return
+
         plot_panel_list = getattr(self, 'plot_panel_list', None) or []
         plot_list = getattr(self, 'plot_list', None) or []
 
@@ -623,6 +633,8 @@ class CDIModel(t.nn.Module):
                 for fig in self.figs:
                     fig.canvas.flush_events()
             self.has_inspect_been_called = True
+
+        self.last_inspected_time = time.time()
 
             
     def _is_backend_interactive(

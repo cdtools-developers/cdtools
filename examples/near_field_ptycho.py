@@ -40,18 +40,15 @@ recon = cdtools.reconstructors.AdamReconstructor(model, dataset)
 
 for loss in recon.optimize(100, lr=0.04, batch_size=10):
     print(model.report())
-    # Plotting is expensive, so we only do it every tenth epoch
-    if model.epoch % 10 == 0:
-        model.inspect(dataset)
+    model.inspect(dataset, min_interval=5)
 
 for loss in recon.optimize(50, lr=0.005, batch_size=50):
     print(model.report())
-    if model.epoch % 10 == 0:
-        model.inspect(dataset)
+    model.inspect(dataset, min_interval=5)
 
 # This orthogonalizes the recovered probe modes
 model.tidy_probes()
 
-model.inspect(dataset)
+model.inspect(dataset, replot_all=True)
 model.compare(dataset)
 plt.show()
