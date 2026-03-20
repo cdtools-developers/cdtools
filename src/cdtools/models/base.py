@@ -768,7 +768,7 @@ class CDIModel(t.nn.Module):
                                  constrained_layout=True)
             else:
                 with plt.rc_context({'figure.raise_window': False}):
-                    fig = plt.figure(panel_def['title'],
+                    fig = plt.figure(panel_def['title'], figsize=figsize,
                                      constrained_layout=True)
 
             fig.clear()
