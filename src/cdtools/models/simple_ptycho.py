@@ -16,7 +16,7 @@ class SimplePtycho(CDIModel):
             obj_guess,
             min_translation = [0,0],
             panel_plot_mode=False,
-            plot_level=0,
+            plot_level=1,
     ):
 
         # We initialize the superclass
@@ -49,7 +49,7 @@ class SimplePtycho(CDIModel):
 
     @classmethod
     def from_dataset(cls, dataset,panel_plot_mode=False,
-            plot_level=0, ):
+            plot_level=1, ):
 
         # We get the key geometry information from the dataset
         wavelength = dataset.wavelength
@@ -142,7 +142,7 @@ class SimplePtycho(CDIModel):
                 }
             ]
         },
-                { 
+        { 
             # Title for window
             'title' : 'Object Results', 
             # (width, height) in inches
