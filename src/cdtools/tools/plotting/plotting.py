@@ -716,9 +716,9 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
     # mode, i.e. on a figure that already has this thing showing.
 
     if fig is None:
-        fig = plt.figure(figsize=(20,4.5), constrained_layout=True)
+        fig = plt.figure(figsize=(8,5.3), constrained_layout=True)
     else:
-        fig = plt.figure(fig.number, figsize=(20,4.5),  constrained_layout=True)
+        fig = plt.figure(fig.number, figsize=(8,5.3),  constrained_layout=True)
         fig.clear()
         if hasattr(fig, 'nanomap_cids'):
             for cid in fig.nanomap_cids:

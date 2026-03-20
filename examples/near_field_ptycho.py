@@ -1,11 +1,11 @@
 import cdtools
+import torch as t
 from matplotlib import pyplot as plt
 
 filename = 'example_data/PETRAIII_P25_Near_Field_Ptycho.cxi'
 dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(filename)
 
 dataset.inspect()
-plt.show()
 
 # Setting near_field equal to True uses an angular spectrum propagator in
 # lieu of the default Fourier-transform propagator for far-field ptychography.
@@ -27,11 +27,12 @@ model = cdtools.models.FancyPtycho.from_dataset(
     propagation_distance=3.65e-3, # 3.65 downstream from focus
     units='um', # Set the units for the live plots
     obj_view_crop=-35,
+    panel_plot_mode=True,
 )
 
-device = 'cuda'
-model.to(device=device)
-dataset.get_as(device=device)
+if t.cuda.is_available():
+    model.to(device='cuda')
+    dataset.get_as(device='cuda')
 
 model.inspect(dataset)
 

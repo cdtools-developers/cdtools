@@ -1,6 +1,6 @@
 import cdtools
-from matplotlib import pyplot as plt
 import torch as t
+from matplotlib import pyplot as plt
 
 filename = 'example_data/AuBalls_700ms_30nmStep_3_6SS_filter.cxi'
 dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(filename)
@@ -26,7 +26,8 @@ model = cdtools.models.FancyPtycho.from_dataset(
     probe_support_radius=50,
     propagation_distance=2e-6,
     units='um',
-    probe_fourier_crop=pad 
+    probe_fourier_crop=pad,
+    panel_plot_mode=True, 
 )
 
 
@@ -39,9 +40,9 @@ model.translation_offsets.data += 0.7 * t.randn_like(model.translation_offsets)
 # Not much probe intensity instability in this dataset, no need for this
 model.weights.requires_grad = False
 
-device = 'cuda'
-model.to(device=device)
-dataset.get_as(device=device)
+if t.cuda.is_available():
+    model.to(device='cuda')
+    dataset.get_as(device='cuda')
 
 # Create the reconstructor
 recon = cdtools.reconstructors.AdamReconstructor(model, dataset)
