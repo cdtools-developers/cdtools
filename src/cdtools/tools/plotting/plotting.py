@@ -164,7 +164,12 @@ def plot_image(
         else:
             im = im.detach().cpu().numpy()
 
-    if fig is None:
+    # Support passing an Axes object instead of a Figure
+    ax_mode = isinstance(fig, plt.Axes)
+    if ax_mode:
+        ax = fig
+        fig = ax.get_figure()
+    elif fig is None:
         fig = plt.figure()
         ax = fig.add_subplot(111, **kwargs)
 
@@ -173,8 +178,13 @@ def plot_image(
     # given
     def make_plot(idx):
         plt.figure(fig.number)
-        title = plt.gca().get_title()
-        fig.clear()
+        if ax_mode:
+            title = ax.get_title()
+            ax.cla()
+            plt.sca(ax)
+        else:
+            title = plt.gca().get_title()
+            fig.clear()
 
 
         # If im only has two dimensions, this reshape will add a leading
@@ -184,9 +194,10 @@ def plot_image(
         s = im.shape
         reshaped_im = im.reshape(-1,s[-2],s[-1])
         num_images = reshaped_im.shape[0]
-        fig.plot_idx = idx % num_images
+        plot_holder = ax if ax_mode else fig
+        plot_holder.plot_idx = idx % num_images
 
-        to_plot = plot_func(reshaped_im[fig.plot_idx])
+        to_plot = plot_func(reshaped_im[plot_holder.plot_idx])
 
         mpl_im = plt.imshow(
             to_plot,
@@ -273,11 +284,13 @@ def plot_image(
         plt.title(title)
 
         if len(im.shape) >= 3:
-            plt.text(0.03, 0.03, str(fig.plot_idx), fontsize=14, transform=plt.gcf().transFigure)
+            text_transform = ax.transAxes if ax_mode else plt.gcf().transFigure
+            plt.text(0.03, 0.03, str(plot_holder.plot_idx), fontsize=14, transform=text_transform)
         return fig
 
-    if hasattr(fig, 'plot_idx'):
-        result = make_plot(fig.plot_idx)
+    plot_holder = ax if ax_mode else fig
+    if hasattr(plot_holder, 'plot_idx'):
+        result = make_plot(plot_holder.plot_idx)
     else:
         result = make_plot(0)
 
@@ -285,15 +298,16 @@ def plot_image(
 
 
     def on_action(event):
+        plot_holder = ax if ax_mode else fig
         if not hasattr(event, 'button'):
             event.button = None
         if not hasattr(event, 'key'):
             event.key = None
 
         if event.key == 'up' or event.button == 'up':
-            update(fig.plot_idx - 1)
+            update(plot_holder.plot_idx - 1)
         elif event.key == 'down' or event.button == 'down':
-            update(fig.plot_idx + 1)
+            update(plot_holder.plot_idx + 1)
         plt.draw()
 
     if len(im.shape) >=3:
@@ -557,7 +571,11 @@ def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, inver
 
     factor = get_units_factor(units)
 
-    if fig is None:
+    if isinstance(fig, plt.Axes):
+        ax = fig
+        fig = ax.get_figure()
+        plt.sca(ax)
+    elif fig is None:
         fig = plt.figure()
         ax = fig.add_subplot(111, **kwargs)
     else:
@@ -614,7 +632,13 @@ def plot_nanomap(translations, values, fig=None, units='$\\mu$m', convention='pr
         The figure object that was actually plotted to.
     """
 
-    if fig is None:
+    ax_mode = isinstance(fig, plt.Axes)
+    if ax_mode:
+        ax = fig
+        fig = ax.get_figure()
+        ax.cla()
+        plt.sca(ax)
+    elif fig is None:
         fig = plt.figure()
     else:
         plt.figure(fig.number)
@@ -622,7 +646,8 @@ def plot_nanomap(translations, values, fig=None, units='$\\mu$m', convention='pr
 
     factor = get_units_factor(units)
 
-    bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    plot_area = ax if ax_mode else fig
+    bbox = plot_area.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     if isinstance(translations, t.Tensor):
         trans = translations.detach().cpu().numpy()
     else:

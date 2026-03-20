@@ -15,10 +15,15 @@ class SimplePtycho(CDIModel):
             probe_guess,
             obj_guess,
             min_translation = [0,0],
+            panel_plot_mode=False,
+            plot_level=0,
     ):
 
         # We initialize the superclass
-        super().__init__()
+        super().__init__(
+            panel_plot_mode=panel_plot_mode,
+            plot_level=plot_level,
+        )
 
         # We register all the constants, like wavelength, as buffers. This
         # lets the model hook into some nice pytorch features, like using
@@ -43,7 +48,8 @@ class SimplePtycho(CDIModel):
 
 
     @classmethod
-    def from_dataset(cls, dataset):
+    def from_dataset(cls, dataset,panel_plot_mode=False,
+            plot_level=0, ):
 
         # We get the key geometry information from the dataset
         wavelength = dataset.wavelength
@@ -76,7 +82,9 @@ class SimplePtycho(CDIModel):
             probe_basis,
             probe,
             obj,
-            min_translation=min_translation
+            min_translation=min_translation,
+            panel_plot_mode=panel_plot_mode,
+            plot_level=plot_level,
         )
 
 
@@ -107,15 +115,59 @@ class SimplePtycho(CDIModel):
 
 
     # This lists all the plots to display on a call to model.inspect()
-    plot_list = [
-        ('Probe Amplitude',
-         lambda self, fig: p.plot_amplitude(self.probe, fig=fig, basis=self.probe_basis)),
-        ('Probe Phase',
-         lambda self, fig: p.plot_phase(self.probe, fig=fig, basis=self.probe_basis)),
-        ('Object Amplitude',
-         lambda self, fig: p.plot_amplitude(self.obj, fig=fig, basis=self.probe_basis)),
-        ('Object Phase',
-         lambda self, fig: p.plot_phase(self.obj, fig=fig, basis=self.probe_basis))
+    plot_panel_list = [
+        { 
+            # Title for window
+            'title' : 'Probe Results', 
+            # (width, height) in inches
+            'figure_size': (7, 7),
+            # (nrows, ncols) for subplot grid
+            'grid': (2, 2),
+            # A setting to control how many plots are produced
+            'plot_level': 1,
+            # The list of plots to include
+            'plots' : [
+                {
+                    'title': 'Probe Amplitude',
+                    'subplot' : (0, 0),
+                    'plot_func': lambda self, fig:
+                        p.plot_amplitude(self.probe, fig,
+                            basis=self.probe_basis)
+                },{
+                    'title': 'Probe Phase',
+                    'subplot' : (0, 1),
+                    'plot_func': lambda self, fig:
+                        p.plot_phase(self.probe, fig,
+                            basis=self.probe_basis)
+                }
+            ]
+        },
+                { 
+            # Title for window
+            'title' : 'Object Results', 
+            # (width, height) in inches
+            'figure_size': (7, 7),
+            # (nrows, ncols) for subplot grid
+            'grid': (2, 2),
+            # A setting to control how many plots are produced
+            'plot_level': 1,
+            # The list of plots to include
+            'plots' : [
+              {
+                    'title': 'Object Amplitude',
+                    'subplot' : (1, 0),
+                    'plot_func': lambda self, fig:
+                        p.plot_amplitude(self.obj, fig,
+                            basis=self.probe_basis)
+                }, {
+                    'title': 'Object Phase',
+                    'subplot' : (1, 1),
+                    'plot_func': lambda self, fig:
+                        p.plot_phase(self.obj, fig,
+                            basis=self.probe_basis)
+                },
+            ]
+        },
     ]
     
     def save_results(self, dataset):

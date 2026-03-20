@@ -58,12 +58,14 @@ class CDIModel(t.nn.Module):
     functions.
     """
 
-    def __init__(self):
+    def __init__(self, panel_plot_mode=False, plot_level=np.inf):
         super(CDIModel, self).__init__()
 
         self.loss_history = []
         self.training_history = ''
         self.epoch = 0
+        self.panel_plot_mode = panel_plot_mode
+        self.plot_level = plot_level
 
     def from_dataset(self, dataset):
         raise NotImplementedError()
@@ -547,96 +549,238 @@ class CDIModel(t.nn.Module):
 
         return msg
 
-    # By default, the plot_list is empty
+    # By default, the plot lists are empty
+    plot_panel_list = []
     plot_list = []
 
 
-    def inspect(self, dataset=None, update=True):
-        """Plots all the plots defined in the model's plot_list attribute
+    def inspect(self, dataset=None, replot_all=False):
+        """Plots all the plots defined in the model's plot_panel_list and plot_list attributes
 
-        If update is set to True, it will update any previously plotted set
-        of plots, if one exists, and then redraw them. Otherwise, it will
-        plot a new set, and any subsequent updates will update the new set
+        Updates any previously plotted figures that are still open. Figures
+        that have been closed are left closed unless replot_all=True.
 
         Optionally, a dataset can be passed, which will allow plotting of any
         registered plots which need to incorporate some information from
         the dataset (such as geometry or a comparison with measured data).
 
-        Plots can be registered in any subclass by defining the plot_list
-        attribute. This should be a list of tuples in the following format:
-        ( 'Plot Title', function_to_generate_plot(self),
-        function_to_determine_whether_to_plot(self))
+        Plots can be registered in any subclass by defining plot_panel_list
+        and/or plot_list class attributes. See the CDIModel documentation for
+        the expected dict-based format of each.
 
-        Where the third element in the tuple (a function that returns
-        True if the plot is relevant) is not required.
+        When panel_plot_mode=True (set in __init__), plot_panel_list entries
+        are rendered as multi-subplot figures. When False (the default),
+        each subplot in plot_panel_list is rendered as its own figure,
+        prepended to any standalone plot_list entries.
+
+        The plot_level attribute (set in __init__, default np.inf) controls
+        which plots are shown: a panel or standalone plot is only shown when
+        its plot_level <= self.plot_level.
 
         Parameters
         ----------
         dataset : CDataset
             Optional, a dataset matched to the model type
-        update : bool, default: True
-            Whether to update existing plots or plot new ones
+        replot_all : bool, default: False
+            If True, recreate figures that were previously closed by the user.
 
         """
-        # We find or create all the figures
-        first_update = False
-        if update and hasattr(self, 'figs') and self.figs:
-            figs = self.figs
-        elif update:
-            figs = None
-            self.figs = []
-            first_update = True
+        plot_panel_list = getattr(self, 'plot_panel_list', None) or []
+        plot_list = getattr(self, 'plot_list', None) or []
+
+        if self.panel_plot_mode and plot_panel_list:
+            self._inspect_panel(dataset=dataset, replot_all=replot_all)
         else:
-            figs = None
-            self.figs = []
+            # Flatten plot_panel_list, assigning each subplot the panel's plot_level,
+            # then prepend to plot_list
+            flat = []
+            for panel in plot_panel_list:
+                panel_level = panel.get('plot_level', 0)
+                for plot in panel['plots']:
+                    flat.append({**plot, 'plot_level': panel_level})
+            all_plots = flat + list(plot_list)
 
-        idx = 0
-        for plots in self.plot_list:
-            # If a conditional is included in the plot, we check whether
-            # it is True
+            if not hasattr(self, '_flat_fig_map'):
+                self._flat_fig_map = {}
+
+            self.figs = self._do_inspect(all_plots, self._flat_fig_map,
+                                         dataset=dataset,
+                                         replot_all=replot_all)
+
+        plt.pause(0.05)
+
+
+    def _do_inspect(self, plot_list, fig_map, dataset=None, replot_all=False):
+        """Core one-figure-per-plot rendering logic.
+
+        fig_map is a dict {title: figure} owned by the caller and updated
+        in-place. It tracks which figures are open across calls.
+
+        Behaviour:
+          replot_all=False  — closed figures are skipped (left closed).
+          replot_all=True   — closed figures are recreated.
+
+        Returns the list of figures that were rendered this call.
+        """
+        if not plot_list:
+            return []
+
+        rendered = []
+
+        for plot in plot_list:
+            # Level filter
+            if plot.get('plot_level', 0) > self.plot_level:
+                continue
+
+            # Condition check
+            condition = plot.get('condition', None)
+            if condition is not None:
+                try:
+                    if not condition(self):
+                        continue
+                except TypeError:
+                    if not condition(self, dataset):
+                        continue
+
+            title = plot['title']
+            fig = fig_map.get(title)
+
+            if fig is not None and not plt.fignum_exists(fig.number):
+                # Figure was closed by the user
+                if replot_all:
+                    fig = None
+                    del fig_map[title]
+                else:
+                    continue  # leave it closed
+
+            if fig is None:
+                fig = plt.figure(num=title)
+                fig._panel_label = title
+                fig_map[title] = fig
+
             try:
-                if len(plots) >=3 and not plots[2](self):
-                    continue
-            except TypeError as e:
-                if len(plots) >= 3 and not plots[2](self, dataset):
-                    continue
-
-            name = plots[0]
-            plotter = plots[1]
-
-            if figs is None:
-                fig = plt.figure()
-                self.figs.append(fig)
-            else:
-                fig = figs[idx]
-
-                
-            try: # We try just plotting using the simplest allowed signature
-                plotter(self,fig)
-                plt.title(name)
-            except TypeError as e:
-                # TypeError implies it wanted another argument, i.e. a dataset
+                plot['plot_func'](self, fig)
+                plt.title(title)
+            except TypeError:
                 if dataset is not None:
                     try:
-                        plotter(self, fig, dataset)
-                        plt.title(name)
-                    except Exception as e: # Don't raise errors: it's just plots
+                        plot['plot_func'](self, fig, dataset)
+                        plt.title(title)
+                    except Exception:
                         pass
-
-            except Exception as e: # Don't raise errors, it's just a plot
+            except Exception:
                 pass
 
-            idx += 1
+            rendered.append(fig)
+            try:
+                fig.canvas.draw_idle()
+            except Exception:
+                pass
 
-            if update:
-                # This seems to update the figure without blocking.
-                plt.draw()
-                fig.canvas.start_event_loop(0.001)
+        return rendered
 
-        if first_update:
-            # But this is needed the first time the figures update, or
-            # they won't get drawn at all
-            plt.pause(0.05 * len(self.figs))
+
+    def _inspect_panel(self, dataset=None, replot_all=False):
+        """Multi-subplot panel rendering.
+
+        Creates one figure per plot_panel_list entry, placing each subplot's
+        plot_func output into the appropriate axes. Closed panels stay closed
+        on subsequent calls unless replot_all=True. Standalone plot_list
+        entries are then rendered via _do_inspect and appended to self.figs.
+        """
+        plot_panel_list = getattr(self, 'plot_panel_list', None) or []
+        plot_list = getattr(self, 'plot_list', None) or []
+        n_panels = len(plot_panel_list)
+
+        # _panel_figs: list of figures (or None if never created / closed).
+        # _panel_axes: dict keyed by (panel_idx, row, col) → Axes.
+        # _standalone_fig_map: dict {title: figure} for standalone plot_list.
+        first_call = not hasattr(self, '_panel_figs')
+        if first_call:
+            self._panel_figs = [None] * n_panels
+            self._panel_axes = {}
+            self._standalone_fig_map = {}
+
+        if not hasattr(self, '_standalone_fig_map'):
+            self._standalone_fig_map = {}
+
+        for panel_idx, panel_def in enumerate(plot_panel_list):
+            panel_level = panel_def.get('plot_level', 0)
+            if panel_level > self.plot_level:
+                continue  # skip entire panel
+
+            nrows, ncols = panel_def['grid']
+            figsize = panel_def.get('figure_size', None)
+            title = panel_def.get('title', '')
+
+            fig = self._panel_figs[panel_idx]
+
+            # Detect if a previously open figure was closed by the user.
+            if fig is not None and not plt.fignum_exists(fig.number):
+                self._panel_figs[panel_idx] = None
+                for k in [k for k in self._panel_axes if k[0] == panel_idx]:
+                    del self._panel_axes[k]
+                fig = None
+
+            if fig is None:
+                if not first_call and not replot_all:
+                    continue  # was closed; leave it closed
+                fig = plt.figure(num=title, figsize=figsize)
+                fig._panel_label = title
+                self._panel_figs[panel_idx] = fig
+            else:
+                # Remove all axes and recreate them fresh each update.
+                # plt.colorbar() shrinks the parent axes to make room for
+                # itself, so clearing and recreating is simpler than trying
+                # to undo that resizing.
+                for ax in list(fig.axes):
+                    ax.remove()
+                for k in [k for k in self._panel_axes if k[0] == panel_idx]:
+                    del self._panel_axes[k]
+
+            for plot in panel_def['plots']:
+                condition = plot.get('condition', None)
+                if condition is not None:
+                    try:
+                        if not condition(self):
+                            continue
+                    except TypeError:
+                        if not condition(self, dataset):
+                            continue
+
+                row, col = plot['subplot']
+                position = row * ncols + col + 1  # 1-indexed for matplotlib
+
+                ax_key = (panel_idx, row, col)
+                ax = fig.add_subplot(nrows, ncols, position)
+                self._panel_axes[ax_key] = ax
+
+                try:
+                    plot['plot_func'](self, ax)
+                    ax.set_title(plot['title'])
+                except TypeError:
+                    if dataset is not None:
+                        try:
+                            plot['plot_func'](self, ax, dataset)
+                            ax.set_title(plot['title'])
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+            try:
+                fig.canvas.draw_idle()
+            except Exception:
+                pass
+
+        # Rebuild self.figs from open panel figures + rendered standalone figures.
+        panel_figs = [f for f in self._panel_figs if f is not None]
+        standalone_rendered = self._do_inspect(
+            list(plot_list), self._standalone_fig_map,
+            dataset=dataset, replot_all=replot_all,
+        )
+        self.figs = panel_figs + standalone_rendered
+
 
 
     def save_figures(self, prefix='', extension='.pdf'):
@@ -661,14 +805,15 @@ class CDIModel(t.nn.Module):
             Default is .eps, the file extension to save with.
         """
 
-        if hasattr(self, 'figs') and self.figs:
-            figs = self.figs
-        else:
-            return # No figures to save
+        if not (hasattr(self, 'figs') and self.figs):
+            return  # No figures to save
 
         for fig in self.figs:
-            fig.savefig(prefix + fig.axes[0].get_title() + extension,
-                        bbox_inches = 'tight')
+            if hasattr(fig, '_panel_label') and fig._panel_label:
+                label = fig._panel_label
+            else:
+                label = fig.axes[0].get_title() if fig.axes else 'figure'
+            fig.savefig(prefix + label + extension, bbox_inches='tight')
 
 
     def compare(self, dataset, logarithmic=False):

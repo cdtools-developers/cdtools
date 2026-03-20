@@ -16,6 +16,7 @@ from torch.utils import data as td
 import threading
 import queue
 import time
+from matplotlib import pyplot as plt
 from typing import List, Union
 
 if TYPE_CHECKING:
@@ -357,10 +358,18 @@ class Reconstructor:
                 try:
                     calc.start()
                     while calc.is_alive():
-                        if hasattr(self.model, 'figs'):
-                            self.model.figs[0].canvas.start_event_loop(0.01)
+                        figs = getattr(self.model, 'figs', [])
+                        open_fig = next(
+                            (f for f in figs if plt.fignum_exists(f.number)),
+                            None,
+                        )
+                        if open_fig is not None:
+                            try:
+                                open_fig.canvas.start_event_loop(0.01)
+                            except Exception:
+                                time.sleep(0.01)
                         else:
-                            calc.join()
+                            time.sleep(0.01)
 
                 except KeyboardInterrupt as e:
                     stop_event.set()
