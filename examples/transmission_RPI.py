@@ -1,5 +1,6 @@
 import cdtools
 import pickle
+import torch as t
 from matplotlib import pyplot as plt
 
 # First, we load an example dataset from a .cxi file
@@ -18,17 +19,18 @@ dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(ss_filename)
 # Note that we explicitly as for two incoherent probe modes
 model = cdtools.models.RPI.from_dataset(dataset, probe, [500,500],
                                         background=background, n_modes=2,
-                                        initialization='random')
+                                        initialization='random',panel_plot_mode=True)
 
 
 # Let's do this reconstruction on the GPU, shall we? 
-model.to(device='cuda')
-dataset.get_as(device='cuda')
+if t.cuda.is_available():
+    model.to(device='cuda')
+    dataset.get_as(device='cuda')
 
 # Note that the inspect step takes the vast majority of the time
 # The regularization is an L2 regularizer that empirically helps accelerate
 # convergence
-for loss in model.LBFGS_optimize(30, dataset, lr=0.4, regularization_factor=[0.05,0.05]):
+for loss in model.Adam_optimize(30, dataset, lr=0.4, regularization_factor=[0.05,0.05]):
     model.inspect(dataset)
     print(model.report())
     

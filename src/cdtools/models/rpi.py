@@ -58,9 +58,12 @@ class RPI(CDIModel):
             propagation_distance=0,
             units='um',
             dtype=t.float32,
+            panel_plot_mode=False,
+            plot_level=1,
     ):
-        
-        super(RPI, self).__init__()
+
+        super(RPI, self).__init__(panel_plot_mode=panel_plot_mode,
+                                  plot_level=plot_level)
 
         complex_dtype = (t.ones([1], dtype=dtype) +
                          1j * t.ones([1], dtype=dtype)).dtype
@@ -164,6 +167,8 @@ class RPI(CDIModel):
             phase_only=False,
             probe_threshold=0,
             dtype=t.float32,
+            panel_plot_mode=False,
+            plot_level=1,
     ):
         complex_dtype = (t.ones([1], dtype=dtype) +
                          1j * t.ones([1], dtype=dtype)).dtype
@@ -227,7 +232,7 @@ class RPI(CDIModel):
         # This will be superceded later by a call to init_obj, but it sets
         # the shape
         if obj_size is None:
-            obj_size = (np.array(self.probe.shape[-2:]) // 2).astype(int)
+            obj_size = (np.array(probe.shape[-2:]) // 2).astype(int)
 
         dummy_init_obj = t.ones([n_modes, obj_size[0], obj_size[1]],
                                 dtype=complex_dtype)
@@ -247,14 +252,16 @@ class RPI(CDIModel):
         obj_support = t.as_tensor(binary_dilation(obj_support))
 
         rpi_object = cls(wavelength, det_geo, ew_basis,
-                         probe, dummy_init_obj, 
+                         probe, dummy_init_obj,
                          background=background, mask=mask,
                          saturation=saturation,
                          obj_support=obj_support,
                          oversampling=oversampling,
                          exponentiate_obj=exponentiate_obj,
                          phase_only=phase_only,
-                         weight_matrix=weight_matrix)
+                         weight_matrix=weight_matrix,
+                         panel_plot_mode=panel_plot_mode,
+                         plot_level=plot_level)
 
         # I don't love this pattern, where I do the "real" obj initialization
         # after creating the rpi object. But, I chose this so that I could
@@ -283,7 +290,9 @@ class RPI(CDIModel):
             exponentiate_obj=False,
             phase_only=False,
             initialization='random',
-            dtype=t.float32
+            dtype=t.float32,
+            panel_plot_mode=False,
+            plot_level=1,
     ):
         
         complex_dtype = (t.ones([1], dtype=dtype) +
@@ -308,7 +317,7 @@ class RPI(CDIModel):
         # This will be superceded later by a call to init_obj, but it sets
         # the shape
         if obj_size is None:
-            obj_size = (np.array(self.probe.shape[-2:]) // 2).astype(int)
+            obj_size = (np.array(probe.shape[-2:]) // 2).astype(int)
 
         dummy_init_obj = t.ones([n_modes, obj_size[0], obj_size[1]],
                                 dtype=complex_dtype)
@@ -327,6 +336,8 @@ class RPI(CDIModel):
             mask=mask,
             exponentiate_obj=exponentiate_obj,
             phase_only=phase_only,
+            panel_plot_mode=panel_plot_mode,
+            plot_level=plot_level,
         )
 
         rpi_object.init_obj(initialization)
@@ -365,7 +376,7 @@ class RPI(CDIModel):
                                obj_shape=obj_shape,
                                n_modes=n_modes)
         else:
-            raise KeyError('Initialization "' + str(initialization) + \
+            raise KeyError('Initialization "' + str(initialization_type) + \
                            '" invalid - use "spectral", "uniform", or "random"')
 
     
@@ -531,40 +542,72 @@ class RPI(CDIModel):
     def sim_to_dataset(self, args_list):
         raise NotImplementedError('No sim to dataset yet, sorry!')
 
-    plot_list = [
-        ('Root Sum Squared Amplitude of all Probes',
-         lambda self, fig: p.plot_amplitude(
-             np.sqrt(np.sum((t.abs(t.sum(self.weights[..., None, None].detach() * self.probe, axis=-3))**2).cpu().numpy(),axis=0)),
-             fig=fig, basis=self.probe_basis)),
-        ('Object Amplitude',
-         lambda self, fig: p.plot_amplitude(
-             self.obj,
-             fig=fig,
-             basis=self.obj_basis,
-             units=self.units),
-         lambda self: not self.exponentiate_obj),
-        ('Object Phase',
-         lambda self, fig: p.plot_phase(
-             self.obj,
-             fig=fig,
-             basis=self.obj_basis,
-             units=self.units),
-         lambda self: not self.exponentiate_obj),
-        ('Real Part of T', 
-         lambda self, fig: p.plot_real(
-             self.obj,
-             fig=fig,
-             basis=self.obj_basis,
-             units=self.units,
-             cmap='cividis'),
-         lambda self: self.exponentiate_obj),
-        ('Imaginary Part of T',
-         lambda self, fig: p.plot_imag(
-             self.obj,
-             fig=fig,
-             basis=self.obj_basis,
-             units=self.units),
-         lambda self: self.exponentiate_obj),
+    plot_panel_list = [
+        {
+            'title': 'RPI Results',
+            'plot_level': 1,
+            'figure_size': (12, 3.5),
+            'grid': (1, 3),
+            'plots': [
+                {
+                    'title': 'Object Phase',
+                    'subplot': (0, 0),
+                    'plot_func': lambda self, fig: p.plot_phase(
+                        self.obj,
+                        fig=fig,
+                        title='Object Phase',
+                        basis=self.obj_basis,
+                        units=self.units),
+                    'condition': lambda self: not self.exponentiate_obj,
+                },
+                {
+                    'title': 'Real Part of T',
+                    'subplot': (0, 0),
+                    'plot_func': lambda self, fig: p.plot_real(
+                        self.obj,
+                        fig=fig,
+                        title='Real Part of T',
+                        basis=self.obj_basis,
+                        units=self.units,
+                        cmap='cividis'),
+                    'condition': lambda self: self.exponentiate_obj,
+                },
+                {
+                    'title': 'Object Amplitude',
+                    'subplot': (0, 1),
+                    'plot_func': lambda self, fig: p.plot_amplitude(
+                        self.obj,
+                        fig=fig,
+                        title='Object Amplitude',
+                        basis=self.obj_basis,
+                        units=self.units),
+                    'condition': lambda self: not self.exponentiate_obj,
+                },
+                {
+                    'title': 'Imaginary Part of T',
+                    'subplot': (0, 1),
+                    'plot_func': lambda self, fig: p.plot_imag(
+                        self.obj,
+                        fig=fig,
+                        title='Imaginary Part of T',
+                        basis=self.obj_basis,
+                        units=self.units),
+                    'condition': lambda self: self.exponentiate_obj,
+                },
+                {
+                    'title': 'Root Sum Squared Amplitude of all Probes',
+                    'subplot': (0, 2),
+                    'plot_func': lambda self, fig: p.plot_amplitude(
+                        np.sqrt(np.sum(
+                            (t.abs(t.sum(self.weights[..., None, None].detach()
+                                         * self.probe, axis=-3))**2
+                            ).cpu().numpy(), axis=0)),
+                        fig=fig,
+                        basis=self.probe_basis,
+                        units=self.units),
+                },
+            ],
+        },
     ]
 
 

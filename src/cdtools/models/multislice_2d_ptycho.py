@@ -47,9 +47,12 @@ class Multislice2DPtycho(CDIModel):
                  prevent_aliasing=True,
                  phase_only=False,
                  units='um',
+                 panel_plot_mode=False,
+                 plot_level=1,
                  ):
 
-        super(Multislice2DPtycho, self).__init__()
+        super(Multislice2DPtycho, self).__init__(panel_plot_mode=panel_plot_mode,
+                                                 plot_level=plot_level)
         self.wavelength = t.tensor(wavelength)
         self.detector_geometry = copy(detector_geometry)
         self.dz = dz
@@ -154,7 +157,7 @@ class Multislice2DPtycho(CDIModel):
 
 
     @classmethod
-    def from_dataset(cls, dataset, dz, nz, probe_convergence_semiangle, padding=0, n_modes=1, dm_rank=None, translation_scale=1, saturation=None, propagation_distance=None, scattering_mode=None, oversampling=1, auto_center=True, bandlimit=None, replicate_slice=False, subpixel=True, exponentiate_obj=True, units='um', fourier_probe=False, phase_only=False, prevent_aliasing=True, probe_support_radius=None):
+    def from_dataset(cls, dataset, dz, nz, probe_convergence_semiangle, padding=0, n_modes=1, dm_rank=None, translation_scale=1, saturation=None, propagation_distance=None, scattering_mode=None, oversampling=1, auto_center=True, bandlimit=None, replicate_slice=False, subpixel=True, exponentiate_obj=True, units='um', fourier_probe=False, phase_only=False, prevent_aliasing=True, probe_support_radius=None, panel_plot_mode=False, plot_level=1):
 
         wavelength = dataset.wavelength
         det_basis = dataset.detector_geometry['basis']
@@ -286,7 +289,7 @@ class Multislice2DPtycho(CDIModel):
                    surface_normal=surface_normal,
                    probe_support=probe_support,
                    min_translation=min_translation,
-                   translation_offsets = translation_offsets,
+                   translation_offsets=translation_offsets,
                    weights=Ws, mask=mask, background=background,
                    translation_scale=translation_scale,
                    saturation=saturation,
@@ -296,7 +299,9 @@ class Multislice2DPtycho(CDIModel):
                    exponentiate_obj=exponentiate_obj,
                    units=units, fourier_probe=fourier_probe,
                    phase_only=phase_only,
-                   prevent_aliasing=prevent_aliasing)
+                   prevent_aliasing=prevent_aliasing,
+                   panel_plot_mode=panel_plot_mode,
+                   plot_level=plot_level)
                    
     
     def interaction(self, index, translations):
@@ -581,22 +586,22 @@ class Multislice2DPtycho(CDIModel):
         
 
     # Needs to be updated to allow for plotting to an existing figure
-    plot_list = [ 
-        ('Probe Fourier Space Amplitude',
-         lambda self, fig: p.plot_amplitude(self.probe if self.fourier_probe else tools.propagators.inverse_far_field(self.probe), fig=fig)),
-        ('Probe Fourier Space Phase',
-         lambda self, fig: p.plot_phase(self.probe if self.fourier_probe else tools.propagators.inverse_far_field(self.probe), fig=fig)),
-        ('Probe Real Space Amplitude',
-         lambda self, fig: p.plot_amplitude(self.probe if not self.fourier_probe else tools.propagators.inverse_far_field(self.probe), fig=fig, basis=self.probe_basis, units=self.units)),
-        ('Probe Real Space Phase',
-         lambda self, fig: p.plot_phase(self.probe if not self.fourier_probe else tools.propagators.inverse_far_field(self.probe), fig=fig, basis=self.probe_basis, units=self.units)),
-        ('Average Weight Matrix Amplitudes',
-         lambda self, fig: p.plot_amplitude(
+    plot_list = [
+        {'title': 'Probe Fourier Space Amplitude',
+         'plot_func': lambda self, fig: p.plot_amplitude(self.probe if self.fourier_probe else tools.propagators.inverse_far_field(self.probe), fig=fig)},
+        {'title': 'Probe Fourier Space Phase',
+         'plot_func': lambda self, fig: p.plot_phase(self.probe if self.fourier_probe else tools.propagators.inverse_far_field(self.probe), fig=fig)},
+        {'title': 'Probe Real Space Amplitude',
+         'plot_func': lambda self, fig: p.plot_amplitude(self.probe if not self.fourier_probe else tools.propagators.inverse_far_field(self.probe), fig=fig, basis=self.probe_basis, units=self.units)},
+        {'title': 'Probe Real Space Phase',
+         'plot_func': lambda self, fig: p.plot_phase(self.probe if not self.fourier_probe else tools.propagators.inverse_far_field(self.probe), fig=fig, basis=self.probe_basis, units=self.units)},
+        {'title': 'Average Weight Matrix Amplitudes',
+         'plot_func': lambda self, fig: p.plot_amplitude(
              np.nanmean(np.abs(self.weights.data.cpu().numpy()), axis=0),
              fig=fig),
-         lambda self: len(self.weights.shape) >= 2),
-        ('% of Power in Top Mode',
-         lambda self, fig, dataset: p.plot_nanomap(
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': '% of Power in Top Mode',
+         'plot_func': lambda self, fig, dataset: p.plot_nanomap(
              self.corrected_translations(dataset),
              100 * t.stack([
                  analysis.calc_mode_power_fractions(
@@ -606,35 +611,35 @@ class Multislice2DPtycho(CDIModel):
              ], dim=0),
              fig=fig,
              units=self.units),
-         lambda self: len(self.weights.shape) >= 2),
-        ('Slice by Slice Real Part of T', 
-         lambda self, fig: p.plot_real(self.obj.detach().cpu(), fig=fig, basis=self.probe_basis, units=self.units, cmap='cividis'),
-         lambda self: self.exponentiate_obj),
-        ('Slice by Slice Imaginary Part of T',
-         lambda self, fig: p.plot_imag(self.obj.detach().cpu(), fig=fig, basis=self.probe_basis, units=self.units),
-         lambda self: self.exponentiate_obj),
-        ('Integrated Real Part of T', 
-         lambda self, fig: p.plot_real(t.sum(self.obj.detach().cpu(),dim=0), fig=fig, basis=self.probe_basis, units=self.units, cmap='cividis'),
-         lambda self: (self.exponentiate_obj) and self.obj.dim() >= 3),
-        ('Integrated Imaginary Part of T',
-         lambda self, fig: p.plot_imag(t.sum(self.obj.detach().cpu(),dim=0), fig=fig, basis=self.probe_basis, units=self.units),
-         lambda self: (self.exponentiate_obj) and self.obj.dim() >= 3),
-        ('Slice by Slice Amplitude of Object Function', 
-         lambda self, fig: p.plot_amplitude(self.obj.detach().cpu(), fig=fig, basis=self.probe_basis, units=self.units),
-         lambda self: not self.exponentiate_obj),
-        ('Slice by Slice Phase of Object Function',
-         lambda self, fig: p.plot_phase(self.obj.detach().cpu(), fig=fig, basis=self.probe_basis, units=self.units,cmap='cividis'),
-         lambda self: not self.exponentiate_obj),
-        ('Amplitude of Stacked Object Function',
-         lambda self, fig: p.plot_amplitude(reduce(t.mul, self.obj.detach().cpu()), fig=fig, basis=self.probe_basis, units=self.units),
-         lambda self: (not self.exponentiate_obj) and self.obj.dim() >=3),
-        ('Phase of Stacked Object Function',
-         lambda self, fig: p.plot_phase(reduce(t.mul, self.obj.detach().cpu()), fig=fig, basis=self.probe_basis, units=self.units, cmap='cividis'),
-         lambda self: (not self.exponentiate_obj) and self.obj.dim() >= 3),
-        ('Corrected Translations',
-         lambda self, fig, dataset: p.plot_translations(self.corrected_translations(dataset), fig=fig, units=self.units)),
-        ('Background',
-         lambda self, fig: plt.figure(fig.number) and plt.imshow(self.background.detach().cpu().numpy()**2))
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': 'Slice by Slice Real Part of T',
+         'plot_func': lambda self, fig: p.plot_real(self.obj.detach().cpu(), fig=fig, basis=self.probe_basis, units=self.units, cmap='cividis'),
+         'condition': lambda self: self.exponentiate_obj},
+        {'title': 'Slice by Slice Imaginary Part of T',
+         'plot_func': lambda self, fig: p.plot_imag(self.obj.detach().cpu(), fig=fig, basis=self.probe_basis, units=self.units),
+         'condition': lambda self: self.exponentiate_obj},
+        {'title': 'Integrated Real Part of T',
+         'plot_func': lambda self, fig: p.plot_real(t.sum(self.obj.detach().cpu(),dim=0), fig=fig, basis=self.probe_basis, units=self.units, cmap='cividis'),
+         'condition': lambda self: self.exponentiate_obj and self.obj.dim() >= 3},
+        {'title': 'Integrated Imaginary Part of T',
+         'plot_func': lambda self, fig: p.plot_imag(t.sum(self.obj.detach().cpu(),dim=0), fig=fig, basis=self.probe_basis, units=self.units),
+         'condition': lambda self: self.exponentiate_obj and self.obj.dim() >= 3},
+        {'title': 'Slice by Slice Amplitude of Object Function',
+         'plot_func': lambda self, fig: p.plot_amplitude(self.obj.detach().cpu(), fig=fig, basis=self.probe_basis, units=self.units),
+         'condition': lambda self: not self.exponentiate_obj},
+        {'title': 'Slice by Slice Phase of Object Function',
+         'plot_func': lambda self, fig: p.plot_phase(self.obj.detach().cpu(), fig=fig, basis=self.probe_basis, units=self.units, cmap='cividis'),
+         'condition': lambda self: not self.exponentiate_obj},
+        {'title': 'Amplitude of Stacked Object Function',
+         'plot_func': lambda self, fig: p.plot_amplitude(reduce(t.mul, self.obj.detach().cpu()), fig=fig, basis=self.probe_basis, units=self.units),
+         'condition': lambda self: (not self.exponentiate_obj) and self.obj.dim() >= 3},
+        {'title': 'Phase of Stacked Object Function',
+         'plot_func': lambda self, fig: p.plot_phase(reduce(t.mul, self.obj.detach().cpu()), fig=fig, basis=self.probe_basis, units=self.units, cmap='cividis'),
+         'condition': lambda self: (not self.exponentiate_obj) and self.obj.dim() >= 3},
+        {'title': 'Corrected Translations',
+         'plot_func': lambda self, fig, dataset: p.plot_translations(self.corrected_translations(dataset), fig=fig, units=self.units)},
+        {'title': 'Background',
+         'plot_func': lambda self, fig: plt.figure(fig.number) and plt.imshow(self.background.detach().cpu().numpy()**2)},
     ]
 
     
