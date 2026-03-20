@@ -92,7 +92,6 @@ def get_units_factor(units):
         factor=1e12
     return factor
 
-
 def plot_image(
         im,
         plot_func=lambda x: x,
@@ -164,28 +163,18 @@ def plot_image(
         else:
             im = im.detach().cpu().numpy()
 
-    # Support passing an Axes object instead of a Figure
-    ax_mode = isinstance(fig, plt.Axes)
-    if ax_mode:
-        ax = fig
-        fig = ax.get_figure()
-    elif fig is None:
+    if fig is None:
         fig = plt.figure()
-        ax = fig.add_subplot(111, **kwargs)
-
     # This nukes everything and updates either the appropriate image from the
     # stack of images, or the only image if only a single image has been
     # given
     def make_plot(idx):
-        plt.figure(fig.number)
-        if ax_mode:
-            title = ax.get_title()
-            ax.cla()
-            plt.sca(ax)
-        else:
-            title = plt.gca().get_title()
-            fig.clear()
-
+        #plt.figure(fig.number)
+        #title = plt.gca().get_title()
+        try:
+            title = fig.axes[0].get_title()
+        except IndexError:
+            title = ''
 
         # If im only has two dimensions, this reshape will add a leading
         # dimension, and update will be called on index 0. If it has 3 or more
@@ -194,19 +183,41 @@ def plot_image(
         s = im.shape
         reshaped_im = im.reshape(-1,s[-2],s[-1])
         num_images = reshaped_im.shape[0]
-        plot_holder = ax if ax_mode else fig
-        plot_holder.plot_idx = idx % num_images
+        fig.plot_idx = idx % num_images
 
-        to_plot = plot_func(reshaped_im[plot_holder.plot_idx])
+        to_plot = plot_func(reshaped_im[fig.plot_idx])
 
-        mpl_im = plt.imshow(
+        # By only updating the data, and not redrawing the fig, we
+        # don't "reset" the home positions of the other
+        if hasattr(fig, '_current_im'):
+            print('Just changing data')
+            fig._current_im.set_data(to_plot)
+            fig._current_im.autoscale()
+            # We need to go to the "home" position before updating it
+            # to include the new data, because otherwise it will store
+            # other axes (potentially zoomed in) positions as "home",
+            # which is super annoying, more so than the reset.
+            if fig.canvas.toolbar is not None:
+                fig.canvas.toolbar.home()
+                fig.canvas.toolbar.update()
+            # Replace existing mode number
+            for artist in fig.texts:
+                artist.set_text(f'Mode {fig.plot_idx}')
+            
+            return fig
+            
+        fig.clear()
+        ax = fig.add_subplot(111, **kwargs)
+
+        mpl_im = ax.imshow(
             to_plot,
             cmap = cmap,
             interpolation = interpolation,
             vmin=vmin,
             vmax=vmax,
         )
-        plt.gca().set_facecolor('k')
+        fig._current_im = mpl_im
+        ax.set_facecolor('k')
         
         if basis is not None:
             # we've closed over basis, so we can't edit it
@@ -264,50 +275,51 @@ def plot_image(
             corners = np.matmul(transform_matrix,corners.transpose())
             mins = np.min(corners, axis=1)
             maxes = np.max(corners, axis=1)
-            plt.gca().set_xlim([mins[0], maxes[0]])
-            plt.gca().set_ylim([mins[1], maxes[1]])
-            plt.gca().invert_yaxis()
+            ax.set_xlim([mins[0], maxes[0]])
+            ax.set_ylim([mins[1], maxes[1]])
+            ax.invert_yaxis()
 
         if show_cbar:
-            cbar = plt.colorbar()
+            cbar = fig.colorbar(mpl_im, ax=ax, fraction=0.05, pad=0.05)
             if cmap_label is not None:
                 cbar.set_label(cmap_label)
 
         if basis is not None:
-            plt.xlabel('X (' + units + ')')
-            plt.ylabel('Y (' + units + ')')
+            ax.set_xlabel('X (' + units + ')')
+            ax.set_ylabel('Y (' + units + ')')
         else:
-            plt.xlabel('j (pixels)')
-            plt.ylabel('i (pixels)')
+            ax.set_xlabel('j (pixels)')
+            ax.set_ylabel('i (pixels)')
 
-
-        plt.title(title)
+        ax.set_title(title)
 
         if len(im.shape) >= 3:
-            text_transform = ax.transAxes if ax_mode else plt.gcf().transFigure
-            plt.text(0.03, 0.03, str(plot_holder.plot_idx), fontsize=14, transform=text_transform)
+            fig.text(0.03, 0.03, f'Mode {fig.plot_idx}', fontsize=14)
+            
+        if fig.canvas.toolbar is not None:
+            fig.canvas.toolbar.update()
         return fig
 
-    plot_holder = ax if ax_mode else fig
-    if hasattr(plot_holder, 'plot_idx'):
-        result = make_plot(plot_holder.plot_idx)
+    if hasattr(fig, 'plot_idx'):
+        result_fig = make_plot(fig.plot_idx)
     else:
-        result = make_plot(0)
-
+        result_fig = make_plot(0)
+        
     update = make_plot
 
-
     def on_action(event):
-        plot_holder = ax if ax_mode else fig
+        # Protection for multi-subfigure situation
+        if event.inaxes not in fig.axes:
+            return
         if not hasattr(event, 'button'):
             event.button = None
         if not hasattr(event, 'key'):
             event.key = None
 
         if event.key == 'up' or event.button == 'up':
-            update(plot_holder.plot_idx - 1)
+            update(fig.plot_idx - 1)
         elif event.key == 'down' or event.button == 'down':
-            update(plot_holder.plot_idx + 1)
+            update(fig.plot_idx + 1)
         plt.draw()
 
     if len(im.shape) >=3:
@@ -320,7 +332,7 @@ def plot_image(
         fig.my_callbacks.append(fig.canvas.mpl_connect('key_press_event',on_action))
         fig.my_callbacks.append(fig.canvas.mpl_connect('scroll_event',on_action))
 
-    return result
+    return result_fig
 
 
 def plot_real(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_label='Real Part (a.u.)', **kwargs):
@@ -571,17 +583,16 @@ def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, inver
 
     factor = get_units_factor(units)
 
-    if isinstance(fig, plt.Axes):
-        ax = fig
-        fig = ax.get_figure()
-        plt.sca(ax)
-    elif fig is None:
+    if fig is None:
         fig = plt.figure()
-        ax = fig.add_subplot(111, **kwargs)
+        
+    if clear_fig:
+        fig.clear()
+
+    if len(fig.axes) >= 1:
+        ax = fig.axes[0]
     else:
-        plt.figure(fig.number)
-        if clear_fig:
-            plt.gcf().clear()
+        ax = fig.add_subplot(111, **kwargs)
 
     if isinstance(translations, t.Tensor):
         translations = translations.detach().cpu().numpy()
@@ -590,25 +601,33 @@ def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, inver
 
     linestyle = '-' if lines else 'None'
     linewidth = 1 if lines else 0
-    plt.plot(translations[:,0], translations[:,1],
-             marker=marker, linestyle=linestyle,
-             label=label, color=color, 
-             linewidth=linewidth)
+    ax.plot(translations[:,0], translations[:,1],
+            marker=marker, linestyle=linestyle,
+            label=label, color=color, 
+            linewidth=linewidth)
     
     if invert_xaxis:
-        ax = plt.gca()
         x_min, x_max = ax.get_xlim()
         # Protect against flipping twice if plotting on top of existing graph
         if x_min <= x_max:
             ax.invert_xaxis()
         
-    plt.xlabel('X (' + units + ')')
-    plt.ylabel('Y (' + units + ')')
+    ax.set_xlabel('X (' + units + ')')
+    ax.set_ylabel('Y (' + units + ')')
 
     return fig
 
 
-def plot_nanomap(translations, values, fig=None, units='$\\mu$m', convention='probe', invert_xaxis=True):
+def plot_nanomap(
+    translations,
+    values,
+    fig=None,
+    cmap='viridis',
+    cmap_label=None,
+    units='$\\mu$m',
+    convention='probe',
+    invert_xaxis=True
+):
     """Plots a set of nanomap data in a flexible way
 
     Parameters
@@ -619,6 +638,10 @@ def plot_nanomap(translations, values, fig=None, units='$\\mu$m', convention='pr
         A length-N object of values associated with the translations
     fig : matplotlib.figure.Figure
         Default is a new figure, a matplotlib figure to use to plot
+    cmap : str
+        Default is 'viridis', the colormap to plot with
+    cmap_label : str
+        Default is no label, what to label the colorbar when plotting.
     units : str
         Default is um, units to report in (assuming input in m)
     convention : str
@@ -632,22 +655,14 @@ def plot_nanomap(translations, values, fig=None, units='$\\mu$m', convention='pr
         The figure object that was actually plotted to.
     """
 
-    ax_mode = isinstance(fig, plt.Axes)
-    if ax_mode:
-        ax = fig
-        fig = ax.get_figure()
-        ax.cla()
-        plt.sca(ax)
-    elif fig is None:
+    if fig is None:
         fig = plt.figure()
-    else:
-        plt.figure(fig.number)
-        plt.gcf().clear()
-
+    
+    fig.clear()
+    ax = fig.add_subplot(111)
     factor = get_units_factor(units)
 
-    plot_area = ax if ax_mode else fig
-    bbox = plot_area.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     if isinstance(translations, t.Tensor):
         trans = translations.detach().cpu().numpy()
     else:
@@ -664,14 +679,17 @@ def plot_nanomap(translations, values, fig=None, units='$\\mu$m', convention='pr
     s = bbox.width * bbox.height / trans.shape[0] * 72**2 #72 is points per inch
     s /= 4 # A rough value to make the size work out
 
-    plt.scatter(factor * trans[:,0],factor * trans[:,1],s=s,c=values)
+    scatter_plot = ax.scatter(
+        factor * trans[:,0],factor * trans[:,1],s=s,c=values, cmap=cmap)
     if invert_xaxis:
-        plt.gca().invert_xaxis()
+        ax.invert_xaxis()
     
-    plt.gca().set_facecolor('k')
-    plt.xlabel('Translation x (' + units + ')')
-    plt.ylabel('Translation y (' + units + ')')
-    plt.colorbar()
+    ax.set_facecolor('k')
+    ax.set_xlabel('Translation x (' + units + ')')
+    ax.set_ylabel('Translation y (' + units + ')')
+    cbar = fig.colorbar(scatter_plot, ax=ax, fraction=0.05, pad=0.05)
+    if cmap_label is not None:
+        cbar.set_label(cmap_label)
 
     return fig
 

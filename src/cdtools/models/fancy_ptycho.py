@@ -45,9 +45,12 @@ class FancyPtycho(CDIModel):
                  near_field=False,
                  angular_spectrum_propagator=None,
                  inv_angular_spectrum_propagator=None,
+                 panel_plot_mode=False,
+                 plot_level=2,
                  ):
 
-        super(FancyPtycho, self).__init__()
+        super(FancyPtycho, self).__init__(panel_plot_mode=panel_plot_mode,
+                                         plot_level=plot_level)
         self.register_buffer('wavelength',
                              t.as_tensor(wavelength, dtype=dtype))
         self.store_detector_geometry(detector_geometry,
@@ -252,6 +255,8 @@ class FancyPtycho(CDIModel):
                      obj_view_crop=None,
                      obj_padding=200,
                      near_field=False,
+                     panel_plot_mode=False,
+                     plot_level=2,
                      ):
 
         wavelength = dataset.wavelength
@@ -517,6 +522,8 @@ class FancyPtycho(CDIModel):
             near_field=near_field,
             angular_spectrum_propagator=angular_spectrum_propagator,
             inv_angular_spectrum_propagator=inv_angular_spectrum_propagator,
+            panel_plot_mode=panel_plot_mode,
+            plot_level=plot_level,
         )
 
 
@@ -887,7 +894,22 @@ class FancyPtycho(CDIModel):
             cmap=cmap,
             **kwargs),
 
+
+    def plot_illumination_intensity(self, fig, dataset):
+        if not hasattr(self, 'weights') or self.weights.ndim != 1:
+            raise NotImplementedError('Not yet implemented for OPRP')
+        p.plot_nanomap(
+            self.corrected_translations(dataset),
+            self.weights**2,
+            fig=fig,
+            cmap='magma',
+            cmap_label='Intensity (a.u.)',
+            units=self.units,
+            convention='probe',
+            invert_xaxis=True
+        )
         
+
     def plot_translations_and_originals(self, fig, dataset):
         """Only used to make a plot for the plot list."""
         p.plot_translations(
@@ -910,62 +932,160 @@ class FancyPtycho(CDIModel):
         plt.legend()
         
         
+    plot_panel_list = [
+      {
+        'title': 'Main Results',
+        'plot_level': 1,
+        'grid': (2,2),
+        'figure_size': (9,7),
+        'plots': [
+          {
+            'title': 'Object Phase',
+            'subplot': (0,0),
+            'plot_func': lambda self, fig: p.plot_phase(
+                self.obj[self.obj_view_slice],
+                fig=fig,
+                basis=self.obj_basis,
+                units=self.units),
+            'condition': lambda self: not self.exponentiate_obj,
+          },
+          {
+            'title': 'Object Amplitude',
+            'subplot': (1,0),
+            'plot_func': lambda self, fig: p.plot_amplitude(
+                self.obj[self.obj_view_slice],
+                fig=fig,
+                basis=self.obj_basis,
+                units=self.units),
+            'condition': lambda self: not self.exponentiate_obj,
+          },
+          {
+            'title': 'Real Part of T',
+            'subplot': (0,0),
+            'plot_func': lambda self, fig: p.plot_real(
+                self.obj[self.obj_view_slice],
+                fig=fig,
+                basis=self.obj_basis,
+                units=self.units,
+                cmap='cividis'),
+            'condition': lambda self: self.exponentiate_obj,
+          },
+          {
+            'title': 'Imaginary Part of T',
+            'subplot': (1,0),
+            'plot_func': lambda self, fig: p.plot_imag(
+                self.obj[self.obj_view_slice],
+                fig=fig,
+                basis=self.obj_basis,
+                units=self.units),
+            'condition': lambda self: self.exponentiate_obj,
+          },
+          {
+            'title': 'Basis Probes, Colorized',
+            'subplot': (0,1),
+            'plot_func': lambda self, fig: p.plot_colorized(
+                (self.probe if not self.fourier_probe
+                else tools.propagators.inverse_far_field(self.probe)),
+                fig=fig,
+                basis=self.probe_basis,
+                units=self.units),
+          },
+          {
+            'title': 'Basis Probes, Amplitude',
+            'subplot': (1,1),
+            'plot_func': lambda self, fig: p.plot_amplitude(
+                (self.probe if not self.fourier_probe
+                else tools.propagators.inverse_far_field(self.probe)),
+                fig=fig,
+                basis=self.probe_basis,
+                units=self.units),
+          },
+        ],
+      },
+      {
+        'title': 'Advanced Monitoring',
+        'plot_level': 2,
+        'figure_size': (12,7),
+        'grid': (2,3),
+        'plots': [
+          {
+            'title': 'Basis Probes, Fourier Colorized',
+            'subplot': (0,0),
+            'plot_func': lambda self, fig: p.plot_colorized(
+                (self.probe if self.fourier_probe
+                else tools.propagators.far_field(self.probe)),
+                fig=fig),
+          },
+          {
+            'title': 'Basis Probes, Fourier Amplitude',
+            'subplot': (1,0),
+            'plot_func': lambda self, fig: p.plot_amplitude(
+                (self.probe if self.fourier_probe
+                else tools.propagators.far_field(self.probe)),
+                fig=fig),
+          },
+          {
+            'title': 'Illumination Intensity',
+            'subplot': (0,1),
+            'plot_func': lambda self, fig, dataset: self.plot_illumination_intensity(fig, dataset),
+            'condition': lambda self: hasattr(self, 'weights') and self.weights.ndim == 1
+          },
+          {
+            'title': 'Detector Background',
+            'subplot': (1,1),
+            'plot_func': lambda self, fig: p.plot_amplitude(self.background**2, fig=fig, cmap='magma', cmap_label='Intensity (detector units)'),
+          },
+          {
+            'title': 'Corrected Translations',
+            'subplot': (0,2),
+            'plot_func': lambda self, fig, dataset: self.plot_translations_and_originals(fig, dataset),
+          },
+          {
+            'title': 'Loss History',
+            'subplot': (1,2),
+            'plot_func': lambda self, fig: self.plot_loss_history(fig),
+          },
+        ],
+      },
+    ]
+
     plot_list = [
-        ('',
-         lambda self, fig, dataset: self.plot_wavefront_variation(
+        {'title': 'Per-Exposure Probe Intensity',
+         'plot_level': 3,
+         'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
              dataset,
              fig=fig,
              mode='root_sum_intensity',
              image_title='Root Summed Probe Intensities',
              image_colorbar_title='Square Root of Intensity'),
-         lambda self: len(self.weights.shape) >= 2),
-        ('',
-         lambda self, fig, dataset: self.plot_wavefront_variation(
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': 'Per-Exposure Probe Amplitudes',
+         'plot_level': 3,
+         'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
              dataset,
              fig=fig,
              mode='amplitude',
              image_title='Probe Amplitudes (scroll to view modes)',
              image_colorbar_title='Probe Amplitude'),
-         lambda self: len(self.weights.shape) >= 2),
-        ('',
-         lambda self, fig, dataset: self.plot_wavefront_variation(
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': 'Per-Exposure Probe Phases',
+         'plot_level': 3,
+         'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
              dataset,
              fig=fig,
              mode='phase',
              image_title='Probe Phases (scroll to view modes)',
              image_colorbar_title='Probe Phase'),
-         lambda self: len(self.weights.shape) >= 2),
-        ('Basis Probe Fourier Space Amplitudes',
-         lambda self, fig: p.plot_amplitude(
-             (self.probe if self.fourier_probe
-              else tools.propagators.far_field(self.probe)),
-              fig=fig)),
-        ('Basis Probe Fourier Space Colorized',
-         lambda self, fig: p.plot_colorized(
-             (self.probe if self.fourier_probe
-              else tools.propagators.far_field(self.probe))
-             , fig=fig)),
-        ('Basis Probe Real Space Amplitudes',
-         lambda self, fig: p.plot_amplitude(
-             (self.probe if not self.fourier_probe
-              else tools.propagators.inverse_far_field(self.probe)),
-             fig=fig,
-             basis=self.probe_basis,
-             units=self.units)),
-        ('Basis Probe Real Space Colorized',
-         lambda self, fig: p.plot_colorized(
-             (self.probe if not self.fourier_probe
-              else tools.propagators.inverse_far_field(self.probe)),
-             fig=fig,
-             basis=self.probe_basis,
-             units=self.units)),
-        ('Average Weight Matrix Amplitudes',
-         lambda self, fig: p.plot_amplitude(
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': 'Average Weight Matrix Amplitudes',
+         'plot_level': 1,
+         'plot_func': lambda self, fig: p.plot_amplitude(
              np.nanmean(np.abs(self.weights.data.cpu().numpy()), axis=0),
              fig=fig),
-         lambda self: len(self.weights.shape) >= 2),
-        ('% of Power in Top Mode',
-         lambda self, fig, dataset: p.plot_nanomap(
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': '% of Power in Top Mode',
+         'plot_level': 3,
+         'plot_func': lambda self, fig, dataset: p.plot_nanomap(
              self.corrected_translations(dataset),
              100 * t.stack([
                  analysis.calc_mode_power_fractions(
@@ -975,44 +1095,11 @@ class FancyPtycho(CDIModel):
              ], dim=0),
              fig=fig,
              units=self.units),
-         lambda self: len(self.weights.shape) >= 2),
-        ('Object Amplitude',
-         lambda self, fig: p.plot_amplitude(
-             self.obj[self.obj_view_slice],
-             fig=fig,
-             basis=self.obj_basis,
-             units=self.units),
-         lambda self: not self.exponentiate_obj),
-        ('Object Phase',
-         lambda self, fig: p.plot_phase(
-             self.obj[self.obj_view_slice],
-             fig=fig,
-             basis=self.obj_basis,
-             units=self.units),
-         lambda self: not self.exponentiate_obj),
-        ('Real Part of T', 
-         lambda self, fig: p.plot_real(
-             self.obj[self.obj_view_slice],
-             fig=fig,
-             basis=self.obj_basis,
-             units=self.units,
-             cmap='cividis'),
-         lambda self: self.exponentiate_obj),
-        ('Imaginary Part of T',
-         lambda self, fig: p.plot_imag(
-             self.obj[self.obj_view_slice],
-             fig=fig,
-             basis=self.obj_basis,
-             units=self.units),
-         lambda self: self.exponentiate_obj),
-
-        ('Corrected Translations',
-         lambda self, fig, dataset: self.plot_translations_and_originals(fig, dataset)),
-        ('Background',
-         lambda self, fig: p.plot_amplitude(self.background**2, fig=fig)),
-        ('Quantum Efficiency Mask',
-         lambda self, fig: p.plot_amplitude(self.qe_mask, fig=fig),
-         lambda self: (hasattr(self, 'qe_mask') and self.qe_mask is not None))
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': 'Quantum Efficiency Mask',
+         'plot_level': 3,
+         'plot_func': lambda self, fig: p.plot_amplitude(self.qe_mask, fig=fig),
+         'condition': lambda self: (hasattr(self, 'qe_mask') and self.qe_mask is not None)},
     ]
     
     

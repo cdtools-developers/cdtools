@@ -28,6 +28,7 @@ loss
 
 """
 
+from sympy import Q
 import torch as t
 from torch.utils import data as torchdata
 import matplotlib
@@ -604,7 +605,7 @@ class CDIModel(t.nn.Module):
             # from the panels
             flat = []
             for panel in plot_panel_list:
-                panel_level = panel.get('plot_level', 0)
+                panel_level = panel.get('plot_level', 1)
                 for plot in panel['plots']:
                     # We add the plot level from the larger panel
                     flat.append({**plot, 'plot_level': panel_level})
@@ -628,9 +629,14 @@ class CDIModel(t.nn.Module):
             self
     ):
         backend = matplotlib.get_backend().lower()
-        interactive_bk = matplotlib.backends.backend_registry.list_builtin(
-            matplotlib.backends.BackendFilter.INTERACTIVE
-        )
+        try:
+            # matplotlib >= 3.9
+            interactive_bk = matplotlib.backends.backend_registry.list_builtin(
+                matplotlib.backends.BackendFilter.INTERACTIVE
+            )
+        except AttributeError:
+            # older matplotlib
+            interactive_bk = matplotlib.rcsetup.interactive_bk
         return backend in [b.lower() for b in interactive_bk]
     
 
@@ -656,7 +662,7 @@ class CDIModel(t.nn.Module):
 
         for plot in plot_list:
             # Level filter
-            if plot.get('plot_level', 0) > self.plot_level:
+            if plot.get('plot_level', 1) > self.plot_level:
                 continue
 
             # Condition check
@@ -670,15 +676,17 @@ class CDIModel(t.nn.Module):
                         continue
 
             if self.has_inspect_been_called and \
-               replot_all == False and \
+               not replot_all and \
                not plt.fignum_exists(plot['title']):
                 continue
 
             if not self.has_inspect_been_called:
-                fig = plt.figure(plot['title'])
+                fig = plt.figure(plot['title'],
+                                 constrained_layout=True)
             else:
                 with plt.rc_context({'figure.raise_window': False}):
-                    fig = plt.figure(plot['title'])
+                    fig = plt.figure(plot['title'],
+                                     constrained_layout=True)
 
             try:
                 plot['plot_func'](self, fig)
@@ -711,34 +719,40 @@ class CDIModel(t.nn.Module):
 
         rendered = []
         
-        for panel_idx, panel_def in enumerate(plot_panel_list):
-            panel_level = panel_def.get('plot_level', 0)
+        for panel_def in plot_panel_list[::-1]: # Flip so first ones show on top
+            panel_level = panel_def.get('plot_level', 1)
             if panel_level > self.plot_level:
                 continue  # skip entire panel
 
             nrows, ncols = panel_def['grid']
             figsize = panel_def.get('figure_size', None)
-            title = panel_def.get('title', '')
-
+            
 
             if self.has_inspect_been_called and \
-               replot_all == False and \
+               not replot_all and \
                not plt.fignum_exists(panel_def['title']):
                 continue
 
             if not self.has_inspect_been_called:
-                fig = plt.figure(panel_def['title'])
+                fig = plt.figure(panel_def['title'], figsize=figsize,
+                                 constrained_layout=True)
             else:
                 with plt.rc_context({'figure.raise_window': False}):
-                    fig = plt.figure(panel_def['title'])
+                    fig = plt.figure(panel_def['title'],
+                                     constrained_layout=True)
 
-                # Remove all axes and recreate them fresh each update.
-                # plt.colorbar() shrinks the parent axes to make room for
-                # itself, so clearing and recreating is simpler than trying
-                # to undo that resizing.
-                for ax in list(fig.axes):
-                    ax.remove()
+            fig.clear()
+                    
+            fig.get_layout_engine().set(
+                rect=(0.02, 0.02, 0.96, 0.96),
+            )
 
+            gs = fig.add_gridspec(
+                nrows, ncols,
+                width_ratios=[1]*ncols,
+                height_ratios=[1]*nrows,
+            )
+            
             for plot in panel_def['plots']:
                 condition = plot.get('condition', None)
                 if condition is not None:
@@ -748,25 +762,22 @@ class CDIModel(t.nn.Module):
                     except TypeError:
                         if not condition(self, dataset):
                             continue
-
-                row, col = plot['subplot']
-                position = row * ncols + col + 1  # 1-indexed for matplotlib
-
-                ax_key = (panel_idx, row, col)
-                ax = fig.add_subplot(nrows, ncols, position)
+                subfig = fig.add_subfigure(gs[plot['subplot'][0],
+                                              plot['subplot'][1]])
 
                 try:
-                    plot['plot_func'](self, ax)
-                    ax.set_title(plot['title'])
+                    plot['plot_func'](self, subfig)
+                    plt.gca().set_title(plot['title'])
                 except TypeError:
                     if dataset is not None:
                         try:
-                            plot['plot_func'](self, ax, dataset)
-                            ax.set_title(plot['title'])
-                        except Exception:
+                            plot['plot_func'](self, subfig, dataset)
+                            plt.gca().set_title(plot['title'])
+                        except TypeError:#Exception:
                             pass
-                except Exception:
-                    pass
+                #except Exception:
+                #    pass
+                
             rendered.append(fig)
             
             if self._is_backend_interactive():
@@ -774,6 +785,41 @@ class CDIModel(t.nn.Module):
 
         return rendered
 
+
+    def plot_loss_history(self, fig=None, clear_fig=True):
+        """Plots the loss history on a semilogy axis
+
+        Parameters
+        ----------
+        fig : matplotlib.figure.Figure
+            Default is a new figure, a matplotlib figure to use to plot
+        clear_fig : bool
+            Default is True. Whether to clear the figure before plotting.
+
+        Returns
+        -------
+        used_fig : matplotlib.figure.Figure
+            The figure object that was actually plotted to.
+        """
+
+        if fig is None:
+            fig = plt.figure()
+        
+        if clear_fig:
+            fig.clear()
+
+        if len(fig.axes) >= 1:
+            ax = fig.axes[0]
+        else:
+            ax = fig.add_subplot(111)
+        
+        ax.semilogy(self.loss_history)
+        plt.title('Loss History')
+        
+        ax.set_xlabel('Epoch')
+        ax.set_ylabel('Loss Metric')
+
+        return fig
 
     def save_figures(self, prefix='', extension='.pdf'):
         """Saves all currently open inspection figures.
