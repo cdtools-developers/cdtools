@@ -106,6 +106,7 @@ def plot_image(
         vmax=None,
         interpolation=None,
         title=None,
+        additional_axis_labels=None,
         **kwargs
 ):
     """Plots an image with a colorbar and on an appropriate spatial grid
@@ -120,6 +121,10 @@ def plot_image(
     Finally, if a function is passed to the plot_func argument, this function
     will be called on each slice of data before it is plotted. This is used
     internally to enable the plot_real, plot_image, plot_phase, etc. functions.
+
+    If the image has more than 2 dimensions, a horizontal slider is created
+    for each extra axis with length > 1. Up/down arrow keys navigate through
+    all extra axes odometer-style (last axis changes fastest).
 
 
     Parameters
@@ -146,6 +151,10 @@ def plot_image(
         Default is max(plot_func(im)), the maximum value for the colormap
     interpolation : str
         What interpolation to use for imshow
+    additional_axis_labels : list of str, optional
+        Labels for each extra axis (all dimensions except the last two).
+        If shorter than the number of extra axes, remaining labels default to
+        "Axis N". If not set, all labels default to "Axis N".
     \\**kwargs
         All other args are passed to fig.add_subplot(111, \\**kwargs)
 
@@ -165,32 +174,40 @@ def plot_image(
             im = im.detach().cpu().numpy()
 
     if fig is None:
-        fig = plt.figure()
-    # This nukes everything and updates either the appropriate image from the
-    # stack of images, or the only image if only a single image has been
-    # given
-    def make_plot(idx):
-        if title is not None:
-            ax_title = title
-        else:
-            try:
-                ax_title = fig.axes[0].get_title()
-            except IndexError:
-                ax_title = ''
+        fig = plt.figure(constrained_layout=True)
 
-        # If im only has two dimensions, this reshape will add a leading
-        # dimension, and update will be called on index 0. If it has 3 or more
-        # dimensions, then all the leading dimensions will be compressed into
-        # one long dimension which can be scrolled through.
-        s = im.shape
-        reshaped_im = im.reshape(-1,s[-2],s[-1])
-        num_images = reshaped_im.shape[0]
-        fig.plot_idx = idx % num_images
+    # Determine extra (non-image) dimensions and build per-axis slider map
+    extra_dims = im.shape[:-2]
+    n_extra = len(extra_dims)
 
-        to_plot = plot_func(reshaped_im[fig.plot_idx])
+    # I have it say e.g. "0th Axis" instead of "Axis 0", because the latter one
+    # looks kind of confusing based on the layout that a Slider widget gets
+    def ordinal(n):
+        suffix = {1: 'st', 2: 'nd', 3: 'rd'}
+        return f"{n}{suffix.get(n % 10, 'th') if n % 100 not in (11, 12, 13) else 'th'}"
+    if additional_axis_labels is None:
+        additional_axis_labels = [f'{ordinal(i)} Axis' for i in range(n_extra)]
+    else:
+        additional_axis_labels = list(additional_axis_labels) + [
+            f'{ordinal(i)} Axis' for i in range(len(additional_axis_labels), n_extra)
+        ]
+
+    # Only axes with length > 1 get sliders
+    slider_axis_map = [
+        (i, extra_dims[i], additional_axis_labels[i])
+        for i in range(n_extra) if extra_dims[i] > 1
+    ]
+    n_sliders = len(slider_axis_map)
+
+    def make_plot(idx_list):
+        # Always update fig._make_plot so slider callbacks get the latest closure
+        fig._make_plot = make_plot
+        fig.plot_idx = list(idx_list)
+        selected = im[tuple(fig.plot_idx)] if n_extra > 0 else im
+        to_plot = plot_func(selected)
 
         # By only updating the data, and not redrawing the fig, we
-        # don't "reset" the home positions of the other
+        # don't "reset" the home positions of the toolbar
         if hasattr(fig, '_current_im'):
             fig._current_im.set_data(to_plot)
             fig._current_im.autoscale()
@@ -201,33 +218,68 @@ def plot_image(
             if fig.canvas.toolbar is not None:
                 fig.canvas.toolbar.home()
                 fig.canvas.toolbar.update()
-
-            if num_images > 1:
-                base = title if title is not None else '('.join(ax_title.split('(')[:-1])[:-1]
-                fig.axes[0].set_title(base + f' ({fig.plot_idx+1} of {num_images})')
-
+            # Sync sliders to the new index without triggering callbacks
+            if hasattr(fig, '_sliders'):
+                fig._updating = True
+                for j, (axis_idx, _, _) in enumerate(slider_axis_map):
+                    fig._sliders[j].set_val(fig.plot_idx[axis_idx])
+                fig._updating = False
+            # Restore image axis as the "current" axis so callers using
+            # plt.gca() / plt.title() target the right axes
+            if hasattr(fig, '_plot_ax'):
+                plt.sca(fig._plot_ax)
             return fig
-            
+
+        if title is not None:
+            ax_title = title
+        else:
+            try:
+                ax_title = fig.axes[0].get_title()
+            except IndexError:
+                ax_title = ''
+
         fig.clear()
-        ax = fig.add_subplot(111, **kwargs)
+
+        # gs = fig.add_gridspec(
+        #     1 + n_sliders, 1,
+        #     height_ratios=[1] + [0.04] * n_sliders,
+        # )
+        # ax = fig.add_subplot(gs[0, 0], **kwargs)
+        # ax_sliders = [fig.add_subplot(gs[i + 1, 0]) for i in range(n_sliders)]
+        import matplotlib
+        gs = matplotlib.gridspec.GridSpec(
+            2, 1,
+            height_ratios=[1] + [0.1 * n_sliders],
+            figure=fig
+        )
+        
+        ax_gs = matplotlib.gridspec.GridSpecFromSubplotSpec(
+            1,1, subplot_spec=gs[0,0])
+        ax = fig.add_subplot(ax_gs[0,0], **kwargs)
+        if n_sliders > 0:
+            slider_gs = matplotlib.gridspec.GridSpecFromSubplotSpec(
+                n_sliders,1, subplot_spec=gs[1,0])
+            ax_sliders = [fig.add_subplot(slider_gs[i, 0]) for i in range(n_sliders)]
+        
+        fig._plot_ax = ax
 
         mpl_im = ax.imshow(
             to_plot,
-            cmap = cmap,
-            interpolation = interpolation,
+            cmap=cmap,
+            interpolation=interpolation,
             vmin=vmin,
             vmax=vmax,
         )
         fig._current_im = mpl_im
         ax.set_facecolor('k')
-        
+
         if basis is not None:
             # we've closed over basis, so we can't edit it
-            if isinstance(basis,t.Tensor):
+            if isinstance(basis, t.Tensor):
                 np_basis = basis.detach().cpu().numpy()
             else:
                 np_basis = basis
-                
+
             np_basis = np_basis * get_units_factor(units)
 
             if isinstance(view_basis, str) and view_basis.lower() == 'ortho':
@@ -237,44 +289,44 @@ def plot_image(
                 # y-axis lies in the x-y plane of the basis, perpendicular
                 # to the x-axis
 
-                basis_norm = np.linalg.norm(np_basis, axis = 0)
-                
+                basis_norm = np.linalg.norm(np_basis, axis=0)
+
                 normed_basis = np_basis / basis_norm
-                normed_z = np.cross(normed_basis[:,1], normed_basis[:,0])
+                normed_z = np.cross(normed_basis[:, 1], normed_basis[:, 0])
                 normed_z /= np.linalg.norm(normed_z)
-                normed_yprime = np.cross(normed_z, normed_basis[:,1])
+                normed_yprime = np.cross(normed_z, normed_basis[:, 1])
                 normed_yprime /= np.linalg.norm(normed_yprime)
-                
+
                 np_view_basis = np.stack(
-                    [normed_yprime, normed_basis[:,1]], axis=1)
+                    [normed_yprime, normed_basis[:, 1]], axis=1)
 
             else:
                 # We've also closed over view_basis, so we can't update it
-                if isinstance(view_basis,t.Tensor):
+                if isinstance(view_basis, t.Tensor):
                     np_view_basis = view_basis.detach().cpu().numpy()
                 else:
                     np_view_basis = view_basis
-                    
+
                 # We always normalize the view basis
-                view_basis_norm = np.linalg.norm(np_view_basis, axis = 0)
+                view_basis_norm = np.linalg.norm(np_view_basis, axis=0)
                 np_view_basis = np_view_basis / view_basis_norm
 
             # Holy cow, this works!
             transform_matrix = \
-                np.linalg.lstsq(np_view_basis[:,::-1], np_basis[:,::-1],
+                np.linalg.lstsq(np_view_basis[:, ::-1], np_basis[:, ::-1],
                                 rcond=None)[0]
-            [[a,c],[b,d]] = transform_matrix
+            [[a, c], [b, d]] = transform_matrix
 
-            transform = mtransforms.Affine2D.from_values(a,b,c,d,0,0)
+            transform = mtransforms.Affine2D.from_values(a, b, c, d, 0, 0)
 
-            trans_data = transform + plt.gca().transData
+            trans_data = transform + ax.transData
 
             mpl_im.set_transform(trans_data)
-            corners = np.array([[-0.5,-0.5],
-                                [im.shape[-1]-0.5,-0.5],
-                                [-0.5, im.shape[-2]-0.5],
-                                [im.shape[-1]-0.5, im.shape[-2]-0.5]])
-            corners = np.matmul(transform_matrix,corners.transpose())
+            corners = np.array([[-0.5, -0.5],
+                                 [im.shape[-1] - 0.5, -0.5],
+                                 [-0.5, im.shape[-2] - 0.5],
+                                 [im.shape[-1] - 0.5, im.shape[-2] - 0.5]])
+            corners = np.matmul(transform_matrix, corners.transpose())
             mins = np.min(corners, axis=1)
             maxes = np.max(corners, axis=1)
             ax.set_xlim([mins[0], maxes[0]])
@@ -282,10 +334,10 @@ def plot_image(
             ax.invert_yaxis()
 
         if show_cbar:
-            cbar = fig.colorbar(mpl_im, ax=ax, fraction=0.05, pad=0.05)
+            cbar = fig.colorbar(mpl_im, ax=ax, fraction=0.05, pad=0.05, location='right')
             if cmap_label is not None:
                 cbar.set_label(cmap_label)
-
+                
         if basis is not None:
             ax.set_xlabel('X (' + units + ')')
             ax.set_ylabel('Y (' + units + ')')
@@ -295,44 +347,86 @@ def plot_image(
 
         if title is not None:
             ax.set_title(ax_title)
-        if num_images >= 3:
-            ax.set_title(ax_title + f' ({fig.plot_idx+1} of {num_images})')
-            
+
+        # Create sliders for axes with length > 1
+        sliders = []
+        for j, (axis_idx, axis_len, label) in enumerate(slider_axis_map):
+            s = Slider(ax_sliders[j], label, 0, axis_len - 1,
+                       valstep=1, valfmt='%d',
+                       valinit=fig.plot_idx[axis_idx])
+            sliders.append(s)
+        fig._sliders = sliders
+
+        # Slider callbacks guarded by _updating flag to prevent re-entry.
+        # Uses fig._make_plot so subsequent plot_image calls update the closure.
+        def make_slider_cb(axis_idx):
+            def cb(val):
+                if getattr(fig, '_updating', False):
+                    return
+                new_idx = list(fig.plot_idx)
+                new_idx[axis_idx] = int(val)
+                fig._make_plot(new_idx)
+                plt.draw()
+            return cb
+
+        for (axis_idx, _, _), slider in zip(slider_axis_map, sliders):
+            slider.on_changed(make_slider_cb(axis_idx))
+
         if fig.canvas.toolbar is not None:
             fig.canvas.toolbar.update()
+        # Restore image axis as "current" so callers using plt.gca() / plt.title()
+        # target the image axes, not the last slider axis added
+        plt.sca(ax)
         return fig
 
-    if hasattr(fig, 'plot_idx'):
+    if hasattr(fig, 'plot_idx') and len(fig.plot_idx) == n_extra:
         result_fig = make_plot(fig.plot_idx)
     else:
-        result_fig = make_plot(0)
-        
-    update = make_plot
+        result_fig = make_plot([0] * n_extra)
 
     def on_action(event):
         # Protection for multi-subfigure situation
         if event.inaxes not in fig.axes:
             return
-        if not hasattr(event, 'button'):
-            event.button = None
         if not hasattr(event, 'key'):
             event.key = None
+        if not getattr(fig, '_sliders', []):
+            return
 
-        if event.key == 'up' or event.button == 'up':
-            update(fig.plot_idx - 1)
-        elif event.key == 'down' or event.button == 'down':
-            update(fig.plot_idx + 1)
+        direction = None
+        if event.key == 'up':
+            direction = -1
+        elif event.key == 'down':
+            direction = 1
+        if direction is None:
+            return
+
+        # Odometer-style: last entry in slider_axis_map changes fastest
+        new_idx = list(fig.plot_idx)
+        carry = direction
+        for axis_idx, axis_len, _ in reversed(slider_axis_map):
+            new_val = new_idx[axis_idx] + carry
+            if new_val < 0:
+                new_idx[axis_idx] = axis_len - 1
+                carry = -1
+            elif new_val >= axis_len:
+                new_idx[axis_idx] = 0
+                carry = 1
+            else:
+                new_idx[axis_idx] = new_val
+                carry = 0
+                break
+
+        make_plot(new_idx)
         plt.draw()
 
-    if len(im.shape) >=3:
-        if not hasattr(fig,'my_callbacks'):
+    if n_sliders > 0:
+        if not hasattr(fig, 'my_callbacks'):
             fig.my_callbacks = []
-
         for cid in fig.my_callbacks:
             fig.canvas.mpl_disconnect(cid)
         fig.my_callbacks = []
-        fig.my_callbacks.append(fig.canvas.mpl_connect('key_press_event',on_action))
-        fig.my_callbacks.append(fig.canvas.mpl_connect('scroll_event',on_action))
+        fig.my_callbacks.append(fig.canvas.mpl_connect('key_press_event', on_action))
 
     return result_fig
 

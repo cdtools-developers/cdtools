@@ -930,6 +930,7 @@ class FancyPtycho(CDIModel):
             convention='probe',
             invert_xaxis=True
         )
+        plt.gca().set_aspect('equal')
     
 
     def plot_translations_and_originals(self, fig, dataset):
@@ -951,7 +952,8 @@ class FancyPtycho(CDIModel):
             color='k',
             marker='.'
         )
-        plt.legend()
+        plt.gca().set_aspect('equal')
+        plt.legend(loc='upper right')
         
         
     plot_panel_list = [
@@ -968,6 +970,7 @@ class FancyPtycho(CDIModel):
                 self.obj[self.obj_view_slice],
                 fig=fig,
                 basis=self.obj_basis,
+                additional_axis_labels=['Mode #',],
                 units=self.units),
             'condition': lambda self: not self.exponentiate_obj,
           },
@@ -978,6 +981,7 @@ class FancyPtycho(CDIModel):
                 self.obj[self.obj_view_slice],
                 fig=fig,
                 basis=self.obj_basis,
+                additional_axis_labels=['Mode #',],
                 units=self.units),
             'condition': lambda self: not self.exponentiate_obj,
           },
@@ -988,6 +992,7 @@ class FancyPtycho(CDIModel):
                 self.obj[self.obj_view_slice],
                 fig=fig,
                 basis=self.obj_basis,
+                additional_axis_labels=['Mode #',],
                 units=self.units,
                 cmap='cividis'),
             'condition': lambda self: self.exponentiate_obj,
@@ -999,6 +1004,7 @@ class FancyPtycho(CDIModel):
                 self.obj[self.obj_view_slice],
                 fig=fig,
                 basis=self.obj_basis,
+                additional_axis_labels=['Mode #',],
                 units=self.units),
             'condition': lambda self: self.exponentiate_obj,
           },
@@ -1011,6 +1017,7 @@ class FancyPtycho(CDIModel):
                 fig=fig,
                 title='Basis Probes',
                 basis=self.probe_basis,
+                additional_axis_labels=['Mode #',],
                 units=self.units),
           },
           {
@@ -1022,6 +1029,7 @@ class FancyPtycho(CDIModel):
                 fig=fig,
                 title='Basis Probes',
                 basis=self.probe_basis,
+                additional_axis_labels=['Mode #',],
                 units=self.units),
           },
         ],
@@ -1040,6 +1048,7 @@ class FancyPtycho(CDIModel):
                 else tools.propagators.far_field(self.probe)),
                 fig=fig,
                 title='Basis Probes, Fourier',
+                additional_axis_labels=['Mode #',],
             ),
           },
           {
@@ -1050,6 +1059,7 @@ class FancyPtycho(CDIModel):
                 else tools.propagators.far_field(self.probe)),
                 fig=fig,
                 title='Basis Probes, Fourier',
+                additional_axis_labels=['Mode #',],
             ),
           },
           {
