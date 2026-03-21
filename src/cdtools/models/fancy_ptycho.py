@@ -924,7 +924,7 @@ class FancyPtycho(CDIModel):
             self.corrected_translations(dataset),
             self.get_probe_intensities(),
             fig=fig,
-            cmap='magma',
+            cmap='viridis',
             cmap_label='Intensity (a.u.)',
             units=self.units,
             convention='probe',
@@ -1009,25 +1009,26 @@ class FancyPtycho(CDIModel):
             'condition': lambda self: self.exponentiate_obj,
           },
           {
-            'title': 'Basis Probes, Colorized',
+            'title': 'Probe Modes, Colorized',
             'subplot': (0,1),
             'plot_func': lambda self, fig: p.plot_colorized(
                 (self.probe if not self.fourier_probe
                 else tools.propagators.inverse_far_field(self.probe)),
                 fig=fig,
-                title='Basis Probes',
+                title='Probe Modes, Real Space',
                 basis=self.probe_basis,
                 additional_axis_labels=['Mode #',],
+                amplitude_scaling=np.sqrt,
                 units=self.units),
           },
           {
-            'title': 'Basis Probes, Amplitude',
+            'title': 'Probe Modes, Amplitude',
             'subplot': (1,1),
             'plot_func': lambda self, fig: p.plot_amplitude(
                 (self.probe if not self.fourier_probe
                 else tools.propagators.inverse_far_field(self.probe)),
                 fig=fig,
-                title='Basis Probes',
+                title='Probe Modes, Real Space',
                 basis=self.probe_basis,
                 additional_axis_labels=['Mode #',],
                 units=self.units),
@@ -1041,24 +1042,25 @@ class FancyPtycho(CDIModel):
         'grid': (2,3),
         'plots': [
           {
-            'title': 'Basis Probes, Fourier Colorized',
+            'title': 'Probe Modes, Fourier Colorized',
             'subplot': (0,0),
             'plot_func': lambda self, fig: p.plot_colorized(
                 (self.probe if self.fourier_probe
                 else tools.propagators.far_field(self.probe)),
                 fig=fig,
-                title='Basis Probes, Fourier',
+                title='Probe Modes, Fourier Space',
                 additional_axis_labels=['Mode #',],
+                amplitude_scaling = np.sqrt,
             ),
           },
           {
-            'title': 'Basis Probes, Fourier Amplitude',
+            'title': 'Probe Modes, Fourier Amplitude',
             'subplot': (1,0),
             'plot_func': lambda self, fig: p.plot_amplitude(
                 (self.probe if self.fourier_probe
                 else tools.propagators.far_field(self.probe)),
                 fig=fig,
-                title='Basis Probes, Fourier',
+                title='Probe Modes, Fourier Space',
                 additional_axis_labels=['Mode #',],
             ),
           },
@@ -1070,7 +1072,7 @@ class FancyPtycho(CDIModel):
           {
             'title': 'Detector Background',
             'subplot': (1,1),
-            'plot_func': lambda self, fig: p.plot_amplitude(self.background**2, fig=fig, cmap='magma', cmap_label='Intensity (detector units)'),
+            'plot_func': lambda self, fig: p.plot_amplitude(self.background**2, fig=fig, cmap='viridis', cmap_label='Intensity (detector units)'),
           },
           {
             'title': 'Corrected Translations',

@@ -14,6 +14,7 @@ model = cdtools.models.FancyPtycho.from_dataset(
     propagation_distance=5e-3, # Propagate the initial probe guess by 5 mm
     units='mm', # Set the units for the live plots
     obj_view_crop=-50, # Expands the field of view in the object plot by 50 pix,
+    panel_plot_mode=False
 )
 
 if t.cuda.is_available():

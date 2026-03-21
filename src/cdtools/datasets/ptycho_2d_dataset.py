@@ -245,8 +245,6 @@ class Ptycho2DDataset(CDataset):
                 return np.log10((meas_data * mask) + log_offset)
             else:
                 return meas_data * mask
-
-        translations = self.translations.detach().cpu().numpy()
         
         # This takes about twice as long as it would to just do it all at
         # once, but it avoids creating another self.patterns-sized array

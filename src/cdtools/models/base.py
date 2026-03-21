@@ -812,7 +812,7 @@ class CDIModel(t.nn.Module):
                 except KeyboardInterrupt:
                     raise
                 except Exception:
-                    pass
+                    raise
                 
             rendered.append(fig)
             

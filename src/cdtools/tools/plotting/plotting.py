@@ -31,7 +31,7 @@ __all__ = [
 ]
 
 
-def colorize(z, use_cmocean=True):
+def colorize(z, use_cmocean=False, amplitude_scaling=lambda x: x):
     """ Returns RGB values for a complex color plot given a complex array
     This function returns a set of RGB values that can be used directly
     in a call to imshow based on an input complex numpy array (not a
@@ -41,6 +41,8 @@ def colorize(z, use_cmocean=True):
     ----------
     z : array
         A complex-valued array
+    use_cmocean : bool
+        If true, uses the cmocean_phase colormap instead of hue
     Returns
     -------
     rgb : list(array)
@@ -48,24 +50,25 @@ def colorize(z, use_cmocean=True):
     """
 
     amp = np.abs(z)
-    scaled_amp = amp / np.max(amp)
+    scaled_amp = amplitude_scaling(amp / np.max(amp))
     ph = np.angle(z, deg=1)
     
-    if not use_cmocean:
-        # HSV are values in range [0,1]
-        h = ((ph + 90) % 360) / 360
-        s = 0.85 * np.ones_like(h)
-        v = scaled_amp
-        return hsv_to_rgb(np.dstack((h,s,v)))
-    else:
+    if use_cmocean:
         base_rgb_values = []
         for channel in range(3):
-            base_rgb_values.append(np.interp(ph%360, 
+            base_rgb_values.append(np.interp((ph + 180)%360, 
                       np.linspace(0, 360, cm_data.shape [0]),
                       cm_data[:,channel]))
         base_rgb_values = np.dstack(base_rgb_values)
         rgb_values = base_rgb_values * scaled_amp[...,None]
         return rgb_values
+    else:
+        # HSV are values in range [0,1]
+        h = ((ph + 90) % 360) / 360
+        s = 0.85 * np.ones_like(h)
+        v = scaled_amp
+        return hsv_to_rgb(np.dstack((h,s,v)))
+        
 
 
 
@@ -116,6 +119,7 @@ def plot_image(
         interpolation=None,
         title=None,
         additional_axis_labels=None,
+        updateable_colorbar=True,
         **kwargs
 ):
     """Plots an image with a colorbar and on an appropriate spatial grid
@@ -219,7 +223,8 @@ def plot_image(
         # don't "reset" the home positions of the toolbar
         if hasattr(fig, '_current_im'):
             fig._current_im.set_data(to_plot)
-            fig._current_im.autoscale()
+            if updateable_colorbar:
+                fig._current_im.autoscale()
             # We need to go to the "home" position before updating it
             # to include the new data, because otherwise it will store
             # other axes (potentially zoomed in) positions as "home",
@@ -344,6 +349,8 @@ def plot_image(
 
         if show_cbar:
             cbar = fig.colorbar(mpl_im, ax=ax, fraction=0.05, pad=0.05, location='right')
+            if not updateable_colorbar:
+                cbar.ax.set_navigate(False)
             if cmap_label is not None:
                 cbar.set_label(cmap_label)
                 
@@ -619,7 +626,7 @@ def plot_phase(
 def plot_amplitude_surfacenorm():
     pass
 
-def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', title=None, **kwargs):
+def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', title=None, amplitude_scaling=lambda x: x, **kwargs):
     """ Plots the colorized version of a complex array with dimensions NxM
 
     The darkness corresponds to the intensity of the image, and the color
@@ -649,11 +656,34 @@ def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', title=None, **kwar
     used_fig : matplotlib.figure.Figure
         The figure object that was actually plotted to.
     """
-    plot_func = lambda x: colorize(x)
-    return plot_image(im, plot_func=plot_func, fig=fig, basis=basis,
+    plot_func = lambda x: colorize(x, use_cmocean=True,
+                                   amplitude_scaling=amplitude_scaling)
+    plot_fig = plot_image(im, plot_func=plot_func, fig=fig, basis=basis,
                       cmap=cmocean_phase, vmin=-np.pi, vmax=np.pi,
                       cmap_label='Phase (rad)',
-                      units=units, show_cbar=True, title=title, **kwargs)
+                      units=units, show_cbar=True, title=title,
+                      updateable_colorbar=False, **kwargs)
+
+    # Find the colorbar - this is a bit hacky
+    cbar_ax = [ax for ax in plot_fig.get_axes() if hasattr(ax, '_colorbar')][0]
+
+    # --- Replace the colorbar image ---
+    # The internal image is a QuadMesh living on cbar.ax
+    #qm = cbar.ax.collections
+    # Build a 2D array to match the colorbar's range, here (0,1) in x
+    # and (pi, pi) in y
+    yg = np.linspace(-np.pi, np.pi, 256)   # colormap values 
+    xg = np.linspace(0, 1, 64)  # second dimension
+    YY, XX = np.meshgrid(yg, xg, indexing='ij')
+    dummy_im = XX * np.exp(1j*YY)
+    cbar_im = plot_func(dummy_im)
+    for artist in list(cbar_ax.get_children()):
+        if 'QuadMesh' in type(artist).__name__ or \
+            'AxesImage' in type(artist).__name__:
+            artist.remove()
+        
+    cbar_ax.imshow(cbar_im, origin='lower', aspect='auto',
+               extent=[xg[0], xg[-1], -np.pi, np.pi])
 
 
 def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, invert_xaxis=True, clear_fig=True, label=None, color=None, marker='.', **kwargs):
@@ -880,7 +910,7 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
     nanomap_units_factor = get_units_factor(nanomap_units)
     nanomap = axes[0].scatter(nanomap_units_factor * translations[:,0],
                               nanomap_units_factor * translations[:,1],
-                              s=s,c=values, picker=True)
+                              s=s,c=values, picker=True, cmap=cmap)
 
     axes[0].invert_xaxis()
     axes[0].set_facecolor('k')

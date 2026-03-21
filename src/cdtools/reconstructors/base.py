@@ -233,7 +233,7 @@ class Reconstructor:
     def optimize(self,
                  iterations: int,
                  batch_size: int = 1,
-                 custom_data_loader: torch.utils.data.DataLoader = None,
+                 custom_data_loader: t.utils.data.DataLoader = None,
                  regularization_factor: Union[float, List[float]] = None,
                  thread: bool = True,
                  calculation_width: int = 10,
@@ -358,14 +358,10 @@ class Reconstructor:
                 try:
                     calc.start()
                     while calc.is_alive():
-                        figs = getattr(self.model, 'figs', [])
-                        open_fig = next(
-                            (f for f in figs if plt.fignum_exists(f.number)),
-                            None,
-                        )
-                        if open_fig is not None:
-                            open_fig.canvas.flush_events()
-                        # We need a low value for smooth figure responses
+                        open_figs = plt.get_fignums()
+                        with plt.rc_context({'figure.raise_window': False}):
+                            for fignum in open_figs:
+                                plt.figure(fignum).canvas.flush_events()
                         time.sleep(0.001)
 
                 except KeyboardInterrupt as e:
