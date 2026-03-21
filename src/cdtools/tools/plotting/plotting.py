@@ -853,7 +853,11 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
     if fig is None:
         fig = plt.figure(figsize=(8,5.3), constrained_layout=True)
     else:
-        fig = plt.figure(fig.number, figsize=(8,5.3),  constrained_layout=True)
+        if plt.fignum_exists(fig.number):
+            fig = plt.figure(fig.number)
+        else:
+            fig = plt.figure(fig.number,
+                             figsize=(8,5.3),  constrained_layout=True)
         fig.clear()
         if hasattr(fig, 'nanomap_cids'):
             for cid in fig.nanomap_cids:
