@@ -31,7 +31,7 @@ __all__ = [
 ]
 
 
-def colorize(z):
+def colorize(z, use_cmocean=True):
     """ Returns RGB values for a complex color plot given a complex array
     This function returns a set of RGB values that can be used directly
     in a call to imshow based on an input complex numpy array (not a
@@ -48,17 +48,26 @@ def colorize(z):
     """
 
     amp = np.abs(z)
-    rmin = 0
-    rmax = np.max(amp)
-    amp = np.where(amp < rmin, rmin, amp)
-    amp = np.where(amp > rmax, rmax, amp)
-    ph = np.angle(z, deg=1) + 90
-    # HSV are values in range [0,1]
-    h = (ph % 360) / 360
-    s = 0.85 * np.ones_like(h)
-    v = (amp - rmin) / (rmax - rmin)
+    scaled_amp = amp / np.max(amp)
+    ph = np.angle(z, deg=1)
+    
+    if not use_cmocean:
+        # HSV are values in range [0,1]
+        h = ((ph + 90) % 360) / 360
+        s = 0.85 * np.ones_like(h)
+        v = scaled_amp
+        return hsv_to_rgb(np.dstack((h,s,v)))
+    else:
+        base_rgb_values = []
+        for channel in range(3):
+            base_rgb_values.append(np.interp(ph%360, 
+                      np.linspace(0, 360, cm_data.shape [0]),
+                      cm_data[:,channel]))
+        base_rgb_values = np.dstack(base_rgb_values)
+        rgb_values = base_rgb_values * scaled_amp[...,None]
+        return rgb_values
 
-    return hsv_to_rgb(np.dstack((h,s,v)))
+
 
 
 def get_units_factor(units):
@@ -642,7 +651,9 @@ def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', title=None, **kwar
     """
     plot_func = lambda x: colorize(x)
     return plot_image(im, plot_func=plot_func, fig=fig, basis=basis,
-                      units=units, show_cbar=False, title=title, **kwargs)
+                      cmap=cmocean_phase, vmin=-np.pi, vmax=np.pi,
+                      cmap_label='Phase (rad)',
+                      units=units, show_cbar=True, title=title, **kwargs)
 
 
 def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, invert_xaxis=True, clear_fig=True, label=None, color=None, marker='.', **kwargs):
@@ -1337,8 +1348,8 @@ cm_data = [[ 0.65830839, 0.46993917, 0.04941288],
            [ 0.65121289, 0.47406244, 0.05044367],
            [ 0.65830839, 0.46993917, 0.04941288]]
 
-rgb = np.array(cm_data)
-rgb_with_alpha = np.zeros((rgb.shape[0],4))
-rgb_with_alpha[:,:3] = rgb
+cm_data = np.array(cm_data)
+rgb_with_alpha = np.zeros((cm_data.shape[0],4))
+rgb_with_alpha[:,:3] = cm_data
 rgb_with_alpha[:,3]  = 1.  #set alpha channel to 1
-cmocean_phase = colors.ListedColormap(rgb_with_alpha, N=rgb.shape[0])
+cmocean_phase = colors.ListedColormap(rgb_with_alpha, N=cm_data.shape[0])
