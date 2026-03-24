@@ -26,7 +26,7 @@ if t.cuda.is_available():
 model.inspect(dataset)
 
 # We run the reconstruction
-for loss in model.Adam_optimize(30, dataset, batch_size=10):
+for loss in model.Adam_optimize(100, dataset, batch_size=10):
     # We print a quick report of the optimization status
     print(model.report())
     # And liveplot the updates to the model as they happen
