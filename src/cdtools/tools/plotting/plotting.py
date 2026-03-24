@@ -13,7 +13,7 @@ from matplotlib.colors import hsv_to_rgb
 from matplotlib.widgets import Slider
 from matplotlib import ticker, patheffects
 from matplotlib import transforms as mtransforms
-from matplotlib import colors, gridspec
+from matplotlib import colors
 
 
 __all__ = [
@@ -31,7 +31,11 @@ __all__ = [
 ]
 
 
-def colorize(z, use_cmocean=False, amplitude_scaling=lambda x: x):
+def colorize(
+        z,
+        use_cmocean=True,
+        amplitude_scaling=lambda x: x,
+):
     """ Returns RGB values for a complex color plot given a complex array
     This function returns a set of RGB values that can be used directly
     in a call to imshow based on an input complex numpy array (not a
@@ -43,6 +47,9 @@ def colorize(z, use_cmocean=False, amplitude_scaling=lambda x: x):
         A complex-valued array
     use_cmocean : bool
         If true, uses the cmocean_phase colormap instead of hue
+    amplitude_scaling : callable
+        A function applied to the normalized amplitude before colorizing.
+        Default is the identity (no scaling).
     Returns
     -------
     rgb : list(array)
@@ -53,24 +60,25 @@ def colorize(z, use_cmocean=False, amplitude_scaling=lambda x: x):
     scaled_amp = amplitude_scaling(amp / np.max(amp))
     ph = np.angle(z, deg=1)
     
+    # The offsets for both options are chosen to match, and to place red
+    # at the cut (at -pi and pi)
     if use_cmocean:
         base_rgb_values = []
         for channel in range(3):
-            base_rgb_values.append(np.interp((ph + 180)%360, 
+            # Flipping the cm_data matches the usual
+            # order of colors from hsv
+            base_rgb_values.append(np.interp((ph + 100)%360, 
                       np.linspace(0, 360, cm_data.shape [0]),
-                      cm_data[:,channel]))
+                      cm_data[::-1,channel]))
         base_rgb_values = np.dstack(base_rgb_values)
         rgb_values = base_rgb_values * scaled_amp[...,None]
         return rgb_values
     else:
         # HSV are values in range [0,1]
-        h = ((ph + 90) % 360) / 360
+        h = ((ph + 170) % 360) / 360
         s = 0.85 * np.ones_like(h)
         v = scaled_amp
         return hsv_to_rgb(np.dstack((h,s,v)))
-        
-
-
 
 
 def get_units_factor(units):
@@ -121,7 +129,7 @@ def plot_image(
         title=None,
         additional_axis_labels=None,
         updateable_colorbar=True,
-        **kwargs
+        **kwargs,
 ):
     """Plots an image with a colorbar and on an appropriate spatial grid
 
@@ -170,7 +178,8 @@ def plot_image(
         If shorter than the number of extra axes, remaining labels default to
         "Axis N". If not set, all labels default to "Axis N".
     \\**kwargs
-        All other args are passed to fig.add_subplot(111, \\**kwargs)
+        All other args are passed to plt.figure(\\**kwargs), if no figure is
+        provided
 
     Returns
     -------
@@ -183,7 +192,7 @@ def plot_image(
         im = im.detach().cpu().numpy()
 
     if fig is None:
-        fig = plt.figure()
+        fig = plt.figure(**kwargs)
 
     # Determine extra (non-image) dimensions and build per-axis slider map
     extra_dims = im.shape[:-2]
@@ -193,7 +202,12 @@ def plot_image(
     # looks kind of confusing based on the layout that a Slider widget gets
     def ordinal(n):
         suffix = {1: 'st', 2: 'nd', 3: 'rd'}
-        return f"{n}{suffix.get(n % 10, 'th') if n % 100 not in (11, 12, 13) else 'th'}"
+        def get_suffix(n):
+            if n % 100 not in (11, 12, 13):
+                suffix.get(n % 10, 'th')
+            else:
+                return 'th'
+        return f"{n}{get_suffix(n)}"
     
     if additional_axis_labels is None:
         additional_axis_labels = [f'{ordinal(i)} Axis' for i in range(n_extra)]
@@ -258,8 +272,6 @@ def plot_image(
         except AttributeError:
             # Only support one layer of nested subfigures
             main_fig = fig.figure # get enclosing figure
-            bbox = fig.bbox
-            main_fig_bbox = main_fig.bbox
             fig_w, fig_h = main_fig.get_size_inches()
             total_width = fig.bbox.width * fig_w / main_fig.bbox.width
             total_height = fig.bbox.height * fig_h / main_fig.bbox.height
@@ -394,8 +406,8 @@ def plot_image(
             sliders.append(s)
         fig._sliders = sliders
 
-        # Slider callbacks guarded by _updating flag to prevent re-entry.
-        # Uses fig._make_plot so subsequent plot_image calls update the closure.
+        # Slider callbacks guarded by the _updating flag to prevent re-entry.
+        # Uses fig._make_plot so further plot_image calls update the closure.
         def make_slider_cb(axis_idx):
             def cb(val):
                 if getattr(fig, '_updating', False):
@@ -463,12 +475,23 @@ def plot_image(
         for cid in fig.my_callbacks:
             fig.canvas.mpl_disconnect(cid)
         fig.my_callbacks = []
-        fig.my_callbacks.append(fig.canvas.mpl_connect('key_press_event', on_action))
+        fig.my_callbacks.append(
+            fig.canvas.mpl_connect('key_press_event', on_action)
+        )
 
     return result_fig
 
 
-def plot_real(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_label='Real Part (a.u.)', title=None, **kwargs):
+def plot_real(
+        im,
+        fig=None,
+        basis=None,
+        units='$\\mu$m',
+        cmap='viridis',
+        cmap_label='Real Part (a.u.)',
+        title=None,
+        **kwargs,
+):
     """Plots the real part of a complex array with dimensions NxM
 
     If a figure is given explicitly, it will clear that existing figure and
@@ -491,8 +514,10 @@ def plot_real(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_
         Default is 'viridis', the colormap to plot with
     cmap_label : str
         What to label the colorbar when plotting
+    title : str, optional
+        Title for the axes.
     \\**kwargs
-        All other args are passed to fig.add_subplot(111, \\**kwargs)
+        All other args are passed through to plotting.plot_image
 
     Returns
     -------
@@ -505,8 +530,16 @@ def plot_real(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_
                       title=title, **kwargs)
 
 
-
-def plot_imag(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_label='Imaginary Part (a.u.)', title=None, **kwargs):
+def plot_imag(
+        im,
+        fig=None,
+        basis=None,
+        units='$\\mu$m',
+        cmap='viridis',
+        cmap_label='Imaginary Part (a.u.)',
+        title=None,
+        **kwargs,
+):
     """Plots the imaginary part of a complex array with dimensions NxM
 
     If a figure is given explicitly, it will clear that existing figure and
@@ -529,8 +562,10 @@ def plot_imag(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_
         Default is 'viridis', the colormap to plot with
     cmap_label : str
         What to label the colorbar when plotting
+    title : str, optional
+        Title for the axes.
     \\**kwargs
-        All other args are passed to fig.add_subplot(111, \\**kwargs)
+        All other args are passed through to plotting.plot_image
 
     Returns
     -------
@@ -543,7 +578,16 @@ def plot_imag(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_
                       title=title, **kwargs)
 
 
-def plot_amplitude(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', cmap_label='Amplitude (a.u.)', title=None, **kwargs):
+def plot_amplitude(
+        im,
+        fig=None,
+        basis=None,
+        units='$\\mu$m',
+        cmap='viridis',
+        cmap_label='Amplitude (a.u.)',
+        title=None,
+        **kwargs,
+):
     """Plots the amplitude of a complex array with dimensions NxM
 
     If a figure is given explicitly, it will clear that existing figure and
@@ -566,8 +610,10 @@ def plot_amplitude(im, fig = None, basis=None, units='$\\mu$m', cmap='viridis', 
         Default is 'viridis', the colormap to plot with
     cmap_label : str
         What to label the colorbar when plotting
+    title : str, optional
+        Title for the axes.
     \\**kwargs
-        All other args are passed to fig.add_subplot(111, \\**kwargs)
+        All other args are passed through to plotting.plot_image
 
     Returns
     -------
@@ -590,7 +636,7 @@ def plot_phase(
         vmin=None,
         vmax=None,
         title=None,
-        **kwargs
+        **kwargs,
 ):
     """ Plots the phase of a complex array with dimensions NxM
 
@@ -600,8 +646,8 @@ def plot_phase(
     If a basis is explicitly passed, the image will be plotted in real-space
     coordinates
 
-    If the cmap is entered as 'phase', it will plot the cmocean phase colormap,
-    and by default set the limits to [-pi,pi].
+    If the cmap is entered as 'phase', it will plot the cmocean phase
+    colormap, and by default set the limits to [-pi,pi].
 
     Parameters
     ----------
@@ -623,7 +669,7 @@ def plot_phase(
         Default is max(angle(im)), the maximum value for the colormap
 
     \\**kwargs
-        All other args are passed to fig.add_subplot(111, \\**kwargs)
+        All other args are passed through to plotting.plot_image
 
     Returns
     -------
@@ -644,10 +690,16 @@ def plot_phase(
                       **kwargs)
 
 
-def plot_amplitude_surfacenorm():
-    pass
-
-def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', title=None, amplitude_scaling=lambda x: x, **kwargs):
+def plot_colorized(
+        im,
+        fig=None,
+        basis=None,
+        units='$\\mu$m',
+        title=None,
+        use_cmocean=True,
+        amplitude_scaling=lambda x: x,
+        **kwargs,
+):
     """ Plots the colorized version of a complex array with dimensions NxM
 
     The darkness corresponds to the intensity of the image, and the color
@@ -669,6 +721,13 @@ def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', title=None, amplit
         Optional, the 3x2 probe basis
     units : str
         The length units to mark on the plot, default is um
+    title : str, optional
+        Title for the axes.  
+    use_cmocean : bool
+        If true, uses the cmocean_phase colormap instead of hue
+    amplitude_scaling : callable
+        A function applied to the normalized amplitude before colorizing.
+        Default is the identity (no scaling).
     \\**kwargs
         All other args are passed to fig.add_subplot(111, \\**kwargs)
 
@@ -677,7 +736,7 @@ def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', title=None, amplit
     used_fig : matplotlib.figure.Figure
         The figure object that was actually plotted to.
     """
-    plot_func = lambda x: colorize(x, use_cmocean=True,
+    plot_func = lambda x: colorize(x, use_cmocean=use_cmocean,
                                    amplitude_scaling=amplitude_scaling)
     plot_fig = plot_image(im, plot_func=plot_func, fig=fig, basis=basis,
                       cmap=cmocean_phase, vmin=-np.pi, vmax=np.pi,
@@ -686,7 +745,8 @@ def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', title=None, amplit
                       updateable_colorbar=False, **kwargs)
 
     # Find the colorbar - this is a bit hacky
-    cbar_ax = [ax for ax in plot_fig.get_axes() if hasattr(ax, '_colorbar')][0]
+    cbar_ax = [ax for ax in plot_fig.get_axes()
+               if hasattr(ax, '_colorbar')][0]
 
     # --- Replace the colorbar image ---
     # The internal image is a QuadMesh living on cbar.ax
@@ -707,7 +767,18 @@ def plot_colorized(im, fig=None, basis=None, units='$\\mu$m', title=None, amplit
                extent=[xg[0], xg[-1], -np.pi, np.pi])
 
 
-def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, invert_xaxis=True, clear_fig=True, label=None, color=None, marker='.', **kwargs):
+def plot_translations(
+        translations,
+        fig=None,
+        units='$\\mu$m',
+        lines=True,
+        invert_xaxis=True,
+        clear_fig=True,
+        label=None,
+        color=None,
+        marker='.',
+        **kwargs,
+):
     """Plots a set of probe translations in a nicely formatted way
 
     Parameters
@@ -721,13 +792,15 @@ def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, inver
     lines : bool
         Whether to plot lines indicating the path taken
     invert_xaxis : bool
-        Default is True. This flips the x axis to match the convention from .cxi files of viewing the image from the beam's perspective
+        Default is True. This flips the x axis to match the convention from
+        .cxi files of viewing the image from the beam's perspective
     clear_fig : bool
         Default is True. Whether to clear the figure before plotting.
     label : str
         Default is None. A label to give the plotted markers for a legend.
     color : str
-        Default is None. The color to plot the markers in. By default, will follow the matplotlib color cycle.
+        Default is None. The color to plot the markers in. By default, will
+        follow the matplotlib color cycle.
     color : str
         Default is '.'. The marker style to plot with.
     \\**kwargs
@@ -756,8 +829,6 @@ def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, inver
         except AttributeError:
             # Only support one layer of nested subfigures
             main_fig = fig.figure # get enclosing figure
-            bbox = fig.bbox
-            main_fig_bbox = main_fig.bbox
             fig_w, fig_h = main_fig.get_size_inches()
             total_width = fig.bbox.width * fig_w / main_fig.bbox.width
             total_height = fig.bbox.height * fig_h / main_fig.bbox.height
@@ -804,14 +875,14 @@ def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, inver
 
 
 def plot_nanomap(
-    translations,
-    values,
-    fig=None,
-    cmap='viridis',
-    cmap_label=None,
-    units='$\\mu$m',
-    convention='probe',
-    invert_xaxis=True
+        translations,
+        values,
+        fig=None,
+        cmap='viridis',
+        cmap_label=None,
+        units='$\\mu$m',
+        convention='probe',
+        invert_xaxis=True,
 ):
     """Plots a set of nanomap data in a flexible way
 
@@ -830,9 +901,11 @@ def plot_nanomap(
     units : str
         Default is um, units to report in (assuming input in m)
     convention : str
-        Default is 'probe', alternative is 'obj'. Whether the translations refer to the probe or object.
+        Default is 'probe', alternative is 'obj'. Whether the translations
+        refer to the probe or object.
     invert_xaxis : bool
-        Default is True. This flips the x axis to match the convention from .cxi files of viewing the image from the beam's perspective
+        Default is True. This flips the x axis to match the convention from
+        .cxi files of viewing the image from the beam's perspective
 
     Returns
     -------
@@ -866,8 +939,6 @@ def plot_nanomap(
     except AttributeError:
         # Only support one layer of nested subfigures
         main_fig = fig.figure # get enclosing figure
-        bbox = fig.bbox
-        main_fig_bbox = main_fig.bbox
         fig_w, fig_h = main_fig.get_size_inches()
         total_width = fig.bbox.width * fig_w / main_fig.bbox.width
         total_height = fig.bbox.height * fig_h / main_fig.bbox.height
@@ -914,7 +985,22 @@ def plot_nanomap(
     return fig
 
 
-def plot_nanomap_with_images(translations, get_image_func, values=None, mask=None, basis=None, fig=None, nanomap_units='$\\mu$m', image_units='$\\mu$m', convention='probe', image_title='Image', image_colorbar_title='Image Amplitude', nanomap_colorbar_title='Integrated Intensity', cmap='viridis', **kwargs):
+def plot_nanomap_with_images(
+        translations,
+        get_image_func,
+        values=None,
+        mask=None,
+        basis=None,
+        fig=None,
+        nanomap_units='$\\mu$m',
+        image_units='$\\mu$m',
+        convention='probe',
+        image_title='Image',
+        image_colorbar_title='Image Amplitude',
+        nanomap_colorbar_title='Integrated Intensity',
+        cmap='viridis',
+        **kwargs,
+):
     """Plots a nanomap, with an image or stack of images for each point
 
     In many situations, ptychography data or the output of ptychography
@@ -954,14 +1040,15 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
 
     # This gets the set of sizes for the points in the nanomap
     def calculate_sizes(idx):
-        bbox = axes[0].get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-        s0 = bbox.width * bbox.height / translations.shape[0] * 72**2 #72 is points per inch
+        bbox = axes[0].get_window_extent().transformed(
+            fig.dpi_scale_trans.inverted())
+        # 72 is points per inch
+        s0 = bbox.width * bbox.height / translations.shape[0] * 72**2 
         s0 /= 4 # A rough value to make the size work out
         s = np.ones(translations.shape[0]) * s0
 
         s[idx] *= 4
         return s
-
 
     def update_colorbar(im):
         #
@@ -1019,7 +1106,7 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
     # Now we set up the second plot, which shows the individual
     # diffraction patterns
     axes[1].set_title(image_title)
-    #Plot in a basis if it exists, otherwise dont
+    # Plot in a basis if it exists, otherwise dont
     if basis is not None:
         axes[1].set_xlabel('X (' + image_units + ')')
         axes[1].set_ylabel('Y (' + image_units + ')')
@@ -1080,9 +1167,9 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
         # Get the new data for this index
         im = get_image_func(idx)
         if len(im.shape) >= 3:
-            if im_idx == None and hasattr(axes[1],'image_idx'):
+            if im_idx is None and hasattr(axes[1],'image_idx'):
                 im_idx = axes[1].image_idx
-            elif im_idx == None:
+            elif im_idx is None:
                 im_idx=0
             axes[1].image_idx = im_idx
             axes[1].text_box.set_text(str(im_idx))
@@ -1097,8 +1184,7 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
         ax_im.set_data(im)
         ax_im.norecurse=False
         update_colorbar(ax_im)
-        #plt.draw()
-
+        # plt.draw()
 
     #
     # Now we define the functions to handle various kinds of events
@@ -1107,7 +1193,10 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
 
     # We start by creating the slider here, so it can be used
     # by the update hooks.
-    slider = Slider(axslider, 'Image #', 0, translations.shape[0]-1, valstep=1, valfmt="%d")
+    slider = Slider(
+        axslider,'Image #', 0, translations.shape[0]-1,
+        valstep=1, valfmt="%d"
+    )
 
     # This handles scroll wheel and keypress events
     def on_action(event):
@@ -1119,13 +1208,13 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
             im = im.reshape(-1,im.shape[-2],im.shape[-1])
             im_idx = axes[1].image_idx
 
-            if (event.key == 'up'
-                or (hasattr(event, 'button') and event.button == 'up') 
-                or event.key == 'left'):
+            if event.key == "left" or (
+                hasattr(event, "button") and event.button == "left"
+            ):
                 im_idx = (im_idx - 1) % im.shape[0]
-            if (event.key == 'down'
-                or (hasattr(event, 'button') and event.button == 'down')
-                or event.key == 'right'):
+            if event.key == "right" or (
+                hasattr(event, "button") and event.button == "right"
+            ):
                 im_idx = (im_idx + 1) % im.shape[0]
 
             axes[1].image_idx=im_idx
@@ -1139,9 +1228,13 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
         if not hasattr(event, 'key'):
             event.key = None
 
-        if event.key == 'up' or event.button == 'up' or event.key == 'left':
+        if event.key == "left" or (
+                hasattr(event, "button") and event.button == "left"
+            ):
             idx = slider.val - 1
-        elif event.key == 'down' or event.button == 'down' or event.key == 'right':
+        elif event.key == "right" or (
+                hasattr(event, "button") and event.button == "right"
+            ):
             idx = slider.val + 1
         else:
             # This prevents errors from being thrown on irrelevant key
@@ -1158,7 +1251,6 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
         # for example, scroll events that happen over the nanomap
         if event.mouseevent.button == 1:
             slider.set_val(event.ind[0])
-
 
     # Here we connect the various update functions
     cid1 = fig.canvas.mpl_connect('pick_event',on_pick)
