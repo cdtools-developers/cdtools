@@ -367,27 +367,41 @@ The forward propagator maps the exit wave to the wave at the surface of the dete
 Plotting
 ++++++++
 
-The base CDIModel class has a function, :code:`model.inspect()`, which looks for a class variable called :code:`plot_list` and plots everything contained within. The plot list should be formatted as a list of tuples, with each tuple containing:
+The base CDIModel class has a function, :code:`model.inspect()`, which looks for a class variable called :code:`plot_list` and plots everything contained within. The plot list should be formatted as a list of dictionaries, with each dictionary containing:
 
-* The title of the plot
-* A function that takes in the model and generates the relevant plot
-* Optional, a function that takes in the model and returns whether or not the plot should be generated
-  
+* :code:`'title'`: the title of the plot
+* :code:`'plot_func'`: a function that takes in the model (and optionally a figure) and generates the relevant plot
+* :code:`'condition'` (optional): a function that takes in the model and returns whether or not the plot should be generated
+
 .. code-block:: python
 
     # This lists all the plots to display on a call to model.inspect()
     plot_list = [
-        ('Probe Amplitude',
-         lambda self, fig: p.plot_amplitude(self.probe, fig=fig, basis=self.probe_basis)),
-        ('Probe Phase',
-         lambda self, fig: p.plot_phase(self.probe, fig=fig, basis=self.probe_basis)),
-        ('Object Amplitude',
-         lambda self, fig: p.plot_amplitude(self.obj, fig=fig, basis=self.probe_basis)),
-        ('Object Phase',
-         lambda self, fig: p.plot_phase(self.obj, fig=fig, basis=self.probe_basis))
+        {
+            'title': 'Probe Amplitude',
+            'plot_func': lambda self, fig:
+                p.plot_amplitude(self.probe, fig=fig, basis=self.probe_basis),
+        },
+        {
+            'title': 'Probe Phase',
+            'plot_func': lambda self, fig:
+                p.plot_phase(self.probe, fig=fig, basis=self.probe_basis),
+        },
+        {
+            'title': 'Object Amplitude',
+            'plot_func': lambda self, fig:
+                p.plot_amplitude(self.obj, fig=fig, basis=self.probe_basis),
+        },
+        {
+            'title': 'Object Phase',
+            'plot_func': lambda self, fig:
+                p.plot_phase(self.obj, fig=fig, basis=self.probe_basis),
+        },
     ]
 
 In this case, we've made use of the convenience plotting functions defined in :code:`tools.plotting`.
+
+More advanced models like :code:`FancyPtycho` also define a :code:`plot_panel_list`, which groups related plots together into multi-subplot figures. The :code:`panel_plot_mode` argument (passed at construction time) controls whether these panels are rendered as combined multi-subplot figures or as individual windows. For a simple model like :code:`SimplePtycho`, :code:`plot_list` is sufficient.
 
 
 Saving

@@ -27,7 +27,7 @@ model = cdtools.models.FancyPtycho.from_dataset(
     propagation_distance=2e-6,
     units='um',
     probe_fourier_crop=pad,
-    panel_plot_mode=True, 
+    plot_level=2,
 )
 
 

@@ -31,9 +31,9 @@ When reading this script, note the basic workflow. After the data is loaded, a m
 
 Next, the model is moved to the GPU using the :code:`model.to` function. Any device understood by :code:`torch.Tensor.to` can be specified here. The next line is a bit more subtle - the dataset is told to move patterns to the GPU before passing them to the model using the :code:`dataset.get_as` function. This function does not move the stored patterns to the GPU. If there is sufficient GPU memory, the patterns can also be pre-moved to the GPU using :code:`dataset.to`, but the speedup is empirically quite small.
 
-Once the device is selected, a reconstruction is run using :code:`model.Adam_optimize`. This is a generator function which will yield at the end of every epoch, to allow some monitoring code to be run.
+Once the device is selected, a reconstruction is run using :code:`model.Adam_optimize`. This is a generator function which will yield at the end of every epoch, to allow some monitoring code to be run. Inside the loop, :code:`model.inspect(dataset)` is called every epoch to live-update a set of plots showing the current state of the model parameters.
 
-Finally, the results can be studied using :code:`model.inspect(dataset)`, which creates or updates a set of plots showing the current state of the model parameters. :code:`model.compare(dataset)` is also called, which shows how the simulated diffraction patterns compare to the measured diffraction patterns in the dataset.
+Finally, :code:`model.compare(dataset)` is called to show how the simulated diffraction patterns compare to the measured diffraction patterns in the dataset.
 
 
 Fancy Ptycho
@@ -63,11 +63,13 @@ By default, FancyPtycho will also optimize over the following model parameters, 
 
 These corrections can be turned off (on) by calling :code:`model.<parameter>.requires_grad = False #(True)`.
 
-Note as well two other changes that are made in this script, when compared to `simple_ptycho.py`. First, a `Reconstructor` object is explicitly created, in this case an `AdamReconstructor`. This object stores a model, dataset, and pytorch optimizer. It is then used to orchestrate the later reconstruction using a call to `Reconstructor.optimize()`.
+Note as well two other changes that are made in this script, when compared to :code:`simple_ptycho.py`. First, a :code:`Reconstructor` object is explicitly created, in this case an :code:`AdamReconstructor`. This object stores a model, dataset, and pytorch optimizer. It is then used to orchestrate the later reconstruction using a call to :code:`Reconstructor.optimize()`.
 
-We use this pattern, instead of the simpler call to `model.Adam_optimize()`, because having the reconstructor store the optimizer as well as the model and dataset allows the moment estimates to persist between multiple rounds of optimization. This leads to the second change: In this script, we run two optimization loops. The first loop aggressively refines the probe, with a low minibatch size and a high learning rate. The second loop has a smaller learning rate and a larger batch size, which allow for a more precise final estimation of the object.
+We use this pattern, instead of the simpler call to :code:`model.Adam_optimize()`, because having the reconstructor store the optimizer as well as the model and dataset allows the moment estimates to persist between multiple rounds of optimization. This leads to the second change: In this script, we run two optimization loops. The first loop aggressively refines the probe, with a low minibatch size and a high learning rate. The second loop has a smaller learning rate and a larger batch size, which allow for a more precise final estimation of the object.
 
-In this case, we used one reconstructor, but it is possible to create additional reconstructors to zero out all the persistant information in the optimizer, if desired, or even to instantiate multiple reconstructors on the same model with different optimization algorithms (e.g. `model.LBFGS_optimize()`).
+In this case, we used one reconstructor, but it is possible to create additional reconstructors to zero out all the persistant information in the optimizer, if desired, or even to instantiate multiple reconstructors on the same model with different optimization algorithms (e.g. :code:`model.LBFGS_optimize()`).
+
+Note also the use of :code:`min_interval=10` in the calls to :code:`model.inspect(dataset)`. Because generating plots can be expensive, passing a minimum interval (in seconds) prevents excessive replots. Finally, the call to :code:`model.inspect(dataset, replot_all=True)` at the end of the script reopens any plot windows that the user may have closed during the reconstruction, so that all results are visible at the end.
 
 
 Gold Ball Ptycho
@@ -77,9 +79,25 @@ This script shows how the FancyPtycho model might be used in a realistic situati
 
 .. literalinclude:: ../../examples/gold_ball_ptycho.py
 
-Note, in particular, the use of :code:`model.save_on_exception` and :code:`model.save_to_h5` to save the results of the reconstruction. If a different file format is required, :code:`model.save_results` will save to a pure-python dictionary.
+Note first the explicit addition of the :code:`plot_level=2` argument in the call to :code:`FancyPtycho.from_dataset`. This value controls which plots are generated. With :code:`plot_level=1`, only the main results are shown - :code:`plot_level=2` shows some more advanced monitoring of the error correction terms (background, position error, etc.), and :code:`plot_level=3` shows all registered plots.
+
+Note also the use of :code:`model.save_on_exception` and :code:`model.save_to_h5` to save the results of the reconstruction. If a different file format is required, :code:`model.save_results` will save to a pure-python dictionary which can be processed further.
 
 Finally, note that there are several small adjustments made to the script to counteract particular sources of error that are present in this dataset, for example the raster grid pathology caused by the scan pattern used. Also note that not every mixin is needed every time - in this case, we turn off optimization of the :code:`weights` parameter.
+
+
+Near-Field Ptycho
+-----------------
+
+This script shows how the FancyPtycho model can be used on a typical near-field ptychography (also known as Fresnel ptychography) dataset.
+
+.. literalinclude:: ../../examples/near_field_ptycho.py
+
+The major change here is the setting of the :code:`near_field=True` argument to :code:`FancyPtycho.from_dataset`. This changes the propagator to a near-field propagator. As noted in the comments, if :code:`propagation_distance` is not set, the model will assume a standard near-field geomtry with flat illumination.
+
+If :code:`propagation_distance` is set, it will assume a Fresnel scaling theorem-type geometry, with :code:`propagation_distance` as the focus-to-sample distance, and the distance set in the dataset object as the sample-to-detector distance.
+
+Finally, note the addition of the :code:`panel_plot_mode=True` argument. This is the default mode, and returns the plots in a panel format, good for easily monitoring the progress of a reconstruction. If individual plots are needed for use in presentations, papers, or otherwise, setting :code:`panel_plot_mode=False` will plot each output in it's own window.
 
 
 Gold Ball Split
