@@ -69,7 +69,8 @@ def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
         units='mm',
         obj_view_crop=-50,
         use_qe_mask=True,  # test this in the case where no qe mask is defined
-        panel_plot_mode=True, # test with panel plot mode
+        panel_plot_mode=True, # test with panel plot mode,
+        plot_level=4, # test with all plots
     )
 
     print('Running reconstruction on provided reconstruction_device,',

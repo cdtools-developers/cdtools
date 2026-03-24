@@ -1004,7 +1004,8 @@ class FancyPtycho(CDIModel):
                 basis=self.obj_basis,
                 additional_axis_labels=['Mode #',],
                 units=self.units,
-                cmap='cividis'),
+                cmap='cividis',
+            ),
             'condition': lambda self: self.exponentiate_obj,
           },
           {
@@ -1015,7 +1016,9 @@ class FancyPtycho(CDIModel):
                 fig=fig,
                 basis=self.obj_basis,
                 additional_axis_labels=['Mode #',],
-                units=self.units),
+                units=self.units,
+                cmap='viridis_r',
+            ),
             'condition': lambda self: self.exponentiate_obj,
           },
           {
