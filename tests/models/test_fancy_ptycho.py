@@ -1,5 +1,7 @@
 import pytest
+import time
 import torch as t
+from matplotlib import pyplot as plt
 
 import cdtools
 
@@ -67,6 +69,7 @@ def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
         units='mm',
         obj_view_crop=-50,
         use_qe_mask=True,  # test this in the case where no qe mask is defined
+        panel_plot_mode=True, # test with panel plot mode
     )
 
     print('Running reconstruction on provided reconstruction_device,',
@@ -76,24 +79,26 @@ def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
 
     for loss in model.Adam_optimize(50, dataset, lr=0.02, batch_size=10):
         print(model.report())
-        if show_plot and model.epoch % 10 == 0:
-            model.inspect(dataset)
+        if show_plot:
+            model.inspect(dataset, min_interval=10)
 
     for loss in model.Adam_optimize(50, dataset, lr=0.005, batch_size=50):
         print(model.report())
-        if show_plot and model.epoch % 10 == 0:
-            model.inspect(dataset)
+        if show_plot:
+            model.inspect(dataset, min_interval=10)
             
     for loss in model.Adam_optimize(25, dataset, lr=0.001, batch_size=50):
         print(model.report())
-        if show_plot and model.epoch % 10 == 0:
-            model.inspect(dataset)
+        if show_plot:
+            model.inspect(dataset, min_interval=10)
 
     model.tidy_probes()
 
     if show_plot:
         model.inspect(dataset)
         model.compare(dataset)
+        time.sleep(3)
+        plt.close('all')
 
     # If this fails, the reconstruction has gotten worse
     assert model.loss_history[-1] < 0.0013
@@ -110,6 +115,7 @@ def test_near_field_ptycho(near_field_ptycho_cxi, reconstruction_device, show_pl
         n_modes=1,
         near_field=True,
         propagation_distance=3.65e-3, # 3.65 downstream from focus
+        panel_plot_mode=False, # test without panel plot mode
     )
 
     print('Running reconstruction on provided reconstruction_device,',
@@ -119,19 +125,21 @@ def test_near_field_ptycho(near_field_ptycho_cxi, reconstruction_device, show_pl
 
     for loss in model.Adam_optimize(100, dataset, lr=0.04, batch_size=10):
         print(model.report())
-        if show_plot and model.epoch % 10 == 0:
-            model.inspect(dataset)
+        if show_plot:
+            model.inspect(dataset, min_interval=10)
 
     for loss in model.Adam_optimize(50, dataset, lr=0.005, batch_size=50):
         print(model.report())
-        if show_plot and model.epoch % 10 == 0:
-            model.inspect(dataset)
+        if show_plot:
+            model.inspect(dataset, min_interval=10)
 
     model.tidy_probes()
 
     if show_plot:
         model.inspect(dataset)
         model.compare(dataset)
+        time.sleep(3)
+        plt.close('all')
 
     # If this fails, the reconstruction has gotten worse
     assert model.loss_history[-1] < 0.005

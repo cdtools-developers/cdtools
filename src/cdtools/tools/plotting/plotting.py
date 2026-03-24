@@ -204,7 +204,7 @@ def plot_image(
         suffix = {1: 'st', 2: 'nd', 3: 'rd'}
         def get_suffix(n):
             if n % 100 not in (11, 12, 13):
-                suffix.get(n % 10, 'th')
+                return suffix.get(n % 10, 'th')
             else:
                 return 'th'
         return f"{n}{get_suffix(n)}"
@@ -1074,7 +1074,11 @@ def plot_nanomap_with_images(
     # First we set up the left-hand plot, which shows an overview map
     axes[0].set_title('Relative Displacement Map')
 
-    translations = translations.detach().cpu().numpy()
+    if isinstance(translations, t.Tensor):
+        translations = translations.detach().cpu().numpy()
+
+    if isinstance(values, t.Tensor):
+        values = values.detach().cpu().numpy()
 
     if convention.lower() != 'probe':
         translations = translations * -1
@@ -1082,9 +1086,13 @@ def plot_nanomap_with_images(
     s = calculate_sizes(0)
 
     nanomap_units_factor = get_units_factor(nanomap_units)
+    
+    # Suppresses a warning from ax.scatter()
+    if values is None:
+        cmap = None
     nanomap = axes[0].scatter(nanomap_units_factor * translations[:,0],
                               nanomap_units_factor * translations[:,1],
-                              s=s,c=values, picker=True, cmap=cmap)
+                              s=s, c=values, picker=True, cmap=cmap)
 
     axes[0].invert_xaxis()
     axes[0].set_facecolor('k')
@@ -1101,7 +1109,9 @@ def plot_nanomap_with_images(
         # This seems to do a good job of leaving the appropriate space
         # where the colorbar should have been to avoid stretching the
         # nanomap plot, while still not showing the (now useless) colorbar.
+        pos = axes[0].get_position()
         cb1.remove()
+        axes[0].set_position(pos)
 
     # Now we set up the second plot, which shows the individual
     # diffraction patterns
