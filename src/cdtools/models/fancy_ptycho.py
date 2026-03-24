@@ -961,7 +961,7 @@ class FancyPtycho(CDIModel):
         'title': 'Main Results',
         'plot_level': 1,
         'grid': (2,2),
-        'figure_size': (9,7),
+        'figure_size': (8.4,6.8),
         'plots': [
           {
             'title': 'Object Phase',
@@ -1038,7 +1038,7 @@ class FancyPtycho(CDIModel):
       {
         'title': 'Advanced Monitoring',
         'plot_level': 2,
-        'figure_size': (12,7),
+        'figure_size': (12.6,6.8),
         'grid': (2,3),
         'plots': [
           {
@@ -1089,7 +1089,7 @@ class FancyPtycho(CDIModel):
       {
         'title': 'Unstable Probe Refinement Details',
         'plot_level': 2,
-        'figure_size': (9,3.5),
+        'figure_size': (8.4,3.4),
         'grid': (1,2),
         'condition': lambda self: len(self.weights.shape) >= 2,
         'plots': [
@@ -1109,7 +1109,7 @@ class FancyPtycho(CDIModel):
             'condition': lambda self: len(self.weights.shape) >= 2
           },
           {
-            'title': 'Average Weight Matrix Amplitudes',
+            'title': 'Mean Weight Matrix Amplitudes',
             'subplot': (0,1),
             'plot_func': lambda self, fig: p.plot_amplitude(
                 np.nanmean(np.abs(self.weights.data.cpu().numpy()), axis=0),

@@ -6,6 +6,7 @@ filename = 'example_data/PETRAIII_P25_Near_Field_Ptycho.cxi'
 dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(filename)
 
 dataset.inspect()
+plt.show()
 
 # Setting near_field equal to True uses an angular spectrum propagator in
 # lieu of the default Fourier-transform propagator for far-field ptychography.

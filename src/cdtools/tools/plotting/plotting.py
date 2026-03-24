@@ -13,7 +13,7 @@ from matplotlib.colors import hsv_to_rgb
 from matplotlib.widgets import Slider
 from matplotlib import ticker, patheffects
 from matplotlib import transforms as mtransforms
-from matplotlib import colors
+from matplotlib import colors, gridspec
 
 
 __all__ = [
@@ -104,6 +104,7 @@ def get_units_factor(units):
         factor=1e12
     return factor
 
+
 def plot_image(
         im,
         plot_func=lambda x: x,
@@ -179,15 +180,10 @@ def plot_image(
 
     # convert to numpy
     if isinstance(im, t.Tensor):
-        # If final dimension is 2, assume it is a complex array. If not,
-        # assume it represents a real array
-        if im.shape[-1] == 2:
-            im = im.detach().cpu().numpy()
-        else:
-            im = im.detach().cpu().numpy()
+        im = im.detach().cpu().numpy()
 
     if fig is None:
-        fig = plt.figure(constrained_layout=True)
+        fig = plt.figure()
 
     # Determine extra (non-image) dimensions and build per-axis slider map
     extra_dims = im.shape[:-2]
@@ -198,11 +194,13 @@ def plot_image(
     def ordinal(n):
         suffix = {1: 'st', 2: 'nd', 3: 'rd'}
         return f"{n}{suffix.get(n % 10, 'th') if n % 100 not in (11, 12, 13) else 'th'}"
+    
     if additional_axis_labels is None:
         additional_axis_labels = [f'{ordinal(i)} Axis' for i in range(n_extra)]
     else:
         additional_axis_labels = list(additional_axis_labels) + [
-            f'{ordinal(i)} Axis' for i in range(len(additional_axis_labels), n_extra)
+            f'{ordinal(i)} Axis'
+            for i in range(len(additional_axis_labels), n_extra)
         ]
 
     # Only axes with length > 1 get sliders
@@ -216,8 +214,9 @@ def plot_image(
         # Always update fig._make_plot so slider callbacks get the latest closure
         fig._make_plot = make_plot
         fig.plot_idx = list(idx_list)
-        selected = im[tuple(fig.plot_idx)] if n_extra > 0 else im
-        to_plot = plot_func(selected)
+        
+        selected_im = im[tuple(fig.plot_idx)] if n_extra > 0 else im
+        to_plot = plot_func(selected_im)
 
         # By only updating the data, and not redrawing the fig, we
         # don't "reset" the home positions of the toolbar
@@ -232,16 +231,18 @@ def plot_image(
             if fig.canvas.toolbar is not None:
                 fig.canvas.toolbar.home()
                 fig.canvas.toolbar.update()
+            
             # Sync sliders to the new index without triggering callbacks
             if hasattr(fig, '_sliders'):
                 fig._updating = True
                 for j, (axis_idx, _, _) in enumerate(slider_axis_map):
                     fig._sliders[j].set_val(fig.plot_idx[axis_idx])
                 fig._updating = False
-            # Restore image axis as the "current" axis so callers using
-            # plt.gca() / plt.title() target the right axes
+            
+            # Restore image axis as the "current" axis
             if hasattr(fig, '_plot_ax'):
-                plt.sca(fig._plot_ax)
+                plt.sca(fig._current_im.ax)
+                
             return fig
 
         if title is not None:
@@ -252,31 +253,45 @@ def plot_image(
             except IndexError:
                 ax_title = ''
 
-        fig.clear()
+        try:
+            total_width, total_height = fig.get_size_inches()
+        except AttributeError:
+            # Only support one layer of nested subfigures
+            main_fig = fig.figure # get enclosing figure
+            bbox = fig.bbox
+            main_fig_bbox = main_fig.bbox
+            fig_w, fig_h = main_fig.get_size_inches()
+            total_width = fig.bbox.width * fig_w / main_fig.bbox.width
+            total_height = fig.bbox.height * fig_h / main_fig.bbox.height
+        except AttributeError:
+            # Fall back to default figsize
+            total_width, total_height = (6.4, 4.8)
 
-        # gs = fig.add_gridspec(
-        #     1 + n_sliders, 1,
-        #     height_ratios=[1] + [0.04] * n_sliders,
-        # )
-        # ax = fig.add_subplot(gs[0, 0], **kwargs)
-        # ax_sliders = [fig.add_subplot(gs[i + 1, 0]) for i in range(n_sliders)]
-        import matplotlib
-        gs = matplotlib.gridspec.GridSpec(
-            2, 1,
-            height_ratios=[1] + [0.1 * n_sliders],
-            figure=fig
+        pad_left = 0.6 / total_height
+        # De-adjusts for an ad-hoc offset introduced by matplotlib
+        pad_right = 0.6 / total_width - 0.05 
+        
+        pad_bottom = 0.5 / total_height
+        pad_top = 0.4 / total_height
+        
+        im_ax_bottom = pad_bottom + n_sliders * 0.05 + 0.025
+        im_ax_height = 1 - pad_top - im_ax_bottom
+        ax = fig.add_axes(
+            [pad_left, im_ax_bottom, 1-pad_left-pad_right, im_ax_height]
         )
-        
-        ax_gs = matplotlib.gridspec.GridSpecFromSubplotSpec(
-            1,1, subplot_spec=gs[0,0])
-        ax = fig.add_subplot(ax_gs[0,0], **kwargs)
-        if n_sliders > 0:
-            slider_gs = matplotlib.gridspec.GridSpecFromSubplotSpec(
-                n_sliders,1, subplot_spec=gs[1,0])
-            ax_sliders = [fig.add_subplot(slider_gs[i, 0]) for i in range(n_sliders)]
-        
-        fig._plot_ax = ax
 
+        pad_left_slider = 1.2 / total_width
+        pad_right_slider = 0.8 / total_width
+
+        if n_sliders > 0:
+            ax_sliders = []
+            for n in range(n_sliders):
+                ax_sliders.append(
+                    fig.add_axes([pad_left_slider, 0.025 + n * 0.05,
+                                  1-pad_left_slider-pad_right_slider, 0.05]))
+            
+            ax_sliders = ax_sliders[::-1]
+                
         mpl_im = ax.imshow(
             to_plot,
             cmap=cmap,
@@ -287,6 +302,8 @@ def plot_image(
         fig._current_im = mpl_im
         ax.set_facecolor('k')
 
+        # Lots of logic to deal with all sorts of wild non-orthogonal
+        # image basis options. Leave this alone.
         if basis is not None:
             # we've closed over basis, so we can't edit it
             if isinstance(basis, t.Tensor):
@@ -348,7 +365,11 @@ def plot_image(
             ax.invert_yaxis()
 
         if show_cbar:
-            cbar = fig.colorbar(mpl_im, ax=ax, fraction=0.05, pad=0.05, location='right')
+            cbar = fig.colorbar(mpl_im, ax=ax,
+                                fraction=0.15,
+                                pad=0.05,
+                                location='right')
+            ax.set_anchor('C')
             if not updateable_colorbar:
                 cbar.ax.set_navigate(False)
             if cmap_label is not None:
@@ -390,9 +411,9 @@ def plot_image(
 
         if fig.canvas.toolbar is not None:
             fig.canvas.toolbar.update()
-        # Restore image axis as "current" so callers using plt.gca() / plt.title()
-        # target the image axes, not the last slider axis added
+            
         plt.sca(ax)
+        
         return fig
 
     if hasattr(fig, 'plot_idx') and len(fig.plot_idx) == n_extra:
@@ -726,12 +747,38 @@ def plot_translations(translations, fig=None, units='$\\mu$m', lines=True, inver
         
     if clear_fig:
         fig.clear()
-
+        
     if len(fig.axes) >= 1:
         ax = fig.axes[0]
     else:
-        ax = fig.add_subplot(111, **kwargs)
-
+        try:
+            total_width, total_height = fig.get_size_inches()
+        except AttributeError:
+            # Only support one layer of nested subfigures
+            main_fig = fig.figure # get enclosing figure
+            bbox = fig.bbox
+            main_fig_bbox = main_fig.bbox
+            fig_w, fig_h = main_fig.get_size_inches()
+            total_width = fig.bbox.width * fig_w / main_fig.bbox.width
+            total_height = fig.bbox.height * fig_h / main_fig.bbox.height
+        except AttributeError:
+            # Fall back to default figsize
+            total_width, total_height = (6.4, 4.8)
+            
+        pad_left = 0.6 / total_height
+        # De-adjusts for an ad-hoc offset introduced by matplotlib
+        pad_right = 0.6 / total_width - 0.05 
+        
+        pad_bottom = 0.5 / total_height
+        pad_top = 0.4 / total_height
+        
+        im_ax_bottom = pad_bottom 
+        im_ax_height = 1 - pad_top - im_ax_bottom
+        
+        ax = fig.add_axes(
+            [pad_left, im_ax_bottom, 1-pad_left-pad_right, im_ax_height]
+        )
+        
     if isinstance(translations, t.Tensor):
         translations = translations.detach().cpu().numpy()
 
@@ -797,10 +844,9 @@ def plot_nanomap(
         fig = plt.figure()
     
     fig.clear()
-    ax = fig.add_subplot(111)
     factor = get_units_factor(units)
 
-    bbox = fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+
     if isinstance(translations, t.Tensor):
         trans = translations.detach().cpu().numpy()
     else:
@@ -814,9 +860,38 @@ def plot_nanomap(
     if convention.lower() != 'probe':
         trans = trans * -1
 
-    s = bbox.width * bbox.height / trans.shape[0] * 72**2 #72 is points per inch
-    s /= 4 # A rough value to make the size work out
 
+    try:
+        total_width, total_height = fig.get_size_inches()
+    except AttributeError:
+        # Only support one layer of nested subfigures
+        main_fig = fig.figure # get enclosing figure
+        bbox = fig.bbox
+        main_fig_bbox = main_fig.bbox
+        fig_w, fig_h = main_fig.get_size_inches()
+        total_width = fig.bbox.width * fig_w / main_fig.bbox.width
+        total_height = fig.bbox.height * fig_h / main_fig.bbox.height
+    except AttributeError:
+        # Fall back to default figsize
+        total_width, total_height = (6.4, 4.8)
+
+    pad_left = 0.6 / total_height
+    # De-adjusts for an ad-hoc offset introduced by matplotlib
+    pad_right = 0.6 / total_width - 0.05 
+    
+    pad_bottom = 0.5 / total_height
+    pad_top = 0.4 / total_height
+    
+    im_ax_bottom = pad_bottom 
+    im_ax_height = 1 - pad_top - im_ax_bottom
+
+    ax = fig.add_axes(
+        [pad_left, im_ax_bottom, 1-pad_left-pad_right, im_ax_height]
+    )
+
+    s = total_width * total_height / trans.shape[0] * 72**2
+    s /= 4 # A rough value to make the size work out
+    
     scatter_plot = ax.scatter(
         factor * trans[:,0],factor * trans[:,1],s=s,c=values, cmap=cmap)
     if invert_xaxis:
@@ -825,7 +900,14 @@ def plot_nanomap(
     ax.set_facecolor('k')
     ax.set_xlabel('Translation x (' + units + ')')
     ax.set_ylabel('Translation y (' + units + ')')
-    cbar = fig.colorbar(scatter_plot, ax=ax, fraction=0.05, pad=0.05)
+    cbar = fig.colorbar(
+        scatter_plot,
+        ax=ax,
+        fraction=0.15,
+        pad=0.05,
+        location='right',
+    )
+    ax.set_anchor('C')
     if cmap_label is not None:
         cbar.set_label(cmap_label)
 
@@ -851,20 +933,21 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
     # mode, i.e. on a figure that already has this thing showing.
 
     if fig is None:
-        fig = plt.figure(figsize=(8,5.3), constrained_layout=True)
+        fig = plt.figure(figsize=(8,5.3))
     else:
         if plt.fignum_exists(fig.number):
             fig = plt.figure(fig.number)
         else:
             fig = plt.figure(fig.number,
-                             figsize=(8,5.3),  constrained_layout=True)
+                             figsize=(8,5.3))
         fig.clear()
         if hasattr(fig, 'nanomap_cids'):
             for cid in fig.nanomap_cids:
                 fig.canvas.mpl_disconnect(cid)
 
     # Does figsize work with the fig.subplots, or just for plt.subplots?
-    gs = fig.add_gridspec(2, 2, height_ratios=[0.9,0.1], width_ratios=[1,1])
+    gs = fig.add_gridspec(2, 2, height_ratios=[0.92,0.08], width_ratios=[1,1],
+                          bottom=0.04)
 
     axes = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
     axslider = fig.add_subplot(gs[1, :])  # full width
@@ -918,14 +1001,14 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
 
     axes[0].invert_xaxis()
     axes[0].set_facecolor('k')
-    axes[0].set_xlabel('Translation x ('+nanomap_units+')', labelpad=1)
-    axes[0].set_ylabel('Translation y ('+nanomap_units+')', labelpad=1)
+    axes[0].set_xlabel('Translation x ('+nanomap_units+')')
+    axes[0].set_ylabel('Translation y ('+nanomap_units+')')
     axes[0].set_aspect('equal')
     cb1 = plt.colorbar(nanomap, ax=axes[0], orientation='horizontal',
                        format='%.2e',
-                       ticks=ticker.LinearLocator(numticks=5))#,
-                       #pad=0.17,fraction=0.1)
-    cb1.ax.set_title(nanomap_colorbar_title, size="medium")#, pad=5)
+                       ticks=ticker.LinearLocator(numticks=5),
+                       pad=0.19,fraction=0.1)
+    cb1.ax.set_title(nanomap_colorbar_title, size="medium", pad=5)
     cb1.ax.tick_params(labelrotation=20)
     if values is None:
         # This seems to do a good job of leaving the appropriate space
@@ -978,8 +1061,8 @@ def plot_nanomap_with_images(translations, get_image_func, values=None, mask=Non
 
     cb2 = plt.colorbar(meas, ax=axes[1], orientation='horizontal',
                        format='%.2e',
-                       ticks=ticker.LinearLocator(numticks=5))#,
-                       #pad=-0.17)#,fraction=0.1)
+                       ticks=ticker.LinearLocator(numticks=5),
+                       pad=0.19,fraction=0.1)
     cb2.ax.tick_params(labelrotation=20)
     cb2.ax.set_title(image_colorbar_title, size="medium", pad=5)
     cb2.ax.callbacks.connect('xlim_changed', lambda ax: update_colorbar(meas))

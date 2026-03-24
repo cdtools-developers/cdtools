@@ -695,13 +695,11 @@ class CDIModel(t.nn.Module):
 
             if not self.has_inspect_been_called:
                 fig = plt.figure(plot['title'],
-                                 figsize=figsize,
-                                 constrained_layout=True)
+                                 figsize=figsize)
             else:
                 with plt.rc_context({'figure.raise_window': False}):
                     fig = plt.figure(plot['title'],
-                                     figsize = figsize,
-                                     constrained_layout=True)
+                                     figsize = figsize)
 
             try:
                 plot['plot_func'](self, fig)
@@ -764,18 +762,16 @@ class CDIModel(t.nn.Module):
                 continue
 
             if not self.has_inspect_been_called:
-                fig = plt.figure(panel_def['title'], figsize=figsize,
-                                 constrained_layout=True)
+                fig = plt.figure(panel_def['title'], figsize=figsize)
             else:
                 with plt.rc_context({'figure.raise_window': False}):
-                    fig = plt.figure(panel_def['title'], figsize=figsize,
-                                     constrained_layout=True)
+                    fig = plt.figure(panel_def['title'], figsize=figsize)
 
+            for subfig in fig.subfigs:
+                if hasattr(subfig, '_sliders'):
+                    for slider in subfig._sliders:
+                        slider.disconnect_events()
             fig.clear()
-                    
-            fig.get_layout_engine().set(
-                rect=(0.02, 0.02, 0.96, 0.96),
-            )
 
             gs = fig.add_gridspec(
                 nrows, ncols,
@@ -813,14 +809,13 @@ class CDIModel(t.nn.Module):
                     raise
                 except Exception:
                     raise
-                
+
             rendered.append(fig)
             
             if self._is_backend_interactive():
                 plt.draw()
 
         return rendered
-
 
     def plot_loss_history(self, fig=None, clear_fig=True):
         """Plots the loss history on a semilogy axis
@@ -847,7 +842,33 @@ class CDIModel(t.nn.Module):
         if len(fig.axes) >= 1:
             ax = fig.axes[0]
         else:
-            ax = fig.add_subplot(111)
+            try:
+                total_width, total_height = fig.get_size_inches()
+            except AttributeError:
+                # Only support one layer of nested subfigures
+                main_fig = fig.figure # get enclosing figure
+                bbox = fig.bbox
+                main_fig_bbox = main_fig.bbox
+                fig_w, fig_h = main_fig.get_size_inches()
+                total_width = fig.bbox.width * fig_w / main_fig.bbox.width
+                total_height = fig.bbox.height * fig_h / main_fig.bbox.height
+            except AttributeError:
+                # Fall back to default figsize
+                total_width, total_height = (6.4, 4.8)
+                
+            pad_left = 0.6 / total_height
+            # De-adjusts for an ad-hoc offset introduced by matplotlib
+            pad_right = 0.6 / total_width - 0.05 
+            
+            pad_bottom = 0.5 / total_height
+            pad_top = 0.4 / total_height
+            
+            im_ax_bottom = pad_bottom 
+            im_ax_height = 1 - pad_top - im_ax_bottom
+        
+            ax = fig.add_axes(
+                [pad_left, im_ax_bottom, 1-pad_left-pad_right, im_ax_height]
+            )
         
         ax.semilogy(self.loss_history)
         plt.title('Loss History')

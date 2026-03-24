@@ -14,7 +14,6 @@ model = cdtools.models.FancyPtycho.from_dataset(
     propagation_distance=5e-3, # Propagate the initial probe guess by 5 mm
     units='mm', # Set the units for the live plots
     obj_view_crop=-50, # Expands the field of view in the object plot by 50 pix,
-    panel_plot_mode=False
 )
 
 if t.cuda.is_available():
@@ -35,7 +34,7 @@ for loss in recon.optimize(50, lr=0.02, batch_size=10):
     print(model.report())
     # Because plotting can be expensive, setting a minimum plotting interval
     # (in seconds) can avoid excessive replots. 
-    model.inspect(dataset, min_interval=5)
+    model.inspect(dataset, min_interval=10)
 
 # It's common to chain several different reconstruction loops. Here, we
 # started with an aggressive refinement to find the probe in the previous
@@ -43,7 +42,7 @@ for loss in recon.optimize(50, lr=0.02, batch_size=10):
 # and larger minibatch
 for loss in recon.optimize(50, lr=0.005, batch_size=50):
     print(model.report())
-    model.inspect(dataset, min_interval=5)
+    model.inspect(dataset, min_interval=10)
 
 # This orthogonalizes the recovered probe modes
 model.tidy_probes()

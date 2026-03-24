@@ -362,7 +362,8 @@ class Reconstructor:
                         with plt.rc_context({'figure.raise_window': False}):
                             for fignum in open_figs:
                                 plt.figure(fignum).canvas.flush_events()
-                        time.sleep(0.001)
+
+                        time.sleep(0.01)
 
                 except KeyboardInterrupt as e:
                     stop_event.set()
