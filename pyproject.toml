@@ -51,3 +51,4 @@ docs = [
 
 [tool.ruff]
 line-length = 79
+ignore = ["E501", "E731"]

@@ -848,6 +848,15 @@ class FancyPtycho(CDIModel):
 
 
     def get_probe_intensities(self):
+        """Returns the effective probe intensity at each scan position.
+
+        Handles both the simple (1D weights) and OPRP (2D weights) cases.
+
+        Returns
+        -------
+        probe_intensities : np.ndarray
+            Array of probe intensities, one per scan position.
+        """
         if not hasattr(self, 'weights'):
             raise NotImplementedError(
                 "I don't know how to handle having no weights")
@@ -920,6 +929,7 @@ class FancyPtycho(CDIModel):
 
 
     def plot_illumination_intensity(self, fig, dataset):
+        """Plots the probe intensity nanomap. Only used to make a plot for the plot list."""
         p.plot_nanomap(
             self.corrected_translations(dataset),
             self.get_probe_intensities(),

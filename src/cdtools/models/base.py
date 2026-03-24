@@ -61,6 +61,16 @@ class CDIModel(t.nn.Module):
     """
 
     def __init__(self, panel_plot_mode=False, plot_level=np.inf):
+        """Initializes the CDIModel base class.
+
+        Parameters
+        ----------
+        panel_plot_mode : bool, default: False
+            If True, plot_panel_list entries are rendered as multi-subplot
+            figures. If False, each subplot is rendered as its own figure.
+        plot_level : float, default: np.inf
+            Only plots whose plot_level <= this value are shown.
+        """
         super(CDIModel, self).__init__()
 
         self.loss_history = []
@@ -640,6 +650,7 @@ class CDIModel(t.nn.Module):
     def _is_backend_interactive(
             self
     ):
+        """Returns True if the current matplotlib backend is interactive."""
         backend = matplotlib.get_backend().lower()
         try:
             # matplotlib >= 3.9

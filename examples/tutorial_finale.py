@@ -1,5 +1,6 @@
 from tutorial_basic_ptycho_dataset import BasicPtychoDataset
 from tutorial_simple_ptycho import SimplePtycho
+import torch as t
 from h5py import File
 from matplotlib import pyplot as plt
 
@@ -11,8 +12,9 @@ dataset.inspect()
 
 model = SimplePtycho.from_dataset(dataset)
 
-model.to(device='cuda')
-dataset.get_as(device='cuda')
+if t.cuda.is_available():
+    model.to(device='cuda')
+    dataset.get_as(device='cuda')
 
 for loss in model.Adam_optimize(10, dataset):
     model.inspect(dataset)

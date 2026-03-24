@@ -110,28 +110,23 @@ class SimplePtycho(CDIModel):
     plot_list = [
         {
             'title': 'Probe Amplitude',
-            'subplot' : (0, 0),
             'plot_func': lambda self, fig:
-                p.plot_amplitude(self.probe, fig,
-                    basis=self.probe_basis),
-        }, {
+                p.plot_amplitude(self.probe, fig, basis=self.probe_basis),
+        },
+        {
             'title': 'Probe Phase',
-            'subplot' : (0, 1),
             'plot_func': lambda self, fig:
-                p.plot_phase(self.probe, fig,
-                    basis=self.probe_basis)
-        }, {
+                p.plot_phase(self.probe, fig, basis=self.probe_basis)
+        },
+        {
             'title': 'Object Amplitude',
-            'subplot' : (1, 0),
             'plot_func': lambda self, fig:
-                p.plot_amplitude(self.obj, fig,
-                    basis=self.probe_basis)
-        }, {
+                p.plot_amplitude(self.obj, fig, basis=self.probe_basis)
+        },
+        {
             'title': 'Object Phase',
-            'subplot' : (1, 1),
             'plot_func': lambda self, fig:
-                p.plot_phase(self.obj, fig,
-                    basis=self.probe_basis)
+                p.plot_phase(self.obj, fig, basis=self.probe_basis)
         },
     ]
     
