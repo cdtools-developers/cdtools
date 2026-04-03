@@ -6,8 +6,6 @@ from cdtools.tools.interactions import RPI_interaction
 from cdtools.tools import initializers
 from scipy.ndimage import binary_dilation
 import numpy as np
-from copy import copy
-import time
 
 __all__ = ['RPI']
 
@@ -383,14 +381,14 @@ class RPI(CDIModel):
     def get_obj_shape_and_n_modes(self, obj_shape=None, n_modes=None):
         """Sets defaults for obj shape and n modes"""
         
-        if obj_shape == None:
+        if obj_shape is None:
             if hasattr(self, 'obj'):
                 obj_shape = self.obj.shape[-2:]
             else:
                 obj_size = (np.array(self.probe.shape[-2:]) // 2).astype(int)
                 obj_shape = [obj_size, obj_size]
 
-        if n_modes == None:
+        if n_modes is None:
             if hasattr(self, 'obj'):
                 n_modes = self.obj.shape[0]
             else:

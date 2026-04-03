@@ -4,11 +4,8 @@ from cdtools.datasets import Ptycho2DDataset
 from cdtools import tools
 from cdtools.tools import plotting as p
 from cdtools.tools import analysis
-from matplotlib import pyplot as plt
 from datetime import datetime
 import numpy as np
-from scipy import linalg as sla
-from copy import copy
 
 __all__ = ['MultislicePtycho']
 
@@ -449,7 +446,7 @@ class MultislicePtycho(CDIModel):
         else:
             try:
                 Ws = t.ones(len(index)) # I'm positive this introduced a bug
-            except:
+            except TypeError:
                 Ws = 1
 
         if self.weights is None or len(self.weights[0].shape) == 0:
@@ -643,7 +640,6 @@ class MultislicePtycho(CDIModel):
         # First we treat the incoherent but stable  case, where the weights are
         # just one per-shot overall weight
         if self.weights.dim() == 1:
-            probe = self.probe.detach().cpu().numpy()
             ortho_probes = analysis.orthogonalize_probes(self.probe.detach())
             self.probe.data = ortho_probes
             return

@@ -7,7 +7,6 @@ from cdtools.tools.propagators import generate_generalized_angular_spectrum_prop
 from matplotlib import pyplot as plt
 from datetime import datetime
 import numpy as np
-from copy import copy
 
 __all__ = ['Bragg2DPtycho']
 
@@ -560,7 +559,6 @@ class Bragg2DPtycho(CDIModel):
                        'orientation': orientation}
 
         
-        detector_geometry = self.detector_geometry
         mask = self.mask
         wavelength = self.wavelength
         indices, translations = args_list

@@ -28,24 +28,18 @@ loss
 
 """
 
-from sympy import Q
 import torch as t
-from torch.utils import data as torchdata
 import matplotlib
 from matplotlib import pyplot as plt
 from matplotlib.widgets import Slider
 from matplotlib import ticker
 import numpy as np
-import threading
-import queue
 import time
-from scipy import io
 from contextlib import contextmanager
-from cdtools.tools.data import nested_dict_to_h5, h5_to_nested_dict, nested_dict_to_numpy, nested_dict_to_torch
+from cdtools.tools.data import nested_dict_to_h5, nested_dict_to_numpy, nested_dict_to_torch
 from cdtools.reconstructors import AdamReconstructor, LBFGSReconstructor, SGDReconstructor
 from cdtools.datasets import CDataset
 from typing import List, Union, Tuple
-import os
 
 __all__ = ['CDIModel']
 
@@ -78,7 +72,6 @@ class CDIModel(t.nn.Module):
         self.epoch = 0
         self.panel_plot_mode = panel_plot_mode
         self.plot_level = plot_level
-        self.has_inspect_been_called = False
         self.last_inspected_time = None
 
     def from_dataset(self, dataset):
@@ -599,8 +592,7 @@ class CDIModel(t.nn.Module):
             If True, recreate figures that were previously closed by the user.
         min_interval : float, optional
             If set, skip updating plots if fewer than this many seconds have
-            elapsed since the last call to inspect(). The time of the last
-            update is stored in self.last_inspected_time.
+            elapsed since the last call to inspect().
 
         """
         if (min_interval is not None
@@ -636,13 +628,12 @@ class CDIModel(t.nn.Module):
             self.figs = self._inspect_individual_figures(
                 all_plots, dataset=dataset, replot_all=replot_all)
 
-        if not self.has_inspect_been_called or replot_all:
+        if self.last_inspected_time is None or replot_all:
             # Somehow, this is needed for new figures to appear
             if self._is_backend_interactive():
                 plt.pause(0.05 * len(self.figs))
                 for fig in self.figs:
                     fig.canvas.flush_events()
-            self.has_inspect_been_called = True
 
         self.last_inspected_time = time.time()
 
@@ -671,14 +662,24 @@ class CDIModel(t.nn.Module):
     ):
         """Core one-figure-per-plot rendering logic.
 
-        fig_map is a dict {title: figure} owned by the caller and updated
-        in-place. It tracks which figures are open across calls.
+        This is the function which is called internally by model.inspect()
+        to plot all the figures registered on plot_list, or to plot all
+        figures if panel_plot_mode is set to False.
 
-        Behaviour:
-          replot_all=False  — closed figures are skipped (left closed).
-          replot_all=True   — closed figures are recreated.
+        Parameters
+        ----------
+        plot_list : dict
+            The list of registerd plots to show.
+        dataset : CDataset
+            A CDataset object which this model is reconstructing, which may
+            store some needed information such as original translations.      
+        replot_all : bool
+            if set to True, will reopen closed figures. Otherwise, will skip.
 
-        Returns the list of figures that were rendered this call.
+        Returns
+        -------
+        rendered : list
+            the list of figures object that were rendered this call.
         """
 
         rendered = []
@@ -699,12 +700,12 @@ class CDIModel(t.nn.Module):
                         continue
 
             figsize = plot.get('figure_size', None)
-            if self.has_inspect_been_called and \
+            if self.last_inspected_time is not None and \
                not replot_all and \
                not plt.fignum_exists(plot['title']):
                 continue
 
-            if not self.has_inspect_been_called:
+            if self.last_inspected_time is None:
                 fig = plt.figure(plot['title'],
                                  figsize=figsize)
             else:
@@ -738,13 +739,32 @@ class CDIModel(t.nn.Module):
         return rendered
 
 
-    def _inspect_panel(self, plot_panel_list, dataset=None, replot_all=False):
+    def _inspect_panel(
+        self,
+        plot_panel_list,
+        dataset=None,
+        replot_all=False,
+    ):
         """Multi-subplot panel rendering.
+        
+        This is the function which is called internally by model.inspect()
+        to plot all the figures registered on plot_panel_list, and is only
+        used when panel_plot_mode is set to True.
 
-        Creates one figure per plot_panel_list entry, placing each subplot's
-        plot_func output into the appropriate axes. Closed panels stay closed
-        on subsequent calls unless replot_all=True. Standalone plot_list
-        entries are then rendered via _do_inspect and appended to self.figs.
+        Parameters
+        ----------
+        plot_panel_list : dict
+            The list of registerd plot panels to show.
+        dataset : CDataset
+            A CDataset object which this model is reconstructing, which may
+            store some needed information such as original translations.      
+        replot_all : bool
+            if set to True, will reopen closed figures. Otherwise, will skip.
+
+        Returns
+        -------
+        rendered : list
+            the list of figures object that were rendered this call.
         """
 
         rendered = []
@@ -767,12 +787,12 @@ class CDIModel(t.nn.Module):
             figsize = panel_def.get('figure_size', None)
             
 
-            if self.has_inspect_been_called and \
+            if self.last_inspected_time is not None and \
                not replot_all and \
                not plt.fignum_exists(panel_def['title']):
                 continue
 
-            if not self.has_inspect_been_called:
+            if self.last_inspected_time is None:
                 fig = plt.figure(panel_def['title'], figsize=figsize)
             else:
                 with plt.rc_context({'figure.raise_window': False}):
@@ -858,8 +878,6 @@ class CDIModel(t.nn.Module):
             except AttributeError:
                 # Only support one layer of nested subfigures
                 main_fig = fig.figure # get enclosing figure
-                bbox = fig.bbox
-                main_fig_bbox = main_fig.bbox
                 fig_w, fig_h = main_fig.get_size_inches()
                 total_width = fig.bbox.width * fig_w / main_fig.bbox.width
                 total_height = fig.bbox.height * fig_h / main_fig.bbox.height

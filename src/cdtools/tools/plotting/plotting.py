@@ -167,6 +167,8 @@ def plot_image(
         What to label the colorbar when plotting.
     show_cbar : bool
         Default is True, whether or not to show the colorbar
+    updateable_colorbar : bool
+        Default is True, whether to allow zooming on the colorbar
     vmin : int
         Default is min(plot_func(im)), the minimum value for the colormap
     vmax : int
@@ -176,7 +178,7 @@ def plot_image(
     additional_axis_labels : list of str, optional
         Labels for each extra axis (all dimensions except the last two).
         If shorter than the number of extra axes, remaining labels default to
-        "Axis N". If not set, all labels default to "Axis N".
+        "Nth Axis". If not set, all labels default to "Nth Axis".
     \\**kwargs
         All other args are passed to plt.figure(\\**kwargs), if no figure is
         provided
@@ -271,13 +273,14 @@ def plot_image(
             total_width, total_height = fig.get_size_inches()
         except AttributeError:
             # Only support one layer of nested subfigures
-            main_fig = fig.figure # get enclosing figure
-            fig_w, fig_h = main_fig.get_size_inches()
-            total_width = fig.bbox.width * fig_w / main_fig.bbox.width
-            total_height = fig.bbox.height * fig_h / main_fig.bbox.height
-        except AttributeError:
-            # Fall back to default figsize
-            total_width, total_height = (6.4, 4.8)
+            try:
+                main_fig = fig.figure # get enclosing figure
+                fig_w, fig_h = main_fig.get_size_inches()
+                total_width = fig.bbox.width * fig_w / main_fig.bbox.width
+                total_height = fig.bbox.height * fig_h / main_fig.bbox.height
+            except AttributeError:
+                # Fall back to default figsize
+                total_width, total_height = (6.4, 4.8)
 
         pad_left = 0.6 / total_height
         # De-adjusts for an ad-hoc offset introduced by matplotlib
@@ -828,13 +831,14 @@ def plot_translations(
             total_width, total_height = fig.get_size_inches()
         except AttributeError:
             # Only support one layer of nested subfigures
-            main_fig = fig.figure # get enclosing figure
-            fig_w, fig_h = main_fig.get_size_inches()
-            total_width = fig.bbox.width * fig_w / main_fig.bbox.width
-            total_height = fig.bbox.height * fig_h / main_fig.bbox.height
-        except AttributeError:
-            # Fall back to default figsize
-            total_width, total_height = (6.4, 4.8)
+            try:
+                main_fig = fig.figure # get enclosing figure
+                fig_w, fig_h = main_fig.get_size_inches()
+                total_width = fig.bbox.width * fig_w / main_fig.bbox.width
+                total_height = fig.bbox.height * fig_h / main_fig.bbox.height
+            except AttributeError:
+                # Fall back to default figsize
+                total_width, total_height = (6.4, 4.8)
             
         pad_left = 0.6 / total_height
         # De-adjusts for an ad-hoc offset introduced by matplotlib
@@ -938,13 +942,14 @@ def plot_nanomap(
         total_width, total_height = fig.get_size_inches()
     except AttributeError:
         # Only support one layer of nested subfigures
-        main_fig = fig.figure # get enclosing figure
-        fig_w, fig_h = main_fig.get_size_inches()
-        total_width = fig.bbox.width * fig_w / main_fig.bbox.width
-        total_height = fig.bbox.height * fig_h / main_fig.bbox.height
-    except AttributeError:
-        # Fall back to default figsize
-        total_width, total_height = (6.4, 4.8)
+        try:
+            main_fig = fig.figure # get enclosing figure
+            fig_w, fig_h = main_fig.get_size_inches()
+            total_width = fig.bbox.width * fig_w / main_fig.bbox.width
+            total_height = fig.bbox.height * fig_h / main_fig.bbox.height
+        except AttributeError:
+            # Fall back to default figsize
+            total_width, total_height = (6.4, 4.8)
 
     pad_left = 0.6 / total_height
     # De-adjusts for an ad-hoc offset introduced by matplotlib
