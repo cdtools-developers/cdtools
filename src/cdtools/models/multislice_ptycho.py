@@ -4,11 +4,8 @@ from cdtools.datasets import Ptycho2DDataset
 from cdtools import tools
 from cdtools.tools import plotting as p
 from cdtools.tools import analysis
-from matplotlib import pyplot as plt
 from datetime import datetime
 import numpy as np
-from scipy import linalg as sla
-from copy import copy
 
 __all__ = ['MultislicePtycho']
 
@@ -39,10 +36,13 @@ class MultislicePtycho(CDIModel):
                  simulate_finite_pixels=False,
                  dtype=t.float32,
                  exponentiate_obj=False,
-                 obj_view_crop=0
+                 obj_view_crop=0,
+                 panel_plot_mode=False,
+                 plot_level=1,
                  ):
 
-        super(MultislicePtycho, self).__init__()
+        super(MultislicePtycho, self).__init__(panel_plot_mode=panel_plot_mode,
+                                               plot_level=plot_level)
         self.register_buffer('wavelength',
                              t.as_tensor(wavelength, dtype=dtype))
         self.store_detector_geometry(detector_geometry,
@@ -202,6 +202,8 @@ class MultislicePtycho(CDIModel):
                      obj_view_crop=None,
                      obj_padding=200,
                      exponentiate_obj=False,
+                     panel_plot_mode=False,
+                     plot_level=1,
                      ):
 
         wavelength = dataset.wavelength
@@ -409,6 +411,8 @@ class MultislicePtycho(CDIModel):
             simulate_finite_pixels=simulate_finite_pixels,
             exponentiate_obj=exponentiate_obj,
             obj_view_crop=obj_view_crop,
+            panel_plot_mode=panel_plot_mode,
+            plot_level=plot_level,
         )
 
 
@@ -442,7 +446,7 @@ class MultislicePtycho(CDIModel):
         else:
             try:
                 Ws = t.ones(len(index)) # I'm positive this introduced a bug
-            except:
+            except TypeError:
                 Ws = 1
 
         if self.weights is None or len(self.weights[0].shape) == 0:
@@ -636,7 +640,6 @@ class MultislicePtycho(CDIModel):
         # First we treat the incoherent but stable  case, where the weights are
         # just one per-shot overall weight
         if self.weights.dim() == 1:
-            probe = self.probe.detach().cpu().numpy()
             ortho_probes = analysis.orthogonalize_probes(self.probe.detach())
             self.probe.data = ortho_probes
             return
@@ -750,61 +753,61 @@ class MultislicePtycho(CDIModel):
 
         
     plot_list = [
-        ('',
-         lambda self, fig, dataset: self.plot_wavefront_variation(
+        {'title': '',
+         'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
              dataset,
              fig=fig,
              mode='root_sum_intensity',
              image_title='Root Summed Probe Intensities',
              image_colorbar_title='Square Root of Intensity'),
-         lambda self: len(self.weights.shape) >= 2),
-        ('',
-         lambda self, fig, dataset: self.plot_wavefront_variation(
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': '',
+         'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
              dataset,
              fig=fig,
              mode='amplitude',
              image_title='Probe Amplitudes (scroll to view modes)',
              image_colorbar_title='Probe Amplitude'),
-         lambda self: len(self.weights.shape) >= 2),
-        ('',
-         lambda self, fig, dataset: self.plot_wavefront_variation(
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': '',
+         'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
              dataset,
              fig=fig,
              mode='phase',
              image_title='Probe Phases (scroll to view modes)',
              image_colorbar_title='Probe Phase'),
-         lambda self: len(self.weights.shape) >= 2),
-        ('Basis Probe Fourier Space Amplitudes',
-         lambda self, fig: p.plot_amplitude(
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': 'Basis Probe Fourier Space Amplitudes',
+         'plot_func': lambda self, fig: p.plot_amplitude(
              (self.probe if self.fourier_probe
               else tools.propagators.inverse_far_field(self.probe)),
-              fig=fig)),
-        ('Basis Probe Fourier Space Phases',
-         lambda self, fig: p.plot_phase(
+             fig=fig)},
+        {'title': 'Basis Probe Fourier Space Phases',
+         'plot_func': lambda self, fig: p.plot_phase(
              (self.probe if self.fourier_probe
-              else tools.propagators.inverse_far_field(self.probe))
-             , fig=fig)),
-        ('Basis Probe Real Space Amplitudes',
-         lambda self, fig: p.plot_amplitude(
+              else tools.propagators.inverse_far_field(self.probe)),
+             fig=fig)},
+        {'title': 'Basis Probe Real Space Amplitudes',
+         'plot_func': lambda self, fig: p.plot_amplitude(
              (self.probe if not self.fourier_probe
               else tools.propagators.inverse_far_field(self.probe)),
              fig=fig,
              basis=self.probe_basis,
-             units=self.units)),
-        ('Basis Probe Real Space Phases',
-         lambda self, fig: p.plot_phase(
+             units=self.units)},
+        {'title': 'Basis Probe Real Space Phases',
+         'plot_func': lambda self, fig: p.plot_phase(
              (self.probe if not self.fourier_probe
               else tools.propagators.inverse_far_field(self.probe)),
              fig=fig,
              basis=self.probe_basis,
-             units=self.units)),
-        ('Average Weight Matrix Amplitudes',
-         lambda self, fig: p.plot_amplitude(
+             units=self.units)},
+        {'title': 'Average Weight Matrix Amplitudes',
+         'plot_func': lambda self, fig: p.plot_amplitude(
              np.nanmean(np.abs(self.weights.data.cpu().numpy()), axis=0),
              fig=fig),
-         lambda self: len(self.weights.shape) >= 2),
-        ('% of Power in Top Mode',
-         lambda self, fig, dataset: p.plot_nanomap(
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': '% of Power in Top Mode',
+         'plot_func': lambda self, fig, dataset: p.plot_nanomap(
              self.corrected_translations(dataset),
              100 * t.stack([
                  analysis.calc_mode_power_fractions(
@@ -814,69 +817,69 @@ class MultislicePtycho(CDIModel):
              ], dim=0),
              fig=fig,
              units=self.units),
-         lambda self: len(self.weights.shape) >= 2),
-        ('Object Amplitude',
-         lambda self, fig: p.plot_amplitude(
+         'condition': lambda self: len(self.weights.shape) >= 2},
+        {'title': 'Object Amplitude',
+         'plot_func': lambda self, fig: p.plot_amplitude(
              self.obj[(np.s_[:],) + self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units),
-         lambda self: not self.exponentiate_obj),
-        ('Object (T) Imaginary Part',
-         lambda self, fig: p.plot_imag(
+         'condition': lambda self: not self.exponentiate_obj},
+        {'title': 'Object (T) Imaginary Part',
+         'plot_func': lambda self, fig: p.plot_imag(
              self.obj[(np.s_[:],) + self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units),
-         lambda self: self.exponentiate_obj),
-        ('Object Phase',
-         lambda self, fig: p.plot_phase(
+         'condition': lambda self: self.exponentiate_obj},
+        {'title': 'Object Phase',
+         'plot_func': lambda self, fig: p.plot_phase(
              self.obj[(np.s_[:],) + self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units),
-         lambda self: not self.exponentiate_obj),
-        ('Object (T) Real Part',
-         lambda self, fig: p.plot_real(
+         'condition': lambda self: not self.exponentiate_obj},
+        {'title': 'Object (T) Real Part',
+         'plot_func': lambda self, fig: p.plot_real(
              self.obj[(np.s_[:],) + self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units,
              cmap='cividis'),
-         lambda self: self.exponentiate_obj),
-        ('Object Product Amplitude',
-         lambda self, fig: p.plot_amplitude(
+         'condition': lambda self: self.exponentiate_obj},
+        {'title': 'Object Product Amplitude',
+         'plot_func': lambda self, fig: p.plot_amplitude(
              t.prod(self.obj, dim=0)[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units),
-         lambda self: not self.exponentiate_obj),
-        ('Object (T) Sum Imaginary Part',
-         lambda self, fig: p.plot_imag(
+         'condition': lambda self: not self.exponentiate_obj},
+        {'title': 'Object (T) Sum Imaginary Part',
+         'plot_func': lambda self, fig: p.plot_imag(
              t.sum(self.obj, dim=0)[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units),
-         lambda self: self.exponentiate_obj),
-        ('Object Product Phase',
-         lambda self, fig: p.plot_phase(
+         'condition': lambda self: self.exponentiate_obj},
+        {'title': 'Object Product Phase',
+         'plot_func': lambda self, fig: p.plot_phase(
              t.prod(self.obj, dim=0)[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units),
-         lambda self: not self.exponentiate_obj),
-        ('Object (T) Sum Real Part',
-         lambda self, fig: p.plot_real(
+         'condition': lambda self: not self.exponentiate_obj},
+        {'title': 'Object (T) Sum Real Part',
+         'plot_func': lambda self, fig: p.plot_real(
              t.sum(self.obj, dim=0)[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units,
              cmap='cividis'),
-         lambda self: self.exponentiate_obj),
-        ('Corrected Translations',
-         lambda self, fig, dataset: p.plot_translations(self.corrected_translations(dataset), fig=fig, units=self.units)),
-        ('Background',
-         lambda self, fig: p.plot_amplitude(self.background**2, fig=fig))
+         'condition': lambda self: self.exponentiate_obj},
+        {'title': 'Corrected Translations',
+         'plot_func': lambda self, fig, dataset: p.plot_translations(self.corrected_translations(dataset), fig=fig, units=self.units)},
+        {'title': 'Background',
+         'plot_func': lambda self, fig: p.plot_amplitude(self.background**2, fig=fig)},
     ]
     
     

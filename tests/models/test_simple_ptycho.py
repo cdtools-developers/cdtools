@@ -1,5 +1,7 @@
 import pytest
+import time
 import torch as t
+from matplotlib import pyplot as plt
 
 import cdtools
 
@@ -18,12 +20,14 @@ def test_simple_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
 
     for loss in model.Adam_optimize(100, dataset, batch_size=10):
         print(model.report())
-        if show_plot and model.epoch % 10 == 0:
-            model.inspect(dataset)
+        if show_plot:
+            model.inspect(dataset, min_interval=10)
 
     if show_plot:
         model.inspect(dataset)
         model.compare(dataset)
+        time.sleep(3)
+        plt.close('all')
 
     # If this fails, the reconstruction got worse
     assert model.loss_history[-1] < 0.013

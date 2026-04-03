@@ -16,6 +16,7 @@ from torch.utils import data as td
 import threading
 import queue
 import time
+from matplotlib import pyplot as plt
 from typing import List, Union
 
 if TYPE_CHECKING:
@@ -232,7 +233,7 @@ class Reconstructor:
     def optimize(self,
                  iterations: int,
                  batch_size: int = 1,
-                 custom_data_loader: torch.utils.data.DataLoader = None,
+                 custom_data_loader: t.utils.data.DataLoader = None,
                  regularization_factor: Union[float, List[float]] = None,
                  thread: bool = True,
                  calculation_width: int = 10,
@@ -357,10 +358,12 @@ class Reconstructor:
                 try:
                     calc.start()
                     while calc.is_alive():
-                        if hasattr(self.model, 'figs'):
-                            self.model.figs[0].canvas.start_event_loop(0.01)
-                        else:
-                            calc.join()
+                        open_figs = plt.get_fignums()
+                        with plt.rc_context({'figure.raise_window': False}):
+                            for fignum in open_figs:
+                                plt.figure(fignum).canvas.flush_events()
+
+                        time.sleep(0.01)
 
                 except KeyboardInterrupt as e:
                     stop_event.set()

@@ -32,9 +32,9 @@ for label, dataset in zip(labels, datasets):
     
     model.weights.requires_grad = False
     
-    device = 'cuda'
-    model.to(device=device)
-    dataset.get_as(device=device)
+    if t.cuda.is_available():
+        model.to(device='cuda')
+        dataset.get_as(device='cuda')
 
     # Create the reconstructor
     recon = cdtools.reconstructors.AdamReconstructor(model, dataset)

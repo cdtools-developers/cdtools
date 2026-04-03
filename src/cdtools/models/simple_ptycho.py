@@ -76,7 +76,7 @@ class SimplePtycho(CDIModel):
             probe_basis,
             probe,
             obj,
-            min_translation=min_translation
+            min_translation=min_translation,
         )
 
 
@@ -108,14 +108,26 @@ class SimplePtycho(CDIModel):
 
     # This lists all the plots to display on a call to model.inspect()
     plot_list = [
-        ('Probe Amplitude',
-         lambda self, fig: p.plot_amplitude(self.probe, fig=fig, basis=self.probe_basis)),
-        ('Probe Phase',
-         lambda self, fig: p.plot_phase(self.probe, fig=fig, basis=self.probe_basis)),
-        ('Object Amplitude',
-         lambda self, fig: p.plot_amplitude(self.obj, fig=fig, basis=self.probe_basis)),
-        ('Object Phase',
-         lambda self, fig: p.plot_phase(self.obj, fig=fig, basis=self.probe_basis))
+        {
+            'title': 'Probe Amplitude',
+            'plot_func': lambda self, fig:
+                p.plot_amplitude(self.probe, fig, basis=self.probe_basis),
+        },
+        {
+            'title': 'Probe Phase',
+            'plot_func': lambda self, fig:
+                p.plot_phase(self.probe, fig, basis=self.probe_basis)
+        },
+        {
+            'title': 'Object Amplitude',
+            'plot_func': lambda self, fig:
+                p.plot_amplitude(self.obj, fig, basis=self.probe_basis)
+        },
+        {
+            'title': 'Object Phase',
+            'plot_func': lambda self, fig:
+                p.plot_phase(self.obj, fig, basis=self.probe_basis)
+        },
     ]
     
     def save_results(self, dataset):

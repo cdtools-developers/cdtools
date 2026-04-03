@@ -1,4 +1,5 @@
 import pytest
+import time
 import cdtools
 import torch as t
 import numpy as np
@@ -36,7 +37,8 @@ def test_Adam_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
         probe_support_radius=50,
         propagation_distance=2e-6,
         units='um',
-        probe_fourier_crop=pad
+        probe_fourier_crop=pad,
+        panel_plot_mode=False, # At least one check without panel plot mode
     )
 
     model.translation_offsets.data += 0.7 * \
@@ -67,8 +69,8 @@ def test_Adam_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
                                    lr=lr_tup[i],
                                    batch_size=batch_size_tup[i]):
             print(model_recon.report())
-            if show_plot and model_recon.epoch % 10 == 0:
-                model_recon.inspect(dataset)
+            if show_plot:
+                model_recon.inspect(dataset, min_interval=10)
 
         # Check hyperparameter update
         assert recon.optimizer.param_groups[0]['lr'] == lr_tup[i]
@@ -86,6 +88,8 @@ def test_Adam_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
     if show_plot:
         model_recon.inspect(dataset)
         model_recon.compare(dataset)
+        time.sleep(3)
+        plt.close('all')
 
     # ******* Reconstructions with CDIModel.Adam_optimize *******
     print('Running reconstruction using CDIModel.Adam_optimize on provided' +
@@ -99,14 +103,16 @@ def test_Adam_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
                                         lr=lr_tup[i],
                                         batch_size=batch_size_tup[i]):
             print(model.report())
-            if show_plot and model.epoch % 10 == 0:
-                model.inspect(dataset)
+            if show_plot:
+                model.inspect(dataset, min_interval=10)
 
     model.tidy_probes()
 
     if show_plot:
         model.inspect(dataset)
         model.compare(dataset)
+        time.sleep(3)
+        plt.close('all')
 
     # Ensure equivalency between the model reconstructions during the first
     # pass, where they should be identical
@@ -170,8 +176,8 @@ def test_LBFGS_RPI(optical_data_ss_cxi,
         for loss in recon.optimize(iterations,
                                    lr=0.4,
                                    regularization_factor=reg_factor_tup[i]):
-            if show_plot and i == 0:
-                model_recon.inspect(dataset)
+            if show_plot:
+                model_recon.inspect(dataset, min_interval=10)
             print(model_recon.report())
 
         # Check hyperparameter update (or lack thereof)
@@ -180,6 +186,8 @@ def test_LBFGS_RPI(optical_data_ss_cxi,
     if show_plot:
         model_recon.inspect(dataset)
         model_recon.compare(dataset)
+        time.sleep(3)
+        plt.close('all')
 
     # Check model pointing
     assert id(model_recon) == id(recon.model)
@@ -193,13 +201,15 @@ def test_LBFGS_RPI(optical_data_ss_cxi,
                                          dataset,
                                          lr=0.4,
                                          regularization_factor=reg_factor_tup[i]): # noqa
-            if show_plot and i == 0:
-                model.inspect(dataset)
+            if show_plot:
+                model.inspect(dataset, min_interval=10)
             print(model.report())
 
     if show_plot:
         model.inspect(dataset)
         model.compare(dataset)
+        time.sleep(3)
+        plt.close('all')
 
     # Check loss equivalency between the two reconstructions
     assert np.allclose(model.loss_history[:epoch_tup[0]], model_recon.loss_history[:epoch_tup[0]])
@@ -271,8 +281,8 @@ def test_SGD_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
                                lr=lr,
                                batch_size=batch_size):
         print(model_recon.report())
-        if show_plot and model_recon.epoch % 10 == 0:
-            model_recon.inspect(dataset)
+        if show_plot:
+            model_recon.inspect(dataset, min_interval=10)
 
     # Check hyperparameter update
     assert recon.optimizer.param_groups[0]['lr'] == lr
@@ -290,6 +300,8 @@ def test_SGD_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
     if show_plot:
         model_recon.inspect(dataset)
         model_recon.compare(dataset)
+        time.sleep(3)
+        plt.close('all')
 
     # ******* Reconstructions with cdtools.CDIModel.SGD_optimize *******
     print('Running reconstruction using CDIModel.SGD_optimize on provided' +
@@ -301,14 +313,16 @@ def test_SGD_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
                                    lr=lr,
                                    batch_size=batch_size):
         print(model.report())
-        if show_plot and model.epoch % 10 == 0:
-            model.inspect(dataset)
+        if show_plot:
+            model.inspect(dataset, min_interval=10)
 
     model.tidy_probes()
 
     if show_plot:
         model.inspect(dataset)
         model.compare(dataset)
+        time.sleep(3)
+        plt.close('all')
 
     # Ensure equivalency between the model reconstructions
     assert np.allclose(model_recon.loss_history[-1], model.loss_history[-1])

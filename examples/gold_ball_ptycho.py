@@ -1,6 +1,6 @@
 import cdtools
-from matplotlib import pyplot as plt
 import torch as t
+from matplotlib import pyplot as plt
 
 filename = 'example_data/AuBalls_700ms_30nmStep_3_6SS_filter.cxi'
 dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(filename)
@@ -26,7 +26,8 @@ model = cdtools.models.FancyPtycho.from_dataset(
     probe_support_radius=50,
     propagation_distance=2e-6,
     units='um',
-    probe_fourier_crop=pad 
+    probe_fourier_crop=pad,
+    plot_level=2,
 )
 
 
@@ -39,9 +40,9 @@ model.translation_offsets.data += 0.7 * t.randn_like(model.translation_offsets)
 # Not much probe intensity instability in this dataset, no need for this
 model.weights.requires_grad = False
 
-device = 'cuda'
-model.to(device=device)
-dataset.get_as(device=device)
+if t.cuda.is_available():
+    model.to(device='cuda')
+    dataset.get_as(device='cuda')
 
 # Create the reconstructor
 recon = cdtools.reconstructors.AdamReconstructor(model, dataset)
@@ -53,13 +54,11 @@ with model.save_on_exception(
     
     for loss in recon.optimize(20, lr=0.005, batch_size=50):
         print(model.report())
-        if model.epoch % 10 == 0:
-            model.inspect(dataset)
+        model.inspect(dataset, min_interval=5)
 
     for loss in recon.optimize(50, lr=0.002, batch_size=100):
         print(model.report())
-        if model.epoch % 10 == 0:
-            model.inspect(dataset)
+        model.inspect(dataset, min_interval=5)
 
     # We can often reset our guess of the probe positions once we have a
     # good guess of probe and object, but in this case it causes the
@@ -70,8 +69,7 @@ with model.save_on_exception(
     # the loss fails to improve after 10 epochs
     for loss in recon.optimize(100, lr=0.001, batch_size=100, schedule=True):
         print(model.report())
-        if model.epoch % 10 == 0:
-            model.inspect(dataset)
+        model.inspect(dataset, min_interval=5)
 
 
 model.tidy_probes()
@@ -79,6 +77,6 @@ model.tidy_probes()
 # This saves the final result
 model.save_to_h5('example_reconstructions/gold_balls.h5', dataset)
 
-model.inspect(dataset)
+model.inspect(dataset, replot_all=True)
 model.compare(dataset)
 plt.show()

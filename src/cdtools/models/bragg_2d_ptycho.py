@@ -7,7 +7,6 @@ from cdtools.tools.propagators import generate_generalized_angular_spectrum_prop
 from matplotlib import pyplot as plt
 from datetime import datetime
 import numpy as np
-from copy import copy
 
 __all__ = ['Bragg2DPtycho']
 
@@ -80,6 +79,8 @@ class Bragg2DPtycho(CDIModel):
             units='um',
             dtype=t.float32,
             obj_view_crop=0,
+            panel_plot_mode=False,
+            plot_level=1,
     ):
 
         # We need the detector geometry
@@ -91,7 +92,8 @@ class Bragg2DPtycho(CDIModel):
         # translation_offsets can stay 2D for now
         # propagate_probe and correct_tilt are important!
 
-        super(Bragg2DPtycho, self).__init__()
+        super(Bragg2DPtycho, self).__init__(panel_plot_mode=panel_plot_mode,
+                                            plot_level=plot_level)
         self.register_buffer('wavelength',
                              t.as_tensor(wavelength, dtype=dtype))
         self.store_detector_geometry(detector_geometry,
@@ -258,7 +260,9 @@ class Bragg2DPtycho(CDIModel):
             obj_padding=200,
             obj_view_crop=None,
             units='um',
-            surface_normal=None
+            surface_normal=None,
+            panel_plot_mode=False,
+            plot_level=1,
     ):
         wavelength = dataset.wavelength
         det_basis = dataset.detector_geometry['basis']
@@ -436,8 +440,8 @@ class Bragg2DPtycho(CDIModel):
         return cls(wavelength, det_geo, obj_basis, probe, obj,
                    min_translation=min_translation,
                    probe_basis=probe_basis,
-                   median_propagation =median_propagation,
-                   translation_offsets = translation_offsets,
+                   median_propagation=median_propagation,
+                   translation_offsets=translation_offsets,
                    weights=weights, mask=mask, background=background,
                    translation_scale=translation_scale,
                    saturation=saturation,
@@ -448,6 +452,8 @@ class Bragg2DPtycho(CDIModel):
                    lens=lens,
                    obj_view_crop=obj_view_crop,
                    units=units,
+                   panel_plot_mode=panel_plot_mode,
+                   plot_level=plot_level,
                    )
                    
     
@@ -553,7 +559,6 @@ class Bragg2DPtycho(CDIModel):
                        'orientation': orientation}
 
         
-        detector_geometry = self.detector_geometry
         mask = self.mask
         wavelength = self.wavelength
         indices, translations = args_list
@@ -578,90 +583,90 @@ class Bragg2DPtycho(CDIModel):
 
 
     plot_list = [
-        ('Basis Probe Fourier Space Amplitudes',
-         lambda self, fig: p.plot_amplitude(tools.propagators.inverse_far_field(self.probe), fig=fig)),
-        ('Basis Probe Fourier Space Phases',
-         lambda self, fig: p.plot_phase(tools.propagators.inverse_far_field(self.probe), fig=fig)),
-        ('Basis Probe Real Space Amplitudes, Surface Normal View',
-         lambda self, fig: p.plot_amplitude(
+        {'title': 'Basis Probe Fourier Space Amplitudes',
+         'plot_func': lambda self, fig: p.plot_amplitude(tools.propagators.inverse_far_field(self.probe), fig=fig)},
+        {'title': 'Basis Probe Fourier Space Phases',
+         'plot_func': lambda self, fig: p.plot_phase(tools.propagators.inverse_far_field(self.probe), fig=fig)},
+        {'title': 'Basis Probe Real Space Amplitudes, Surface Normal View',
+         'plot_func': lambda self, fig: p.plot_amplitude(
              self.probe,
              fig=fig,
              basis=self.probe_basis,
              units=self.units,
-         )),
-        ('Basis Probe Real Space Phases, Surface Normal View',
-         lambda self, fig: p.plot_phase(
+         )},
+        {'title': 'Basis Probe Real Space Phases, Surface Normal View',
+         'plot_func': lambda self, fig: p.plot_phase(
              self.probe,
              fig=fig,
              basis=self.probe_basis,
              units=self.units,
-         )),
-        ('Basis Probe Real Space Amplitudes, Beam View',
-         lambda self, fig: p.plot_amplitude(
-             self.probe,
-             fig=fig,
-             basis=self.probe_basis,
-             view_basis=beam_basis,
-             units=self.units,
-         )),
-        ('Basis Probe Real Space Phases, Beam View',
-         lambda self, fig: p.plot_phase(
+         )},
+        {'title': 'Basis Probe Real Space Amplitudes, Beam View',
+         'plot_func': lambda self, fig: p.plot_amplitude(
              self.probe,
              fig=fig,
              basis=self.probe_basis,
              view_basis=beam_basis,
              units=self.units,
-         )),
-        ('Object Amplitude, Surface Normal View', 
-         lambda self, fig: p.plot_amplitude(
+         )},
+        {'title': 'Basis Probe Real Space Phases, Beam View',
+         'plot_func': lambda self, fig: p.plot_phase(
+             self.probe,
+             fig=fig,
+             basis=self.probe_basis,
+             view_basis=beam_basis,
+             units=self.units,
+         )},
+        {'title': 'Object Amplitude, Surface Normal View',
+         'plot_func': lambda self, fig: p.plot_amplitude(
              self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units,
-         )),
-        ('Object Phase, Surface Normal View',
-         lambda self, fig: p.plot_phase(
+         )},
+        {'title': 'Object Phase, Surface Normal View',
+         'plot_func': lambda self, fig: p.plot_phase(
              self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              units=self.units,
-         )),
-        ('Object Amplitude, Beam View', 
-         lambda self, fig: p.plot_amplitude(
+         )},
+        {'title': 'Object Amplitude, Beam View',
+         'plot_func': lambda self, fig: p.plot_amplitude(
              self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              view_basis=beam_basis,
              units=self.units,
-         )),
-        ('Object Phase, Beam View',
-         lambda self, fig: p.plot_phase(
+         )},
+        {'title': 'Object Phase, Beam View',
+         'plot_func': lambda self, fig: p.plot_phase(
              self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              view_basis=beam_basis,
              units=self.units,
-         )),
-        ('Object Amplitude, Detector View', 
-         lambda self, fig: p.plot_amplitude(
+         )},
+        {'title': 'Object Amplitude, Detector View',
+         'plot_func': lambda self, fig: p.plot_amplitude(
              self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              view_basis=self.det_basis,
              units=self.units,
-         )),
-        ('Object Phase, Detector View',
-         lambda self, fig: p.plot_phase(
+         )},
+        {'title': 'Object Phase, Detector View',
+         'plot_func': lambda self, fig: p.plot_phase(
              self.obj[self.obj_view_slice],
              fig=fig,
              basis=self.obj_basis,
              view_basis=self.det_basis,
              units=self.units,
-         )),
-        ('Corrected Translations',
-         lambda self, fig, dataset: p.plot_translations(self.corrected_translations(dataset), fig=fig, units=self.units)),
-        ('Background',
-         lambda self, fig: plt.figure(fig.number) and plt.imshow(self.background.detach().cpu().numpy()**2))
+         )},
+        {'title': 'Corrected Translations',
+         'plot_func': lambda self, fig, dataset: p.plot_translations(self.corrected_translations(dataset), fig=fig, units=self.units)},
+        {'title': 'Background',
+         'plot_func': lambda self, fig: plt.figure(fig.number) and plt.imshow(self.background.detach().cpu().numpy()**2)},
     ]
 
     

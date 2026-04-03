@@ -8,6 +8,7 @@ more powerful FancyPtycho model and include more information on how to
 correct for common sources of error.
 """
 import cdtools
+import torch as t
 from matplotlib import pyplot as plt
 
 # We load an example dataset from a .cxi file
@@ -17,10 +18,12 @@ dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(filename)
 # We create a ptychography model from the dataset
 model = cdtools.models.SimplePtycho.from_dataset(dataset)
 
-# We move the model to the GPU
-device = 'cuda'
-model.to(device=device)
-dataset.get_as(device=device)
+# We move the model to the GPU, if possible
+if t.cuda.is_available():
+    model.to(device='cuda')
+    dataset.get_as(device='cuda')
+
+model.inspect(dataset)
 
 # We run the reconstruction
 for loss in model.Adam_optimize(100, dataset, batch_size=10):
@@ -29,7 +32,6 @@ for loss in model.Adam_optimize(100, dataset, batch_size=10):
     # And liveplot the updates to the model as they happen
     model.inspect(dataset)
 
-# We study the results
-model.inspect(dataset)
+# We open a comparison of the simulated and measured data
 model.compare(dataset)
 plt.show()
