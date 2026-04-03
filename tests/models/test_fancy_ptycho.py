@@ -97,8 +97,8 @@ def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
 
     print('Running reconstruction on provided reconstruction_device,',
           reconstruction_device)
-    #model.to(device=reconstruction_device)
-    #dataset.get_as(device=reconstruction_device)
+    model.to(device=reconstruction_device)
+    dataset.get_as(device=reconstruction_device)
 
     for loss in model.Adam_optimize(50, dataset, lr=0.02, batch_size=10):
         print(model.report())
