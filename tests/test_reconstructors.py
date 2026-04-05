@@ -1,3 +1,4 @@
+from numbers import Number
 import pytest
 import time
 import cdtools
@@ -113,6 +114,11 @@ def test_Adam_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
         model.compare(dataset)
         time.sleep(3)
         plt.close('all')
+
+
+    # Check that the losses returned in loss_history are not torch tensors
+    assert isinstance(model.loss_history[-1], Number) and \
+        not isinstance(model.loss_history[-1], t.Tensor)
 
     # Ensure equivalency between the model reconstructions during the first
     # pass, where they should be identical
