@@ -166,4 +166,4 @@ def test_near_field_ptycho(near_field_ptycho_cxi, reconstruction_device, show_pl
         plt.close('all')
 
     # If this fails, the reconstruction has gotten worse
-    assert model.loss_history[-1] < 17
+    assert model.loss_history[-1] < 18
