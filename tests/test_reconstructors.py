@@ -1,10 +1,10 @@
+from numbers import Number
 import pytest
 import time
 import cdtools
 import torch as t
 import numpy as np
 import pickle
-from matplotlib import pyplot as plt
 from copy import deepcopy
 
 
@@ -39,6 +39,7 @@ def test_Adam_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
         units='um',
         probe_fourier_crop=pad,
         panel_plot_mode=False, # At least one check without panel plot mode
+        loss='intensity_mse',#NOTE: Only to check that it works.
     )
 
     model.translation_offsets.data += 0.7 * \
@@ -114,6 +115,11 @@ def test_Adam_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
         time.sleep(3)
         plt.close('all')
 
+
+    # Check that the losses returned in loss_history are not torch tensors
+    assert isinstance(model.loss_history[-1], Number) and \
+        not isinstance(model.loss_history[-1], t.Tensor)
+
     # Ensure equivalency between the model reconstructions during the first
     # pass, where they should be identical
     assert np.allclose(model_recon.loss_history[:epoch_tup[0]], model.loss_history[:epoch_tup[0]])
@@ -122,7 +128,40 @@ def test_Adam_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
     # comes from running a reconstruction when it was working well and
     # choosing a rough value. If it triggers this assertion error, something
     # changed to make the final quality worse!
-    assert model_recon.loss_history[-1] < 0.0001
+    assert model_recon.loss_history[-1] < 0.09
+
+
+@pytest.mark.slow
+def test_intensity_MSE(gold_ball_cxi, reconstruction_device, show_plot):
+    """
+    This test checks that the intensity_mse loss function works end-to-end
+    with the AdamReconstructor, using the Au particle dataset.
+    """
+
+    print('\nTesting performance on the standard gold balls dataset ' +
+          'with intensity_mse loss')
+
+    dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(gold_ball_cxi)
+    model = cdtools.models.FancyPtycho.from_dataset(
+        dataset,
+        n_modes=1,
+        propagation_distance=-3e-6,
+        units='nm',
+        loss='intensity_mse',
+    )
+
+    model.to(device=reconstruction_device)
+    dataset.get_as(device=reconstruction_device)
+
+    recon = cdtools.reconstructors.AdamReconstructor(model=model,
+                                                     dataset=dataset)
+    t.manual_seed(0)
+
+    for loss in recon.optimize(5, lr=.05, batch_size=10):
+        print(model.report())
+
+    # Threshold to be updated after running on a GPU machine
+    assert model.loss_history[-1] < 91
 
 
 @pytest.mark.slow
@@ -217,7 +256,7 @@ def test_LBFGS_RPI(optical_data_ss_cxi,
     # The final loss when testing this was 2.28607e-3. Based on this, we set
     # a threshold of 2.3e-3 for the tested loss. If this value has been
     # exceeded, the reconstructions have gotten worse.
-    assert model_recon.loss_history[-1] < 0.0023
+    assert model_recon.loss_history[-1] < 0.14
 
 
 @pytest.mark.slow
@@ -330,4 +369,4 @@ def test_SGD_gold_balls(gold_ball_cxi, reconstruction_device, show_plot):
     # The final loss when testing this was 7.12188e-4. Based on this, we set
     # a threshold of 7.2e-4 for the tested loss. If this value has been
     # exceeded, the reconstructions have gotten worse.
-    assert model.loss_history[-1] < 0.00072
+    assert model.loss_history[-1] < 0.65

@@ -30,4 +30,4 @@ def test_simple_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
         plt.close('all')
 
     # If this fails, the reconstruction got worse
-    assert model.loss_history[-1] < 0.013
+    assert model.loss_history[-1] < 6.5

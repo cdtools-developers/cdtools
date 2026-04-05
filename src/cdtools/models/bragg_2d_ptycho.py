@@ -76,6 +76,7 @@ class Bragg2DPtycho(CDIModel):
             propagate_probe=True,
             correct_tilt=True,
             lens=False,
+            loss='amplitude mse',
             units='um',
             dtype=t.float32,
             obj_view_crop=0,
@@ -237,7 +238,22 @@ class Bragg2DPtycho(CDIModel):
         # TODO: probably doesn't support non-float-32 dtypes
         self.register_buffer('universal_propagator',
                              universal_propagator)
-                            
+
+        # Here we set the appropriate loss function
+        if (loss.lower().strip() == 'amplitude mse'
+                or loss.lower().strip() == 'amplitude_mse'):
+            self.loss = tools.losses.amplitude_mse
+            self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
+        elif (loss.lower().strip() == 'poisson nll'
+                or loss.lower().strip() == 'poisson_nll'):
+            self.loss = tools.losses.poisson_nll
+            self.loss_normalizer = tools.losses.SimplePoissonNLLNormalizer()
+        elif (loss.lower().strip() == 'intensity mse'
+                or loss.lower().strip() == 'intensity_mse'):
+            self.loss = tools.losses.intensity_mse
+            self.loss_normalizer = tools.losses.IntensityMSENormalizer()
+        else:
+            raise KeyError('Specified loss function not supported')
         
 
     @classmethod
@@ -257,6 +273,7 @@ class Bragg2DPtycho(CDIModel):
             propagate_probe=True,
             correct_tilt=True,
             lens=False,
+            loss='amplitude mse',
             obj_padding=200,
             obj_view_crop=None,
             units='um',
@@ -450,6 +467,7 @@ class Bragg2DPtycho(CDIModel):
                    propagate_probe=propagate_probe,
                    correct_tilt=correct_tilt,
                    lens=lens,
+                   loss=loss,
                    obj_view_crop=obj_view_crop,
                    units=units,
                    panel_plot_mode=panel_plot_mode,
@@ -532,10 +550,6 @@ class Bragg2DPtycho(CDIModel):
             saturation=self.saturation,
             oversampling=self.oversampling,
         )
-
-    
-    def loss(self, sim_data, real_data, mask=None):
-        return tools.losses.amplitude_mse(real_data, sim_data, mask=mask)
 
     
     def sim_to_dataset(self, args_list):

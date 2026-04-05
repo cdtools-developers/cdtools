@@ -46,6 +46,7 @@ class Multislice2DPtycho(CDIModel):
                  fourier_probe=False,
                  prevent_aliasing=True,
                  phase_only=False,
+                 loss='amplitude mse',
                  units='um',
                  panel_plot_mode=False,
                  plot_level=1,
@@ -155,9 +156,25 @@ class Multislice2DPtycho(CDIModel):
 
         self.as_prop = tools.propagators.generate_angular_spectrum_propagator(shape, spacing, self.wavelength, self.dz, self.bandlimit)
 
+        # Here we set the appropriate loss function
+        if (loss.lower().strip() == 'amplitude mse'
+                or loss.lower().strip() == 'amplitude_mse'):
+            self.loss = tools.losses.amplitude_mse
+            self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
+        elif (loss.lower().strip() == 'poisson nll'
+                or loss.lower().strip() == 'poisson_nll'):
+            self.loss = tools.losses.poisson_nll
+            self.loss_normalizer = tools.losses.SimplePoissonNLLNormalizer()
+        elif (loss.lower().strip() == 'intensity mse'
+                or loss.lower().strip() == 'intensity_mse'):
+            self.loss = tools.losses.intensity_mse
+            self.loss_normalizer = tools.losses.IntensityMSENormalizer()
+        else:
+            raise KeyError('Specified loss function not supported')
+
 
     @classmethod
-    def from_dataset(cls, dataset, dz, nz, probe_convergence_semiangle, padding=0, n_modes=1, dm_rank=None, translation_scale=1, saturation=None, propagation_distance=None, scattering_mode=None, oversampling=1, auto_center=True, bandlimit=None, replicate_slice=False, subpixel=True, exponentiate_obj=True, units='um', fourier_probe=False, phase_only=False, prevent_aliasing=True, probe_support_radius=None, panel_plot_mode=False, plot_level=1):
+    def from_dataset(cls, dataset, dz, nz, probe_convergence_semiangle, padding=0, n_modes=1, dm_rank=None, translation_scale=1, saturation=None, propagation_distance=None, scattering_mode=None, oversampling=1, auto_center=True, bandlimit=None, replicate_slice=False, subpixel=True, exponentiate_obj=True, units='um', fourier_probe=False, phase_only=False, prevent_aliasing=True, probe_support_radius=None, panel_plot_mode=False, plot_level=1, loss='amplitude_mse'):
 
         wavelength = dataset.wavelength
         det_basis = dataset.detector_geometry['basis']
@@ -301,7 +318,9 @@ class Multislice2DPtycho(CDIModel):
                    phase_only=phase_only,
                    prevent_aliasing=prevent_aliasing,
                    panel_plot_mode=panel_plot_mode,
-                   plot_level=plot_level)
+                   plot_level=plot_level,
+                   loss=loss,
+        )
                    
     
     def interaction(self, index, translations):
@@ -413,11 +432,6 @@ class Multislice2DPtycho(CDIModel):
                             measurement=tools.measurements.incoherent_sum,
                             saturation=self.saturation,
                             oversampling=self.oversampling)
-
-    
-    def loss(self, sim_data, real_data, mask=None):
-        return tools.losses.amplitude_mse(real_data, sim_data, mask=mask)
-        #return tools.losses.poisson_nll(real_data, sim_data, mask=mask,eps=0.5)
 
     
     def to(self, *args, **kwargs):

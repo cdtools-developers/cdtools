@@ -162,7 +162,9 @@ class Reconstructor:
         # The data loader is responsible for setting the minibatch
         # size, so each set is a minibatch
         for inputs, patterns in self.data_loader:
-            normalization += t.sum(patterns).cpu().numpy()
+            if hasattr(self.model, 'loss_normalizer') and \
+                    self.model.loss_normalizer is not None:
+                self.model.loss_normalizer.accumulate(patterns)
             N += 1
 
             def closure():
@@ -216,9 +218,14 @@ class Reconstructor:
                 return total_loss
 
             # This takes the step for this minibatch
-            loss += self.optimizer.step(closure).detach().cpu().numpy()
+            loss += self.optimizer.step(closure).detach()
 
-        loss /= normalization
+        if hasattr(self.model, 'loss_normalizer') and \
+                self.model.loss_normalizer is not None:
+            loss = self.model.loss_normalizer.normalize_loss(loss)
+
+        # Make sure to return a scalar value which is fully numpy
+        loss = loss.cpu().numpy()[()]
 
         # We step the scheduler after the full epoch
         if self.scheduler is not None:

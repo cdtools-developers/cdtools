@@ -1,5 +1,6 @@
 import numpy as np
 import torch as t
+from scipy.special import xlogy
 
 from cdtools.tools import losses
 
@@ -52,22 +53,24 @@ def test_intensity_mse():
 
 
 def test_poisson_nll():
-    # Make some fake data
-    data = np.random.rand(10, 100, 100)
-    # And add some noise to it
+    # Make some fake data spread over a realistic photon-count range,
+    # with ~5% of pixels set to zero
+    data = 10 * np.random.rand(10, 100, 100)
+    data[np.random.rand(10, 100, 100) < 0.05] = 0
+    # Add some noise, but set ~5% of sim pixels to exactly match data
     sim = data + 0.1 * np.random.rand(10, 100, 100)
+    exact_match = np.random.rand(10, 100, 100) < 0.05
+    sim[exact_match] = data[exact_match]
     # and define a simple mask that needs to be broadcast
     mask = (np.random.rand(100, 100) > 0.1).astype(bool)
 
     # First, test without a mask
-    np_result = np.sum(sim - data * np.log(sim))
-    np_result /= data.size
+    np_result = np.sum(sim - xlogy(data, sim))
     torch_result = losses.poisson_nll(t.from_numpy(data), t.from_numpy(sim), eps=0)
     assert np.isclose(np_result, np.take(torch_result.numpy(), 0))
 
     # Then, test with a mask
-    np_result = np.sum(mask * (sim - data * np.log(sim)))
-    np_result /= np.count_nonzero(mask * np.ones_like(data))
+    np_result = np.sum(mask * (sim - xlogy(data, sim)))
     torch_result = losses.poisson_nll(t.from_numpy(data), t.from_numpy(sim),
                                       mask=t.from_numpy(mask), eps=0)
     assert np.isclose(np_result, np.take(torch_result.numpy(), 0))

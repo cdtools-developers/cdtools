@@ -220,9 +220,15 @@ class FancyPtycho(CDIModel):
         if (loss.lower().strip() == 'amplitude mse'
                 or loss.lower().strip() == 'amplitude_mse'):
             self.loss = tools.losses.amplitude_mse
+            self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
         elif (loss.lower().strip() == 'poisson nll'
                 or loss.lower().strip() == 'poisson_nll'):
             self.loss = tools.losses.poisson_nll
+            self.loss_normalizer = tools.losses.SimplePoissonNLLNormalizer()
+        elif (loss.lower().strip() == 'intensity mse'
+                or loss.lower().strip() == 'intensity_mse'):
+            self.loss = tools.losses.intensity_mse
+            self.loss_normalizer = tools.losses.IntensityMSENormalizer()
         else:
             raise KeyError('Specified loss function not supported')
 
