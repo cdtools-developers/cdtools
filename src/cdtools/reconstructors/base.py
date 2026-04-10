@@ -164,7 +164,8 @@ class Reconstructor:
         for inputs, patterns in self.data_loader:
             if hasattr(self.model, 'loss_normalizer') and \
                     self.model.loss_normalizer is not None:
-                self.model.loss_normalizer.accumulate(patterns)
+                self.model.loss_normalizer.accumulate(
+                    patterns, mask=self.model.mask)
             N += 1
 
             def closure():

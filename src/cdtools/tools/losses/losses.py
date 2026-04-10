@@ -347,13 +347,13 @@ class SimplePoissonNLLNormalizer(object):
         
         """
         if not self.first_pass_complete:
+            self.offset += poisson_nll(patterns, patterns, mask=mask)
             if mask is None:
                 self.sum_nonzero += t.sum(patterns >= 1)
-                self.offset += poisson_nll(patterns, patterns)
             else:
                 masked_pats = patterns.masked_select(mask)
                 self.sum_nonzero += t.sum(masked_pats >= 1)
-                self.offset += poisson_nll(masked_pats, masked_pats)
+                
 
     
     def normalize_loss(self, loss):
@@ -373,7 +373,7 @@ class SimplePoissonNLLNormalizer(object):
         if not self.first_pass_complete:
             self.normalization = 0.5 * self.sum_nonzero
             self.first_pass_complete = True
-        
+
         return (loss - self.offset) / self.normalization
     
     
