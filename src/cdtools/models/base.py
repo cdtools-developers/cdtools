@@ -255,7 +255,7 @@ class CDIModel(t.nn.Module):
 
 
     @classmethod
-    def from_results_h5(cls, filename):
+    def from_results_h5(cls, filename, *args, **kwargs):
         """Reconstructs a model directly from a saved .h5 result file.
 
         Reads the file into a dictionary and delegates to cls.from_results_dict.
@@ -272,7 +272,8 @@ class CDIModel(t.nn.Module):
             A fully reconstructed model with all parameters, buffers, and
             training metadata restored.
         """
-        return cls.from_results_dict(h5_to_nested_dict(filename))
+        return cls.from_results_dict(
+            h5_to_nested_dict(filename), *args, **kwargs)
 
 
     @contextmanager

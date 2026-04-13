@@ -149,6 +149,7 @@ class FancyPtycho(CDIModel):
                                         obj_view_crop:-obj_view_crop]
         else:
             self.obj_view_slice = np.s_[:,:]
+            
         
         # TODO: perhaps not working anymore for fourier cropped probes
         if background is None:
@@ -1224,7 +1225,12 @@ class FancyPtycho(CDIModel):
 
 
     @classmethod
-    def from_results_dict(cls, results_dict):
+    def from_results_dict(
+        cls,
+        results_dict,
+        obj_view_crop=0,
+        units='um',    
+    ):
         """Reconstructs a FancyPtycho model from a results dictionary.
 
         Parameters
@@ -1280,6 +1286,8 @@ class FancyPtycho(CDIModel):
             angular_spectrum_propagator=sd.get('angular_spectrum_propagator'),
             inv_angular_spectrum_propagator=sd.get('inv_angular_spectrum_propagator'),
             translations=sd.get('original_translations'),
+            obj_view_crop=obj_view_crop,
+            units=units,
         )
         model._load_results_dict(results_dict)
         return model
