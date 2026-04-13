@@ -36,7 +36,8 @@ from matplotlib import ticker
 import numpy as np
 import time
 from contextlib import contextmanager
-from cdtools.tools.data import nested_dict_to_h5, nested_dict_to_numpy, nested_dict_to_torch
+import cdtools
+from cdtools.tools.data import nested_dict_to_h5, nested_dict_to_numpy, nested_dict_to_torch, h5_to_nested_dict
 from cdtools.reconstructors import AdamReconstructor, LBFGSReconstructor, SGDReconstructor
 from cdtools.datasets import CDataset
 from typing import List, Union, Tuple
@@ -193,6 +194,8 @@ class CDIModel(t.nn.Module):
             'epoch': self.epoch,
             'training_history': self.training_history,
             'loss_function': self.loss.__name__,
+            'model_class': type(self).__name__,
+            'cdtools_version': cdtools.__version__,
         }
 
 
@@ -207,7 +210,71 @@ class CDIModel(t.nn.Module):
             Accepts any additional args that model.save_results needs, for this model
         """
         return nested_dict_to_h5(filename, self.save_results(*args))
-    
+
+
+    def _load_results_dict(self, results_dict):
+        """Restores model state and training metadata from a results dictionary.
+
+        This is the kernel used by from_results_dict implementations. It loads
+        the state_dict (all parameters and buffers) and restores loss history,
+        epoch count, and training history.
+
+        Parameters
+        ----------
+        results_dict : dict
+            The dictionary returned by save_results(), as loaded from an h5 file
+            or produced directly in memory.
+        """
+        state_dict = nested_dict_to_torch(results_dict['state_dict'])
+        self.load_state_dict(state_dict)
+        self.loss_history = list(results_dict['loss_history'])
+        self.epoch = int(results_dict['epoch'])
+        self.training_history = str(results_dict['training_history'])
+
+
+    @classmethod
+    def from_results_dict(cls, results_dict):
+        """Reconstructs a model from the dictionary returned by save_results().
+
+        Must be implemented by each subclass. The base class raises
+        NotImplementedError.
+
+        Parameters
+        ----------
+        results_dict : dict
+            The dictionary returned by save_results(), as loaded from an h5 file
+            or produced directly in memory.
+
+        Returns
+        -------
+        model : CDIModel subclass
+            A fully reconstructed model with all parameters, buffers, and
+            training metadata restored.
+        """
+        raise NotImplementedError()
+
+
+    @classmethod
+    def from_results_h5(cls, filename, *args, **kwargs):
+        """Reconstructs a model directly from a saved .h5 result file.
+
+        Reads the file into a dictionary and delegates to cls.from_results_dict.
+        Subclasses inherit this method and only need to implement from_results_dict.
+
+        Parameters
+        ----------
+        filename : str or Path
+            Path to the .h5 file saved by save_to_h5.
+
+        Returns
+        -------
+        model : CDIModel subclass
+            A fully reconstructed model with all parameters, buffers, and
+            training metadata restored.
+        """
+        return cls.from_results_dict(
+            h5_to_nested_dict(filename), *args, **kwargs)
+
 
     @contextmanager
     def save_on_exit(self, filename, *args, exception_filename=None):

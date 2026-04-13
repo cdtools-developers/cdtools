@@ -17,7 +17,7 @@ if t.cuda.is_available():
     dataset.get_as(device='cuda')
 
 for loss in model.Adam_optimize(10, dataset):
-    model.inspect(dataset)
+    model.inspect()
     print(model.report())
 
 model.inspect(dataset)

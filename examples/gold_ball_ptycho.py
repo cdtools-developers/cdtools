@@ -54,11 +54,11 @@ with model.save_on_exception(
     
     for loss in recon.optimize(20, lr=0.005, batch_size=50):
         print(model.report())
-        model.inspect(dataset, min_interval=5)
+        model.inspect(min_interval=5)
 
     for loss in recon.optimize(50, lr=0.002, batch_size=100):
         print(model.report())
-        model.inspect(dataset, min_interval=5)
+        model.inspect(min_interval=5)
 
     # We can often reset our guess of the probe positions once we have a
     # good guess of probe and object, but in this case it causes the
@@ -69,14 +69,14 @@ with model.save_on_exception(
     # the loss fails to improve after 10 epochs
     for loss in recon.optimize(100, lr=0.001, batch_size=100, schedule=True):
         print(model.report())
-        model.inspect(dataset, min_interval=5)
+        model.inspect(min_interval=5)
 
 
 model.tidy_probes()
 
 # This saves the final result
-model.save_to_h5('example_reconstructions/gold_balls.h5', dataset)
+model.save_to_h5('example_reconstructions/gold_balls.h5')
 
-model.inspect(dataset, replot_all=True)
+model.inspect(replot_all=True)
 model.compare(dataset)
 plt.show()

@@ -166,3 +166,62 @@ def test_near_field_ptycho(near_field_ptycho_cxi, reconstruction_device, show_pl
 
     # If this fails, the reconstruction has gotten worse
     assert model.loss_history[-1] < 0.005
+
+
+def test_fancy_ptycho_from_results_dict(lab_ptycho_cxi, tmp_path):
+    dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(lab_ptycho_cxi)
+
+    t.manual_seed(42)
+    model = cdtools.models.FancyPtycho.from_dataset(
+        dataset,
+        n_modes=2,
+    )
+
+    # Verify original_translations is stored after from_dataset
+    assert hasattr(model, 'original_translations')
+    assert model.original_translations is not None
+
+    # Run a few epochs to get non-trivial state
+    for loss in model.Adam_optimize(5, dataset, batch_size=10):
+        pass
+
+    # Test from_results_dict with in-memory dict (no dataset argument needed)
+    results_dict = model.save_results()
+    loaded_model = cdtools.models.FancyPtycho.from_results_dict(results_dict)
+
+    # Test from_results_h5 via a temporary file
+    h5_path = str(tmp_path / 'fancy_ptycho_test.h5')
+    model.save_to_h5(h5_path)
+    loaded_model_h5 = cdtools.models.FancyPtycho.from_results_h5(h5_path)
+
+    # Verify training metadata is restored
+    assert loaded_model.epoch == model.epoch
+    assert loaded_model.loss_history == model.loss_history
+
+    # Verify original_translations round-trips correctly
+    assert t.allclose(
+        loaded_model.original_translations,
+        model.original_translations,
+    )
+
+    # Verify all parameters and buffers are restored exactly
+    original_sd = model.state_dict()
+    loaded_sd = loaded_model.state_dict()
+    loaded_h5_sd = loaded_model_h5.state_dict()
+    for key in original_sd:
+        assert t.allclose(original_sd[key].float(), loaded_sd[key].float()), \
+            f'from_results_dict: state_dict mismatch for key {key}'
+        assert t.allclose(original_sd[key].float(), loaded_h5_sd[key].float()), \
+            f'from_results_h5: state_dict mismatch for key {key}'
+
+    # Verify forward pass produces identical output
+    (indices, translations), patterns = dataset[:5]
+    with t.no_grad():
+        original_out = model(indices, translations)
+        loaded_out = loaded_model(indices, translations)
+        loaded_h5_out = loaded_model_h5(indices, translations)
+
+    assert t.allclose(original_out, loaded_out), \
+        'from_results_dict: forward pass output mismatch'
+    assert t.allclose(original_out, loaded_h5_out), \
+        'from_results_h5: forward pass output mismatch'
