@@ -45,6 +45,7 @@ class FancyPtycho(CDIModel):
                  inv_angular_spectrum_propagator=None,
                  panel_plot_mode=True,
                  plot_level=2,
+                 translations=None,
                  ):
 
         super(FancyPtycho, self).__init__(panel_plot_mode=panel_plot_mode,
@@ -155,7 +156,7 @@ class FancyPtycho(CDIModel):
             shape = [s//oversampling for s in self.probe[0]]
             background = 1e-6 * t.ones(shape, dtype=t.float32)
             
-        self.background = t.nn.Parameter(background)
+        self.background = t.nn.Parameter(t.as_tensor(background, dtype=dtype))
 
         if weights is None:
             self.weights = None
@@ -225,6 +226,10 @@ class FancyPtycho(CDIModel):
             self.loss = tools.losses.poisson_nll
         else:
             raise KeyError('Specified loss function not supported')
+
+        if translations is not None:
+            self.register_buffer('original_translations',
+                                 t.as_tensor(translations, dtype=dtype))
 
 
     @classmethod
@@ -523,6 +528,7 @@ class FancyPtycho(CDIModel):
             inv_angular_spectrum_propagator=inv_angular_spectrum_propagator,
             panel_plot_mode=panel_plot_mode,
             plot_level=plot_level,
+            translations=translations,
         )
 
 
@@ -710,9 +716,18 @@ class FancyPtycho(CDIModel):
             mask=mask)
 
 
-    def corrected_translations(self, dataset):
-        translations = dataset.translations.to(
-            dtype=t.float32, device=self.probe.device)
+    def corrected_translations(self, dataset=None):
+        if dataset is not None:
+            translations = dataset.translations.to(
+                dtype=t.float32, device=self.probe.device)
+        elif (hasattr(self, 'original_translations') and
+              self.original_translations is not None):
+            translations = self.original_translations.to(
+                dtype=t.float32, device=self.probe.device)
+        else:
+            raise ValueError(
+                'Must provide a dataset or have original_translations stored '
+                'internally (via from_dataset or from_results_dict).')
         if (hasattr(self, 'translation_offsets') and
             self.translation_offsets is not None):
             t_offset = tools.interactions.pixel_to_translations(
@@ -1169,7 +1184,7 @@ class FancyPtycho(CDIModel):
     ]
     
     
-    def save_results(self, dataset):
+    def save_results(self, dataset=None):
         # This will save out everything needed to recreate the object
         # in the same state, but it's not the best formatted. For example,
         # "background" stores the square root of the background, etc.
@@ -1178,8 +1193,11 @@ class FancyPtycho(CDIModel):
         # We also save out the main results in a more readable format
         obj_basis = self.obj_basis.detach().cpu().numpy()
         probe_basis = self.probe_basis.detach().cpu().numpy()
-        translations=self.corrected_translations(dataset).detach().cpu().numpy()
-        original_translations = dataset.translations.detach().cpu().numpy()
+        translations = self.corrected_translations(dataset).detach().cpu().numpy()
+        if dataset is not None:
+            original_translations = dataset.translations.detach().cpu().numpy()
+        else:
+            original_translations = self.original_translations.detach().cpu().numpy()
         probe = self.probe.detach().cpu().numpy()
         probe = probe * self.probe_norm.detach().cpu().numpy()
         obj = self.obj.detach().cpu().numpy()
@@ -1202,3 +1220,65 @@ class FancyPtycho(CDIModel):
         }
 
         return {**base_results, **results}
+
+
+    @classmethod
+    def from_results_dict(cls, results_dict):
+        """Reconstructs a FancyPtycho model from a results dictionary.
+
+        Parameters
+        ----------
+        results_dict : dict
+            The dictionary returned by save_results(), as loaded from an h5 file
+            or produced directly in memory.
+
+        Returns
+        -------
+        model : FancyPtycho
+            A fully reconstructed model with all parameters, buffers, and
+            training metadata restored.
+        """
+        import numpy as np
+        sd = results_dict['state_dict']
+
+        # For optional Parameters (translation_offsets, weights, qe_mask, etc.),
+        # we pass the saved values directly so they get registered as
+        # Parameters/buffers before _load_results_dict overwrites them with the
+        # exact saved state via load_state_dict.
+        translation_offsets = sd.get('translation_offsets')
+
+        model = cls(
+            wavelength=sd['wavelength'],
+            detector_geometry={
+                'basis': sd['det_basis'],
+                'distance': sd.get('det_distance'),
+                'corner': sd.get('det_corner'),
+            },
+            obj_basis=sd['obj_basis'],
+            probe_guess=sd['probe'],   # normalized; probe_norm restored by _load_results_dict
+            obj_guess=sd['obj'],
+            surface_normal=sd['surface_normal'],
+            min_translation=sd['min_translation'],
+            background=sd['background'],   # sqrt form; restored exactly by _load_results_dict
+            probe_basis=sd.get('probe_basis'),
+            translation_offsets=translation_offsets,  # overwritten by _load_results_dict
+            probe_fourier_shifts=sd.get('probe_fourier_shifts'),  # overwritten by _load_results_dict
+            mask=sd.get('mask'),
+            weights=sd.get('weights'),  # overwritten by _load_results_dict
+            qe_mask=sd.get('qe_mask'),  # overwritten by _load_results_dict
+            saturation=sd.get('saturation'),
+            translation_scale=float(sd['translation_scale']),
+            oversampling=int(sd['oversampling']),
+            fourier_probe=bool(sd['fourier_probe']),
+            loss=results_dict.get('loss_function', 'amplitude mse'),
+            simulate_probe_translation=bool(sd['simulate_probe_translation']),
+            simulate_finite_pixels=bool(sd['simulate_finite_pixels']),
+            exponentiate_obj=bool(sd['exponentiate_obj']),
+            phase_only=bool(sd['phase_only']),
+            near_field=bool(sd['near_field']),
+            angular_spectrum_propagator=sd.get('angular_spectrum_propagator'),
+            inv_angular_spectrum_propagator=sd.get('inv_angular_spectrum_propagator'),
+            translations=sd.get('original_translations'),
+        )
+        model._load_results_dict(results_dict)
+        return model
