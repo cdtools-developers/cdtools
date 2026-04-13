@@ -907,7 +907,7 @@ class FancyPtycho(CDIModel):
         return probe_intensities
 
     
-    def plot_wavefront_variation(self, dataset, fig=None, mode='amplitude', **kwargs):
+    def plot_wavefront_variation(self, dataset=None, fig=None, mode='amplitude', **kwargs):
         def get_probes(idx):
             basis_prs = self.probe * self.probe_support[..., :, :]
             prs = t.sum(self.weights[idx, :, :, None, None] * basis_prs,
@@ -941,7 +941,7 @@ class FancyPtycho(CDIModel):
             **kwargs),
 
 
-    def plot_illumination_intensity(self, fig, dataset):
+    def plot_illumination_intensity(self, fig, dataset=None):
         """Plots the probe intensity nanomap. Only used to make a plot for the plot list."""
         p.plot_nanomap(
             self.corrected_translations(dataset),
@@ -956,10 +956,14 @@ class FancyPtycho(CDIModel):
         plt.gca().set_aspect('equal')
     
 
-    def plot_translations_and_originals(self, fig, dataset):
+    def plot_translations_and_originals(self, fig, dataset=None):
         """Only used to make a plot for the plot list."""
+        if dataset is not None:
+            original_translations = dataset.translations
+        else:
+            original_translations = self.original_translations
         p.plot_translations(
-            dataset.translations,
+            original_translations,
             fig=fig,
             units=self.units,
             label='original translations',
@@ -1093,7 +1097,7 @@ class FancyPtycho(CDIModel):
           {
             'title': 'Illumination Intensity',
             'subplot': (0,1),
-            'plot_func': lambda self, fig, dataset: self.plot_illumination_intensity(fig, dataset),
+            'plot_func': lambda self, fig: self.plot_illumination_intensity(fig),
           },
           {
             'title': 'Detector Background',
@@ -1103,7 +1107,7 @@ class FancyPtycho(CDIModel):
           {
             'title': 'Corrected Translations',
             'subplot': (0,2),
-            'plot_func': lambda self, fig, dataset: self.plot_translations_and_originals(fig, dataset),
+            'plot_func': lambda self, fig: self.plot_translations_and_originals(fig),
           },
           {
             'title': 'Loss History',
@@ -1122,8 +1126,8 @@ class FancyPtycho(CDIModel):
           {
             'title': '% of Power in Top Mode',
             'subplot': (0,0),
-            'plot_func': lambda self, fig, dataset: p.plot_nanomap(
-                 self.corrected_translations(dataset),
+            'plot_func': lambda self, fig: p.plot_nanomap(
+                 self.corrected_translations(),
                  100 * t.stack([
                      analysis.calc_mode_power_fractions(
                      self.probe.data,
@@ -1154,8 +1158,7 @@ class FancyPtycho(CDIModel):
         {'title': 'Per-Exposure Probe Intensity',
          'plot_level': 3,
          'figure_size': (8,5.3),
-         'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
-             dataset,
+         'plot_func': lambda self, fig: self.plot_wavefront_variation(
              fig=fig,
              mode='root_sum_intensity',
              image_title='Root Summed Probe Intensities',
@@ -1164,8 +1167,7 @@ class FancyPtycho(CDIModel):
         {'title': 'Per-Exposure Probe Amplitudes',
          'plot_level': 3,
          'figure_size': (8,5.3),
-         'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
-             dataset,
+         'plot_func': lambda self, fig: self.plot_wavefront_variation(
              fig=fig,
              mode='amplitude',
              image_title='Probe Amplitudes (scroll to view modes)',
@@ -1174,8 +1176,7 @@ class FancyPtycho(CDIModel):
         {'title': 'Per-Exposure Probe Phases',
          'plot_level': 3,
          'figure_size': (8,5.3),
-         'plot_func': lambda self, fig, dataset: self.plot_wavefront_variation(
-             dataset,
+         'plot_func': lambda self, fig: self.plot_wavefront_variation(
              fig=fig,
              mode='phase',
              image_title='Probe Phases (scroll to view modes)',

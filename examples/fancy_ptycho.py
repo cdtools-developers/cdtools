@@ -34,7 +34,7 @@ for loss in recon.optimize(50, lr=0.02, batch_size=10):
     print(model.report())
     # Because plotting can be expensive, setting a minimum plotting interval
     # (in seconds) can avoid excessive replots. 
-    model.inspect(dataset, min_interval=10)
+    model.inspect(min_interval=10)
 
 # It's common to chain several different reconstruction loops. Here, we
 # started with an aggressive refinement to find the probe in the previous
@@ -42,12 +42,12 @@ for loss in recon.optimize(50, lr=0.02, batch_size=10):
 # and larger minibatch
 for loss in recon.optimize(50, lr=0.005, batch_size=50):
     print(model.report())
-    model.inspect(dataset, min_interval=10)
+    model.inspect(min_interval=10)
 
 # This orthogonalizes the recovered probe modes
 model.tidy_probes()
 
 # Setting replot_all will reopen any windows which were closed earlier
-model.inspect(dataset, replot_all=True)
+model.inspect(replot_all=True)
 model.compare(dataset)
 plt.show()

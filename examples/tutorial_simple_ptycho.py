@@ -130,7 +130,7 @@ class SimplePtycho(CDIModel):
         },
     ]
     
-    def save_results(self, dataset):
+    def save_results(self, dataset=None):
         # This will save out everything needed to recreate the object
         # in the same state, but it's not the best formatted. 
         base_results = super().save_results()
