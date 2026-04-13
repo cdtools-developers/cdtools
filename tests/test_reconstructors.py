@@ -5,6 +5,7 @@ import cdtools
 import torch as t
 import numpy as np
 import pickle
+from matplotlib import pyplot as plt
 from copy import deepcopy
 
 

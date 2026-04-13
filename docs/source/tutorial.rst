@@ -196,6 +196,7 @@ Once again, we start with the basic skeleton
 
 .. code-block:: python
 
+   from functools import partial
    import torch as t
    from cdtools.models import CDIModel
    from cdtools import tools
@@ -252,7 +253,7 @@ There is no requirement for what the arguments to the initialization function of
        self.obj = t.nn.Parameter(obj_guess)
 
        # We register a loss function and an appropriate normalization
-       self.loss = tools.losses.amplitude_mse
+       self.loss = partial(tools.losses.amplitude_mse, use_sum=True)
        self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
 
 
@@ -272,7 +273,7 @@ The Adam optimizer is designed so that the learning rate sets the maximum stepsi
 
 This is important to remember when adding additional error models. Rescaling all the parameters to have a typical amplitude near 1 is the best way to get well-behaved reconstructions.
 
-The final two lines assign a loss function and its associated normalizer. The loss function is stored as an instance attribute rather than defined as a method, which allows it to be swapped out at construction time. The normalizer is a stateful object that accumulates statistics over the first epoch and uses them to convert the raw summed loss into a normalized mean value. Here we use :code:`amplitude_mse` and its paired :code:`AmplitudeMSENormalizer`, which computes the mean squared error between the square roots of the simulated and measured intensities.
+The final two lines assign a loss function and its associated normalizer. Here we use :code:`amplitude_mse` and its paired :code:`AmplitudeMSENormalizer`. The normalization function :code:`amplitude_mse` computes the the mean squared error between the square roots of the simulated and measured intensities. In this case, we call it with the :code:`use_sum=True` flag, which will actually calculate a sum-square error, which will be normalized afterward to a mean-squared error by the normalizer, :code:`AmplitudeMSENormalizer`. This pattern is used to ensure that the losses from minibatches with different sizes are properly weighted.
 
 
 Initialization from Dataset

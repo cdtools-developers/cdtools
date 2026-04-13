@@ -21,14 +21,33 @@ def test_amplitude_mse():
     # First, test without a mask
     np_result = np.sum((np.sqrt(data) - np.sqrt(sim))**2)
     # np_result /=  data.size
-    torch_result = losses.amplitude_mse(t.from_numpy(data), t.from_numpy(sim))
+    torch_result = losses.amplitude_mse(t.from_numpy(data), t.from_numpy(sim),
+                                        use_sum=True)
     assert np.isclose(np_result, np.take(torch_result.numpy(), 0))
 
     # Then, test with a mask
     np_result = np.sum(mask * (np.sqrt(data) - np.sqrt(sim))**2)
     # np_result /=  np.count_nonzero(mask * np.ones_like(data))
-    torch_result = losses.amplitude_mse(t.from_numpy(data), t.from_numpy(sim), mask=t.from_numpy(mask))
+    torch_result = losses.amplitude_mse(t.from_numpy(data), t.from_numpy(sim),
+                                        mask=t.from_numpy(mask), use_sum=True)
     assert np.isclose(np_result, np.take(torch_result.numpy(), 0))
+
+    # Now, test the version with use_sum=False, the default
+
+    # First, test without a mask
+    np_result = np.mean((np.sqrt(data) - np.sqrt(sim))**2)
+    # np_result /=  data.size
+    torch_result = losses.amplitude_mse(t.from_numpy(data), t.from_numpy(sim))
+    assert np.isclose(np_result, np.take(torch_result.numpy(), 0))
+
+    # Then, test with a mask. Note that with a mask, the masked pixels
+    # should not contribute to the denominator for the mean.
+    np_result = np.sum(mask * (np.sqrt(data) - np.sqrt(sim))**2)
+    np_result /=  np.count_nonzero(mask * np.ones_like(data))
+    torch_result = losses.amplitude_mse(t.from_numpy(data), t.from_numpy(sim),
+                                        mask=t.from_numpy(mask), use_sum=False)
+    assert np.isclose(np_result, np.take(torch_result.numpy(), 0))
+
 
 
 def test_intensity_mse():
@@ -41,6 +60,20 @@ def test_intensity_mse():
 
     # First, test without a mask
     np_result = np.sum((data - sim)**2)
+    torch_result = losses.intensity_mse(t.from_numpy(data), t.from_numpy(sim),
+                                        use_sum=True)
+    assert np.isclose(np_result, np.take(torch_result.numpy(), 0))
+
+    # Then, test with a mask
+    np_result = np.sum(mask * (data - sim)**2)
+    torch_result = losses.intensity_mse(t.from_numpy(data), t.from_numpy(sim),
+                                        mask=t.from_numpy(mask), use_sum=True)
+    assert np.isclose(np_result, np.take(torch_result.numpy(), 0))
+    
+    # Now, test the version with use_sum=False, the default
+
+    # First, test without a mask
+    np_result = np.sum((data - sim)**2)
     np_result /= data.size
     torch_result = losses.intensity_mse(t.from_numpy(data), t.from_numpy(sim))
     assert np.isclose(np_result, np.take(torch_result.numpy(), 0))
@@ -48,7 +81,8 @@ def test_intensity_mse():
     # Then, test with a mask
     np_result = np.sum(mask * (data - sim)**2)
     np_result /= np.count_nonzero(mask * np.ones_like(data))
-    torch_result = losses.intensity_mse(t.from_numpy(data), t.from_numpy(sim), mask=t.from_numpy(mask))
+    torch_result = losses.intensity_mse(t.from_numpy(data), t.from_numpy(sim),
+                                        mask=t.from_numpy(mask), use_sum=False)
     assert np.isclose(np_result, np.take(torch_result.numpy(), 0))
 
 

@@ -1,3 +1,4 @@
+from functools import partial
 import torch as t
 from cdtools.models import CDIModel
 from cdtools import tools
@@ -42,7 +43,7 @@ class SimplePtycho(CDIModel):
         self.obj = t.nn.Parameter(obj_guess)
 
         # We register a loss function and an appropriate normalization
-        self.loss = tools.losses.amplitude_mse
+        self.loss = partial(tools.losses.amplitude_mse, use_sum=True)
         self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
 
 

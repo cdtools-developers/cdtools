@@ -18,22 +18,16 @@ __all__ = [
 ]
 
 
-def amplitude_mse(intensities, sim_intensities, mask=None):
+def amplitude_mse(intensities, sim_intensities, mask=None, use_sum=False):
     """ Returns the mean squared error of a simulated dataset's amplitudes
 
     Calculates the mean squared error between a given set of 
     measured diffraction intensities and a simulated set.
 
-
     This function calculates the mean squared error between their
     associated amplitudes. Because this is not well defined for negative
     numbers, make sure that all the intensities are >0 before using this
     loss.
-    
-    Note that this is actually, by defauly, a sum-squared error. In this
-    case, it is intended to be used with the loss normalization strategy
-    in the base CDIModel class, which works well if the minibatch size
-    is not fixed.
 
     It can accept intensity and simulated intensity tensors of any shape
     as long as their shapes match, and the provided mask array can be
@@ -41,6 +35,12 @@ def amplitude_mse(intensities, sim_intensities, mask=None):
 
     This is empirically the most useful loss function for most cases where
     a photon counting detector cannot be used.
+    
+    Note that, when used with the AmplitudeMSENormalizer, this function
+    should be called with use_sum=True, in order to return the sum-squared
+    error rather than the mean-squared error. This allows for the
+    AmplitudeMSENormalizer to properly weight the loss arising from minibatches
+    which may not have equal length.
 
     Parameters
     ----------
@@ -51,7 +51,7 @@ def amplitude_mse(intensities, sim_intensities, mask=None):
     mask : torch.Tensor
         A mask with ones for pixels to include and zeros for pixels to exclude
     use_sum : bool
-        Default is True. If set to True, actually performs the sum squared error
+        Default is False. If set to True, actually performs the sum squared error
 
     Returns
     -------
@@ -64,13 +64,20 @@ def amplitude_mse(intensities, sim_intensities, mask=None):
     # with all the errors working off of the same inputs
 
     if mask is None:
-        return t.sum((t.sqrt(sim_intensities) -
-                      t.sqrt(intensities))**2)
+        if use_sum:
+            return t.sum((t.sqrt(sim_intensities) -
+                          t.sqrt(intensities))**2)
+        else:
+            return t.mean((t.sqrt(sim_intensities) -
+                          t.sqrt(intensities))**2)
     else:
         masked_intensities = intensities.masked_select(mask)
-        return t.sum((t.sqrt(sim_intensities.masked_select(mask)) -
-                      t.sqrt(masked_intensities))**2)
-
+        if use_sum:
+            return t.sum((t.sqrt(sim_intensities.masked_select(mask)) -
+                          t.sqrt(masked_intensities))**2)
+        else:
+            return t.mean((t.sqrt(sim_intensities.masked_select(mask)) -
+                          t.sqrt(masked_intensities))**2)
 
 class AmplitudeMSENormalizer(object):
     """ Normalizer for the amplitude MSE loss, used with recon.optimize
@@ -115,7 +122,7 @@ class AmplitudeMSENormalizer(object):
         return loss / self.num_pix
                       
     
-def intensity_mse(intensities, sim_intensities, mask=None):
+def intensity_mse(intensities, sim_intensities, mask=None, use_sum=False):
     """ Returns the mean squared error of a simulated dataset's intensities
 
     Calculates the summed mean squared error between a given set of 
@@ -129,6 +136,12 @@ def intensity_mse(intensities, sim_intensities, mask=None):
     
     This is rarely a good loss function for ptychography, but can occasionally
     be useful.
+    
+    Note that, when used with the IntensityMSENormalizer, this function
+    should be called with use_sum=True, in order to return the sum-squared
+    error rather than the mean-squared error. This allows for the
+    IntensityMSENormalizer to properly weight the loss arising from minibatches
+    which may not have equal length.
 
     Parameters
     ----------
@@ -138,6 +151,8 @@ def intensity_mse(intensities, sim_intensities, mask=None):
         A tensor of simulated detector intensities
     mask : torch.Tensor
         A mask with ones for pixels to include and zeros for pixels to exclude
+    use_sum : bool
+        Default is False. If set to True, actually performs the sum squared error
 
     Returns
     -------
@@ -146,13 +161,18 @@ def intensity_mse(intensities, sim_intensities, mask=None):
 
     """
     if mask is None:
-        return t.sum((sim_intensities - intensities)**2) \
-            / intensities.view(-1).shape[0]
+        if use_sum:
+            return t.sum((sim_intensities - intensities)**2)
+        else:
+            return t.mean((sim_intensities - intensities)**2)
     else:
-        masked_intensities = intensities.masked_select(mask)
-        return t.sum((sim_intensities.masked_select(mask) -
-                      masked_intensities)**2) \
-                      / masked_intensities.shape[0]
+        if use_sum:
+            return t.sum((sim_intensities.masked_select(mask) -
+                          intensities.masked_select(mask))**2)
+        else:
+            return t.mean((sim_intensities.masked_select(mask) -
+                          intensities.masked_select(mask))**2)
+            
 
 
 class IntensityMSENormalizer(object):
@@ -309,8 +329,8 @@ class SimplePoissonNLLNormalizer(object):
 
     2. **Normalization scaling**: Divides by 0.5 times the count of non-zero
        pixels in the measured patterns. This is because, roughly, each non-zero
-       pixel is expected to contribute to the Poisson NLL, if Poisson noise were
-       the only relevant source of noise in the data.
+       pixel is expected to contribute 0.5 to the Poisson NLL, if Poisson noise
+       were the only relevant source of noise in the data.
 
     The normalizer is stateful: it completes its accumulation phase on the
     first epoch by processing all patterns in the data, then applies the

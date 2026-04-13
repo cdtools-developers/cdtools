@@ -1,3 +1,4 @@
+from functools import partial
 import torch as t
 from cdtools.models import CDIModel
 from cdtools.datasets import Ptycho2DDataset
@@ -219,7 +220,7 @@ class FancyPtycho(CDIModel):
         # Here we set the appropriate loss function
         if (loss.lower().strip() == 'amplitude mse'
                 or loss.lower().strip() == 'amplitude_mse'):
-            self.loss = tools.losses.amplitude_mse
+            self.loss = partial(tools.losses.amplitude_mse, use_sum=True)
             self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
         elif (loss.lower().strip() == 'poisson nll'
                 or loss.lower().strip() == 'poisson_nll'):
@@ -227,7 +228,7 @@ class FancyPtycho(CDIModel):
             self.loss_normalizer = tools.losses.SimplePoissonNLLNormalizer()
         elif (loss.lower().strip() == 'intensity mse'
                 or loss.lower().strip() == 'intensity_mse'):
-            self.loss = tools.losses.intensity_mse
+            self.loss = partial(tools.losses.intensity_mse, use_sum=True)
             self.loss_normalizer = tools.losses.IntensityMSENormalizer()
         else:
             raise KeyError('Specified loss function not supported')
