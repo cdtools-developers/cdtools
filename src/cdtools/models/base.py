@@ -192,7 +192,10 @@ class CDIModel(t.nn.Module):
             'loss_history': np.array(self.loss_history),
             'epoch': self.epoch,
             'training_history': self.training_history,
-            'loss_function': self.loss.__name__,
+            'loss_function': (
+                getattr(self.loss, '__name__', None) or 
+                getattr(self.loss.func, '__name__', str(self.loss))
+            ),
         }
 
 

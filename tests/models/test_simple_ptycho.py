@@ -29,5 +29,8 @@ def test_simple_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
         time.sleep(3)
         plt.close('all')
 
+    # Simply test that this does not fail
+    results = model.save_results(dataset)
+
     # If this fails, the reconstruction got worse
     assert model.loss_history[-1] < 6.5
