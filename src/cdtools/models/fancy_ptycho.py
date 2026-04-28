@@ -145,10 +145,11 @@ class FancyPtycho(CDIModel):
         # asks for a big padding which goes outside of the actual object array.
         # Just show the full array.
         if obj_view_crop > 0:
-            self.obj_view_slice = np.s_[obj_view_crop:-obj_view_crop,
+            self.obj_view_slice = np.s_[...,
+                                        obj_view_crop:-obj_view_crop,
                                         obj_view_crop:-obj_view_crop]
         else:
-            self.obj_view_slice = np.s_[:,:]
+            self.obj_view_slice = np.s_[...,:,:]
         
         # TODO: perhaps not working anymore for fourier cropped probes
         if background is None:
@@ -621,14 +622,31 @@ class FancyPtycho(CDIModel):
             obj = self.obj
 
 
-        # Now we actually do the interaction, using the sinc subpixel
-        # translation model as per usual
-        exit_waves = self.probe_norm * tools.interactions.ptycho_2D_sinc(
-            prs, obj, pix_trans,
-            shift_probe=True,
-            multiple_modes=True,
-            probe_support=self.probe_support)
-        
+        if obj.ndim == 2:
+            # Now we actually do the interaction, using the sinc subpixel
+            # translation model as per usual
+            exit_waves = self.probe_norm * tools.interactions.ptycho_2D_sinc(
+                prs, obj, pix_trans,
+                shift_probe=True,
+                multiple_modes=True,
+                probe_support=self.probe_support)
+        elif obj.ndim == 3:
+            # In this case, we treat each object mode as interacting
+            # separately and identically with each probe mode, so we get
+            # an output with a total number of modes equal to the product
+            # of the number of probe and object modes
+            exit_waves = [
+                self.probe_norm * tools.interactions.ptycho_2D_sinc(
+                    prs, obj_mode, pix_trans,
+                    shift_probe=True,
+                    multiple_modes=True,
+                    probe_support=self.probe_support
+                ) for obj_mode in obj
+            ]
+            exit_waves = t.cat(exit_waves, dim=-3)
+        else:
+            raise NotImplementedError('Object has dimension greater than 3')
+            
         return exit_waves
     
 
@@ -897,6 +915,18 @@ class FancyPtycho(CDIModel):
                 probe_intensities / basis_probe_intensities)
             
         return probe_intensities
+
+
+    def tidy_objs(self):
+        """Tidies up the objects for multi-mode object reconstructions
+        
+        If the object array is defined with multiple modes, this will run
+        `analysis.orthogonalize_probes() on the object array.
+        """
+        
+        if self.obj.ndim == 3:
+            ortho_objs = analysis.orthogonalize_probes(self.obj.detach())
+            self.obj.data = ortho_objs
 
     
     def plot_wavefront_variation(self, dataset, fig=None, mode='amplitude', **kwargs):
