@@ -86,6 +86,16 @@ Note also the use of :code:`model.save_on_exception` and :code:`model.save_to_h5
 Finally, note that there are several small adjustments made to the script to counteract particular sources of error that are present in this dataset, for example the raster grid pathology caused by the scan pattern used. Also note that not every mixin is needed every time - in this case, we turn off optimization of the :code:`weights` parameter.
 
 
+View Gold Ball Ptycho Results
+-----------------------------
+
+This script shows how to load and view a saved ptychography reconstruction.
+
+.. literalinclude:: ../../examples/view_gold_ball_ptycho.py
+
+Note that :code:`obj_view_crop` and :code:`units` are directly set when loading from the saved reconstruction, because this information purely refers to the settings of the viewer in :code:`model.inspect()` and is not saved with the reconstruction.
+
+
 Near-Field Ptycho
 -----------------
 
