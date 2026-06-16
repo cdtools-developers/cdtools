@@ -408,8 +408,8 @@ In this case, we've made use of the convenience plotting functions defined in :c
 More advanced models like :code:`FancyPtycho` also define a :code:`plot_panel_list`, which groups related plots together into multi-subplot figures. The :code:`panel_plot_mode` argument (passed at construction time) controls whether these panels are rendered as combined multi-subplot figures or as individual windows. For a simple model like :code:`SimplePtycho`, :code:`plot_list` is sufficient.
 
 
-Saving
-++++++
+Saving and Loading
+++++++++++++++++++
 
 By default, a function :code:`model.save_results()` is defined, which returns a python dictionary with an entry, :code:`'state_dict'`, containing all the registered parameters and buffers in the model. It also contains a basic record of the model's training history. This function is used internally by :code:`model.save_to_h5()`, as well as all other convenience functions for saving results.
 
@@ -439,9 +439,44 @@ Sometimes, it is also useful to return a more user-friendly version of the resul
 
         return {**base_results, **results}
 
-However, it is perfectly possible to write a new ptychography model without overriding :code:`model.save_results()`
+However, it is perfectly possible to write a new ptychography model without overriding :code:`model.save_results()`.
 
-	
+Sometimes, it is useful to be able to load this saved reconstruction back into a cdtools model, either to continue a reconstruction from it or just to quickly view the results using the standard :code:`model.inspect()` function. For this purpose, we can override the function :code:`model.from_results_dict()`, which loads a model from the exact dictionary produced by :code:`model.save_results()`. This is also called internally by :code:`model.from_results_h5()`, which loads a model directly from a saved .h5 file.
+
+.. code-block:: python
+
+    @classmethod
+    def from_results_dict(cls, results_dict):
+        """Reconstructs a SimplePtycho model from a results dictionary.
+
+        Parameters
+        ----------
+        results_dict : dict
+            The dictionary returned by save_results(), as loaded from an h5 file
+            or produced directly in memory.
+
+        Returns
+        -------
+        model : SimplePtycho
+            A fully reconstructed model with all parameters, buffers, and
+            training metadata restored.
+        """
+        sd = results_dict['state_dict']
+
+        model = cls(
+            wavelength=sd['wavelength'],
+            probe_basis=sd['probe_basis'],
+            probe_guess=sd['probe'],   # normalized; probe_norm restored by _load_results_dict
+            obj_guess=sd['obj'],
+            min_translation=sd['min_translation'],
+        )
+        model._load_results_dict(results_dict)
+        return model
+
+Here, we first directly load the model by initializing the object using the main parameters stored in the results which are needed to properly run through the model initialization. Then, we use the private method :code:`model._load_results_dict(results_dict)` to load the standard information - like the current epoch, loss history, and so forth, as well as to populate each element of the state dict from the saved state_dict dictionary - information such as the :code:`probe_norm`.
+
+With these functions, it is now possible to easily and quickly save and load the reconstructions produced by our new model!
+
 Testing
 +++++++
 

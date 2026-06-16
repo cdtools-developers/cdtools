@@ -152,3 +152,32 @@ class SimplePtycho(CDIModel):
         }
 
         return {**base_results, **results}
+    
+    
+    @classmethod
+    def from_results_dict(cls, results_dict):
+        """Reconstructs a SimplePtycho model from a results dictionary.
+
+        Parameters
+        ----------
+        results_dict : dict
+            The dictionary returned by save_results(), as loaded from an h5 file
+            or produced directly in memory.
+
+        Returns
+        -------
+        model : SimplePtycho
+            A fully reconstructed model with all parameters, buffers, and
+            training metadata restored.
+        """
+        sd = results_dict['state_dict']
+
+        model = cls(
+            wavelength=sd['wavelength'],
+            probe_basis=sd['probe_basis'],
+            probe_guess=sd['probe'],   # normalized; probe_norm restored by _load_results_dict
+            obj_guess=sd['obj'],
+            min_translation=sd['min_translation'],
+        )
+        model._load_results_dict(results_dict)
+        return model
