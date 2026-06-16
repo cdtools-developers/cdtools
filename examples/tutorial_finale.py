@@ -20,6 +20,6 @@ for loss in model.Adam_optimize(10, dataset):
     model.inspect()
     print(model.report())
 
-model.inspect(dataset)
+model.inspect()
 model.compare(dataset)
 plt.show()

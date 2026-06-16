@@ -23,7 +23,7 @@ if t.cuda.is_available():
     model.to(device='cuda')
     dataset.get_as(device='cuda')
 
-model.inspect(dataset)
+model.inspect()
 
 # We run the reconstruction
 for loss in model.Adam_optimize(100, dataset, batch_size=10):
