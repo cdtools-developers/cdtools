@@ -1,3 +1,4 @@
+from functools import partial
 import torch as t
 from cdtools.models import CDIModel
 from cdtools import tools
@@ -54,6 +55,7 @@ class RPI(CDIModel):
             exponentiate_obj=False,
             phase_only=False,
             propagation_distance=0,
+            loss='amplitude mse',
             units='um',
             dtype=t.float32,
             panel_plot_mode=True,
@@ -146,6 +148,22 @@ class RPI(CDIModel):
         self.register_buffer('prop_dir',
                              t.as_tensor([0, 0, 1], dtype=dtype))
 
+        # Here we set the appropriate loss function
+        if (loss.lower().strip() == 'amplitude mse'
+                or loss.lower().strip() == 'amplitude_mse'):
+            self.loss = partial(tools.losses.amplitude_mse, use_sum=True)
+            self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
+        elif (loss.lower().strip() == 'poisson nll'
+                or loss.lower().strip() == 'poisson_nll'):
+            self.loss = tools.losses.poisson_nll
+            self.loss_normalizer = tools.losses.SimplePoissonNLLNormalizer()
+        elif (loss.lower().strip() == 'intensity mse'
+                or loss.lower().strip() == 'intensity_mse'):
+            self.loss = partial(tools.losses.intensity_mse, use_sum=True)
+            self.loss_normalizer = tools.losses.IntensityMSENormalizer()
+        else:
+            raise KeyError('Specified loss function not supported')
+
 
     @classmethod
     def from_dataset(
@@ -164,6 +182,7 @@ class RPI(CDIModel):
             exponentiate_obj=False,
             phase_only=False,
             probe_threshold=0,
+            loss='amplitude mse',
             dtype=t.float32,
             panel_plot_mode=True,
             plot_level=1,
@@ -259,7 +278,9 @@ class RPI(CDIModel):
                          phase_only=phase_only,
                          weight_matrix=weight_matrix,
                          panel_plot_mode=panel_plot_mode,
-                         plot_level=plot_level)
+                         plot_level=plot_level,
+                         loss=loss,
+        )
 
         # I don't love this pattern, where I do the "real" obj initialization
         # after creating the rpi object. But, I chose this so that I could
@@ -291,6 +312,7 @@ class RPI(CDIModel):
             dtype=t.float32,
             panel_plot_mode=True,
             plot_level=1,
+            loss='amplitude_mse',
     ):
         
         complex_dtype = (t.ones([1], dtype=dtype) +
@@ -336,6 +358,7 @@ class RPI(CDIModel):
             phase_only=phase_only,
             panel_plot_mode=panel_plot_mode,
             plot_level=plot_level,
+            loss=loss,
         )
 
         rpi_object.init_obj(initialization)

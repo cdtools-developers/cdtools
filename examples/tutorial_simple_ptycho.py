@@ -1,3 +1,4 @@
+from functools import partial
 import torch as t
 from cdtools.models import CDIModel
 from cdtools import tools
@@ -40,6 +41,10 @@ class SimplePtycho(CDIModel):
         # they can get optimized by pytorch
         self.probe = t.nn.Parameter(probe_guess / self.probe_norm)
         self.obj = t.nn.Parameter(obj_guess)
+
+        # We register a loss function and an appropriate normalization
+        self.loss = partial(tools.losses.amplitude_mse, use_sum=True)
+        self.loss_normalizer = tools.losses.AmplitudeMSENormalizer()
 
 
     @classmethod
@@ -101,9 +106,6 @@ class SimplePtycho(CDIModel):
 
     def measurement(self, wavefields):
         return tools.measurements.intensity(wavefields)
-
-    def loss(self, real_data, sim_data):
-        return tools.losses.amplitude_mse(real_data, sim_data)
 
 
     # This lists all the plots to display on a call to model.inspect()

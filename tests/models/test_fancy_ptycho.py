@@ -97,8 +97,8 @@ def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
 
     print('Running reconstruction on provided reconstruction_device,',
           reconstruction_device)
-    #model.to(device=reconstruction_device)
-    #dataset.get_as(device=reconstruction_device)
+    model.to(device=reconstruction_device)
+    dataset.get_as(device=reconstruction_device)
 
     for loss in model.Adam_optimize(50, dataset, lr=0.02, batch_size=10):
         print(model.report())
@@ -123,8 +123,11 @@ def test_lab_ptycho(lab_ptycho_cxi, reconstruction_device, show_plot):
         time.sleep(3)
         plt.close('all')
 
+    # Simply test that this does not fail
+    results = model.save_results(dataset)
+
     # If this fails, the reconstruction has gotten worse
-    assert model.loss_history[-1] < 0.0013
+    assert model.loss_history[-1] < 0.38
 
 
 @pytest.mark.slow
@@ -139,6 +142,7 @@ def test_near_field_ptycho(near_field_ptycho_cxi, reconstruction_device, show_pl
         near_field=True,
         propagation_distance=3.65e-3, # 3.65 downstream from focus
         panel_plot_mode=False, # test without panel plot mode
+        loss='poisson_nll',
     )
 
     print('Running reconstruction on provided reconstruction_device,',
@@ -165,7 +169,7 @@ def test_near_field_ptycho(near_field_ptycho_cxi, reconstruction_device, show_pl
         plt.close('all')
 
     # If this fails, the reconstruction has gotten worse
-    assert model.loss_history[-1] < 0.005
+    assert model.loss_history[-1] < 18
 
 
 def test_fancy_ptycho_from_results_dict(lab_ptycho_cxi, tmp_path):

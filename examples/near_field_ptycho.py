@@ -26,7 +26,8 @@ model = cdtools.models.FancyPtycho.from_dataset(
     near_field=True,
     propagation_distance=3.65e-3, # 3.65 downstream from focus
     units='um', # Set the units for the live plots
-    obj_view_crop=-35,
+    obj_view_crop=-35, # Expand the view for the live plots
+    loss="poisson_nll", # Best option for photon-counting detectors
     panel_plot_mode=True, # Set to False to get individual figures
 )
 
