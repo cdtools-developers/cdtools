@@ -501,10 +501,10 @@ We can test this model with a simple script, in examples/tutorial_finale.py. By 
     dataset.get_as(device='mps')#cuda')
     
     for loss in model.Adam_optimize(10, dataset):
-        model.inspect(dataset)
+        model.inspect()
 	print(model.report())
 
-    model.inspect(dataset)
+    model.inspect()
     model.compare(dataset)
     plt.show()
     

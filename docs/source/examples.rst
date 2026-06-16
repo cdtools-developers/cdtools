@@ -31,7 +31,7 @@ When reading this script, note the basic workflow. After the data is loaded, a m
 
 Next, the model is moved to the GPU using the :code:`model.to` function. Any device understood by :code:`torch.Tensor.to` can be specified here. The next line is a bit more subtle - the dataset is told to move patterns to the GPU before passing them to the model using the :code:`dataset.get_as` function. This function does not move the stored patterns to the GPU. If there is sufficient GPU memory, the patterns can also be pre-moved to the GPU using :code:`dataset.to`, but the speedup is empirically quite small.
 
-Once the device is selected, a reconstruction is run using :code:`model.Adam_optimize`. This is a generator function which will yield at the end of every epoch, to allow some monitoring code to be run. Inside the loop, :code:`model.inspect(dataset)` is called every epoch to live-update a set of plots showing the current state of the model parameters.
+Once the device is selected, a reconstruction is run using :code:`model.Adam_optimize`. This is a generator function which will yield at the end of every epoch, to allow some monitoring code to be run. Inside the loop, :code:`model.inspect()` is called every epoch to live-update a set of plots showing the current state of the model parameters.
 
 Finally, :code:`model.compare(dataset)` is called to show how the simulated diffraction patterns compare to the measured diffraction patterns in the dataset.
 
@@ -69,7 +69,7 @@ We use this pattern, instead of the simpler call to :code:`model.Adam_optimize()
 
 In this case, we used one reconstructor, but it is possible to create additional reconstructors to zero out all the persistant information in the optimizer, if desired, or even to instantiate multiple reconstructors on the same model with different optimization algorithms (e.g. :code:`model.LBFGS_optimize()`).
 
-Note also the use of :code:`min_interval=10` in the calls to :code:`model.inspect(dataset)`. Because generating plots can be expensive, passing a minimum interval (in seconds) prevents excessive replots. Finally, the call to :code:`model.inspect(dataset, replot_all=True)` at the end of the script reopens any plot windows that the user may have closed during the reconstruction, so that all results are visible at the end.
+Note also the use of :code:`min_interval=10` in the calls to :code:`model.inspect()`. Because generating plots can be expensive, passing a minimum interval (in seconds) prevents excessive replots. Finally, the call to :code:`model.inspect(replot_all=True)` at the end of the script reopens any plot windows that the user may have closed during the reconstruction, so that all results are visible at the end.
 
 
 Gold Ball Ptycho
