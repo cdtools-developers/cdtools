@@ -83,6 +83,7 @@ class Bragg2DPtycho(CDIModel):
             obj_view_crop=0,
             panel_plot_mode=False,
             plot_level=1,
+            translations=None,
     ):
 
         # We need the detector geometry
@@ -176,7 +177,7 @@ class Bragg2DPtycho(CDIModel):
             shape = [s//oversampling for s in self.probe[0]]
             background = 1e-6 * t.ones(shape, dtype=t.float32)
 
-        self.background = t.nn.Parameter(background)
+        self.background = t.nn.Parameter(t.as_tensor(background, dtype=dtype))
 
         if weights is None:
             self.weights = None
@@ -255,7 +256,11 @@ class Bragg2DPtycho(CDIModel):
             self.loss_normalizer = tools.losses.IntensityMSENormalizer()
         else:
             raise KeyError('Specified loss function not supported')
-        
+
+        if translations is not None:
+            self.register_buffer('original_translations',
+                                 t.as_tensor(translations, dtype=dtype))
+
 
     @classmethod
     def from_dataset(
@@ -473,6 +478,7 @@ class Bragg2DPtycho(CDIModel):
                    units=units,
                    panel_plot_mode=panel_plot_mode,
                    plot_level=plot_level,
+                   translations=translations,
                    )
                    
     
@@ -590,11 +596,25 @@ class Bragg2DPtycho(CDIModel):
                                  mask=mask)
 
     
-    def corrected_translations(self,dataset):
-        translations = dataset.translations.to(dtype=self.probe.real.dtype,
-                                               device=self.probe.device)
-        t_offset = tools.interactions.pixel_to_translations(self.obj_basis,self.translation_offsets*self.translation_scale,surface_normal=self.surface_normal)
-        return translations + t_offset
+    def corrected_translations(self, dataset=None):
+        if dataset is not None:
+            translations = dataset.translations.to(
+                dtype=self.probe.real.dtype, device=self.probe.device)
+        elif (hasattr(self, 'original_translations') and
+              self.original_translations is not None):
+            translations = self.original_translations.to(
+                dtype=self.probe.real.dtype, device=self.probe.device)
+        else:
+            raise ValueError(
+                'Must provide a dataset or have original_translations stored '
+                'internally (via from_dataset or from_results_dict).')
+        if self.translation_offsets is not None:
+            t_offset = tools.interactions.pixel_to_translations(
+                self.obj_basis,
+                self.translation_offsets * self.translation_scale,
+                surface_normal=self.surface_normal)
+            return translations + t_offset
+        return translations
 
 
     plot_list = [
@@ -679,13 +699,48 @@ class Bragg2DPtycho(CDIModel):
              units=self.units,
          )},
         {'title': 'Corrected Translations',
-         'plot_func': lambda self, fig, dataset: p.plot_translations(self.corrected_translations(dataset), fig=fig, units=self.units)},
+         'plot_func': lambda self, fig: p.plot_translations(self.corrected_translations(), fig=fig, units=self.units)},
         {'title': 'Background',
          'plot_func': lambda self, fig: plt.figure(fig.number) and plt.imshow(self.background.detach().cpu().numpy()**2)},
     ]
 
     
-    def save_results(self, dataset):
+    @classmethod
+    def from_results_dict(cls, results_dict, obj_view_crop=0, units='um'):
+        sd = results_dict['state_dict']
+        translation_offsets = sd.get('translation_offsets')
+        model = cls(
+            wavelength=sd['wavelength'],
+            detector_geometry={
+                'basis': sd['det_basis'],
+                'distance': sd.get('det_distance'),
+                'corner': sd.get('det_corner'),
+            },
+            obj_basis=sd['obj_basis'],
+            probe_guess=sd['probe'],
+            obj_guess=sd['obj'],
+            min_translation=sd.get('min_translation', np.array([0., 0.])),
+            probe_basis=sd.get('probe_basis'),
+            median_propagation=sd.get('median_propagation', 0.0),
+            background=sd['background'],
+            translation_offsets=translation_offsets,
+            mask=sd.get('mask'),
+            weights=sd.get('weights'),
+            translation_scale=float(sd.get('translation_scale', 1.0)),
+            saturation=sd.get('saturation'),
+            oversampling=int(sd.get('oversampling', 1)),
+            propagate_probe=bool(sd.get('propagate_probe', True)),
+            correct_tilt=bool(sd.get('correct_tilt', True)),
+            loss=results_dict.get('loss_function', 'amplitude mse'),
+            obj_view_crop=obj_view_crop,
+            units=units,
+            translations=sd.get('original_translations'),
+        )
+        model._load_results_dict(results_dict)
+        return model
+
+
+    def save_results(self, dataset=None):
         # This will save out everything needed to recreate the object
         # in the same state, but it's not the best formatted. For example,
         # "background" stores the square root of the background, etc.
@@ -694,8 +749,11 @@ class Bragg2DPtycho(CDIModel):
         # We also save out the main results in a more readable format
         obj_basis = self.obj_basis.detach().cpu().numpy()
         probe_basis = self.probe_basis.detach().cpu().numpy()
-        translations=self.corrected_translations(dataset).detach().cpu().numpy()
-        original_translations = dataset.translations.detach().cpu().numpy()
+        translations = self.corrected_translations(dataset).detach().cpu().numpy()
+        if dataset is not None:
+            original_translations = dataset.translations.detach().cpu().numpy()
+        else:
+            original_translations = self.original_translations.detach().cpu().numpy()
         probe = self.probe.detach().cpu().numpy()
         probe = probe * self.probe_norm.detach().cpu().numpy()
         obj = self.obj.detach().cpu().numpy()
