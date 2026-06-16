@@ -398,6 +398,7 @@ class FancyPtycho(CDIModel):
                 dataset.patterns.shape[-2:], dtype=t.float32)
             
         if probe_fourier_crop is not None:
+            initial_probe_shape = np.array(probe.shape)
             probe = tools.propagators.far_field(probe)
             probe = probe[probe_fourier_crop : probe.shape[-2]
                           - probe_fourier_crop,
@@ -405,7 +406,7 @@ class FancyPtycho(CDIModel):
                           - probe_fourier_crop]
             probe = tools.propagators.inverse_far_field(probe)
 
-            scale_factor = np.array(det_shape) / np.array(probe.shape)
+            scale_factor = initial_probe_shape / np.array(probe.shape)
             probe_basis = obj_basis * scale_factor[None,:]
         else:
             probe_basis = obj_basis.clone()
