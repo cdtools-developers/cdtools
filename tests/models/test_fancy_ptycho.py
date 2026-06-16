@@ -229,3 +229,40 @@ def test_fancy_ptycho_from_results_dict(lab_ptycho_cxi, tmp_path):
         'from_results_dict: forward pass output mismatch'
     assert t.allclose(original_out, loaded_h5_out), \
         'from_results_h5: forward pass output mismatch'
+
+
+def test_fancy_ptycho_from_results_dict_with_missing_keys(lab_ptycho_cxi):
+    dataset = cdtools.datasets.Ptycho2DDataset.from_cxi(lab_ptycho_cxi)
+
+    t.manual_seed(42)
+    model = cdtools.models.FancyPtycho.from_dataset(dataset, n_modes=1)
+    results_dict = model.save_results()
+
+    # Strip top-level training metadata
+    for key in ('loss_history', 'epoch', 'training_history'):
+        results_dict.pop(key, None)
+
+    # Strip defaultable state_dict keys
+    sd_keys_to_strip = (
+        'exponentiate_obj', 'phase_only', 'near_field', 'fourier_probe',
+        'simulate_probe_translation', 'simulate_finite_pixels',
+        'translation_scale', 'oversampling', 'surface_normal', 'min_translation',
+    )
+    for key in sd_keys_to_strip:
+        results_dict['state_dict'].pop(key, None)
+
+    loaded = cdtools.models.FancyPtycho.from_results_dict(results_dict)
+
+    assert loaded.loss_history == []
+    assert loaded.epoch == 0
+    assert loaded.training_history == ''
+    assert bool(loaded.exponentiate_obj) == False
+    assert bool(loaded.phase_only) == False
+    assert bool(loaded.near_field) == False
+    assert bool(loaded.fourier_probe) == False
+    assert bool(loaded.simulate_probe_translation) == False
+    assert bool(loaded.simulate_finite_pixels) == False
+    assert float(loaded.translation_scale) == 1.0
+    assert int(loaded.oversampling) == 1
+    assert t.allclose(loaded.surface_normal, t.tensor([0., 0., 1.]))
+    assert t.allclose(loaded.min_translation, t.tensor([0., 0.]))

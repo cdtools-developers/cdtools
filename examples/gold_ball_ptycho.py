@@ -50,7 +50,7 @@ recon = cdtools.reconstructors.AdamReconstructor(model, dataset)
 # This will save out the intermediate results if an exception is thrown
 # during the reconstruction
 with model.save_on_exception(
-        'example_reconstructions/gold_balls_earlyexit.h5', dataset):
+        'example_reconstructions/gold_balls_earlyexit.h5'):
     
     for loss in recon.optimize(20, lr=0.005, batch_size=50):
         print(model.report())

@@ -1252,7 +1252,6 @@ class FancyPtycho(CDIModel):
             A fully reconstructed model with all parameters, buffers, and
             training metadata restored.
         """
-        import numpy as np
         sd = results_dict['state_dict']
 
         # For optional Parameters (translation_offsets, weights, qe_mask, etc.),
@@ -1271,8 +1270,8 @@ class FancyPtycho(CDIModel):
             obj_basis=sd['obj_basis'],
             probe_guess=sd['probe'],   # normalized; probe_norm restored by _load_results_dict
             obj_guess=sd['obj'],
-            surface_normal=sd['surface_normal'],
-            min_translation=sd['min_translation'],
+            surface_normal=sd.get('surface_normal', np.array([0., 0., 1.])),
+            min_translation=sd.get('min_translation', np.array([0., 0.])),
             background=sd['background'],   # sqrt form; restored exactly by _load_results_dict
             probe_basis=sd.get('probe_basis'),
             translation_offsets=translation_offsets,  # overwritten by _load_results_dict
@@ -1281,15 +1280,15 @@ class FancyPtycho(CDIModel):
             weights=sd.get('weights'),  # overwritten by _load_results_dict
             qe_mask=sd.get('qe_mask'),  # overwritten by _load_results_dict
             saturation=sd.get('saturation'),
-            translation_scale=float(sd['translation_scale']),
-            oversampling=int(sd['oversampling']),
-            fourier_probe=bool(sd['fourier_probe']),
+            translation_scale=float(sd.get('translation_scale', 1.0)),
+            oversampling=int(sd.get('oversampling', 1)),
+            fourier_probe=bool(sd.get('fourier_probe', False)),
             loss=results_dict.get('loss_function', 'amplitude mse'),
-            simulate_probe_translation=bool(sd['simulate_probe_translation']),
-            simulate_finite_pixels=bool(sd['simulate_finite_pixels']),
-            exponentiate_obj=bool(sd['exponentiate_obj']),
-            phase_only=bool(sd['phase_only']),
-            near_field=bool(sd['near_field']),
+            simulate_probe_translation=bool(sd.get('simulate_probe_translation', False)),
+            simulate_finite_pixels=bool(sd.get('simulate_finite_pixels', False)),
+            exponentiate_obj=bool(sd.get('exponentiate_obj', False)),
+            phase_only=bool(sd.get('phase_only', False)),
+            near_field=bool(sd.get('near_field', False)),
             angular_spectrum_propagator=sd.get('angular_spectrum_propagator'),
             inv_angular_spectrum_propagator=sd.get('inv_angular_spectrum_propagator'),
             translations=sd.get('original_translations'),

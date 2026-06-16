@@ -229,10 +229,10 @@ class CDIModel(t.nn.Module):
             or produced directly in memory.
         """
         state_dict = nested_dict_to_torch(results_dict['state_dict'])
-        self.load_state_dict(state_dict)
-        self.loss_history = list(results_dict['loss_history'])
-        self.epoch = int(results_dict['epoch'])
-        self.training_history = str(results_dict['training_history'])
+        self.load_state_dict(state_dict, strict=False)
+        self.loss_history = list(results_dict.get('loss_history', []))
+        self.epoch = int(results_dict.get('epoch', 0))
+        self.training_history = str(results_dict.get('training_history', ''))
 
 
     @classmethod
