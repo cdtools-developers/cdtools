@@ -29,10 +29,10 @@ CDTools is an open source python library for ptychography and CDI reconstruction
         print(model.report())
    
    # Save the results
-   model.save_to_h5('ptycho_results.h5', dataset)
+   model.save_to_h5('ptycho_results.h5')
    
    # And look at them!
-   model.inspect(dataset) # See the reconstructed object, probe, etc.
+   model.inspect() # See the reconstructed object, probe, etc.
    model.compare(dataset) # See how the simulated and measured patterns compare
    plt.show()
 

@@ -54,4 +54,4 @@ for label, dataset in zip(labels, datasets):
         
     model.tidy_probes()
 
-    model.save_to_h5(f'example_reconstructions/gold_balls_{label}.h5', dataset)
+    model.save_to_h5(f'example_reconstructions/gold_balls_{label}.h5')

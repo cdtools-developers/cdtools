@@ -31,19 +31,19 @@ if t.cuda.is_available():
 # The regularization is an L2 regularizer that empirically helps accelerate
 # convergence
 for loss in model.LBFGS_optimize(30, dataset, lr=0.4, regularization_factor=[0.05,0.05]):
-    model.inspect(dataset, min_interval=5)
+    model.inspect(min_interval=5)
     print(model.report())
     
 
 # Now we use the regularizer to damp all but the top modes
 for loss in model.LBFGS_optimize(50, dataset, lr=0.4, regularization_factor=[0.001,0.1]):
-    model.inspect(dataset, min_interval=5)
+    model.inspect(min_interval=5)
     print(model.report())
 
 # Save results to an h5 file
-model.save_to_h5('example_reconstructions/transmission_RPI.h5', dataset)
+model.save_to_h5('example_reconstructions/transmission_RPI.h5')
 
 # Finally, we plot the results
-model.inspect(dataset, replot_all=True)
+model.inspect(replot_all=True)
 model.compare(dataset)
 plt.show()

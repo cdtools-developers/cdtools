@@ -111,10 +111,11 @@ class RPI(CDIModel):
 
         # We always use multi-modes to store the object, so we convert it
         # if we just get a single 2D array as an input
+        obj_guess = t.as_tensor(obj_guess, dtype=complex_dtype)
         if obj_guess.dim() == 2:
             obj_guess = obj_guess[None, :, :]
-        
-        self.obj = t.nn.Parameter(t.as_tensor(obj_guess, dtype=complex_dtype))
+
+        self.obj = t.nn.Parameter(obj_guess)
 
         self.weights = t.nn.Parameter(
             t.eye(probe.shape[0], dtype=complex_dtype))
@@ -630,6 +631,32 @@ class RPI(CDIModel):
             ],
         },
     ]
+
+
+    @classmethod
+    def from_results_dict(cls, results_dict, units='um'):
+        sd = results_dict['state_dict']
+        model = cls(
+            wavelength=sd['wavelength'],
+            detector_geometry={
+                'basis': sd['det_basis'],
+                'distance': sd.get('det_distance'),
+                'corner': sd.get('det_corner'),
+            },
+            probe_basis=sd['probe_basis'],
+            probe=sd['probe'],
+            obj_guess=sd['obj'],
+            background=sd.get('background'),
+            mask=sd.get('mask'),
+            saturation=sd.get('saturation'),
+            oversampling=int(sd.get('oversampling', 1)),
+            exponentiate_obj=bool(sd.get('exponentiate_obj', False)),
+            phase_only=bool(sd.get('phase_only', False)),
+            loss=results_dict.get('loss_function', 'amplitude mse'),
+            units=units,
+        )
+        model._load_results_dict(results_dict)
+        return model
 
 
     def save_results(self, dataset=None):

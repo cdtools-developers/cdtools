@@ -23,14 +23,14 @@ if t.cuda.is_available():
     model.to(device='cuda')
     dataset.get_as(device='cuda')
 
-model.inspect(dataset)
+model.inspect()
 
 # We run the reconstruction
 for loss in model.Adam_optimize(100, dataset, batch_size=10):
     # We print a quick report of the optimization status
     print(model.report())
     # And liveplot the updates to the model as they happen
-    model.inspect(dataset)
+    model.inspect()
 
 # We open a comparison of the simulated and measured data
 model.compare(dataset)
