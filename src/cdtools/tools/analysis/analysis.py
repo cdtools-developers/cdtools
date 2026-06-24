@@ -34,6 +34,7 @@ __all__ = [
     'standardize_reconstruction_set',
     'standardize_reconstruction_pair',
     'calc_spectral_info',
+    'line_based_frc',
 ]
 
 
@@ -1525,4 +1526,161 @@ def calc_spectral_info(dataset, nbins=50):
     pattern_snr = sum_spectrum_sq / sum_spectrum
 
     return sum_pattern, frc_bins[:-1], mean_spectrum
-        
+
+
+def line_based_frc(
+    image1, image2, axis=1, n_bins=None, thresholds={}, pixel_size=1.0, unit="pixels"
+):
+    """
+    Compute line-based FRC with multiple threshold methods. This works great for highly anisotropic
+    images, such as those with vertical or horizontal stripes.
+
+    Parameters
+    ----------
+    image1, image2: np.ndarray or torch.Tensor
+        Input images (should be same size). Must be 2D arrays. Should be aligned before
+        hand using ip.find_shift, ip.sinc_subpixel_shift, or similar methods.
+    axis: int
+        axis along which to extract lines (1 for horizontal lines, 0 for vertical)
+        if None, standard 2D FRC is computed
+    n_bins: int
+        number of frequency bins (if None, no binning is applied)
+    thresholds: dict
+        Dictionary of threshold methods and values
+    pixel_size: float
+        Physical size of one pixel
+    unit: str
+        Unit for the pixel size and resolution output
+
+    Returns
+    -------
+    frequencies: np.ndarray
+        Spatial frequency array
+    frc_curve: np.ndarray
+        FRC values as function of frequency
+    resolution_dict: dict
+        Resolution at different thresholds
+    """
+
+    def find_resolution(frequencies, frc_curve, thresholds):
+        resolution_dict = {}
+        for method, threshold_val in thresholds.items():
+            above_threshold = frc_curve >= threshold_val
+            crossings = np.where(np.diff(above_threshold.astype(int)) == -1)[0]
+            if crossings.size > 0:
+                idx = crossings[0]
+                freq1, freq2 = frequencies[idx], frequencies[idx + 1]
+                frc1, frc2 = frc_curve[idx], frc_curve[idx + 1]
+                # Linear interpolation
+                resolution_frequency = freq1 + (threshold_val - frc1) * (freq2 - freq1) / (frc2 - frc1)
+            else:
+                if np.all(above_threshold):
+                    resolution_frequency = frequencies[-1]
+                else:
+                    resolution_frequency = 0
+            if resolution_frequency > 0:
+                resolution_pixels = 1 / resolution_frequency
+                resolution_physical = resolution_pixels * pixel_size
+            else:
+                resolution_physical = np.inf
+            resolution_dict[method] = resolution_physical
+        return resolution_dict
+
+    # transform all torch tensors to np.arrays
+    if isinstance(image1, t.Tensor):
+        image1 = image1.numpy()
+    if isinstance(image2, t.Tensor):
+        image2 = image2.numpy()
+
+    assert isinstance(image1, np.ndarray), "image1 must be a numpy array or torch tensor"
+    assert isinstance(image2, np.ndarray), "image2 must be a numpy array or torch tensor"
+    assert image1.shape == image2.shape, "Images must have same shape"
+    if image1.ndim != 2 or image2.ndim != 2:
+        raise ValueError("Images must be 2D")
+
+    if axis == 1:
+        lines1, lines2 = image1, image2
+        n_freq = image1.shape[1] // 2
+    elif axis == 0:
+        lines1, lines2 = image1.T, image2.T
+        n_freq = image1.shape[0] // 2
+    elif axis is None:
+        lines1, lines2 = image1, image2
+        n_freq = min(image1.shape) // 2
+    else:
+        raise ValueError("Axis must be 0, 1, or None for line-based FRC")
+
+    if axis is not None:
+        # Compute 1D FFT for each line
+        fft1 = np.fft.fft(lines1, axis=1)
+        fft2 = np.fft.fft(lines2, axis=1)
+
+        # Only keep positive frequencies
+        fft1 = fft1[:, :n_freq]
+        fft2 = fft2[:, :n_freq]
+
+        # Get the raw frequency array
+        raw_frequencies = np.fft.fftfreq(lines1.shape[1])[:n_freq]
+
+        if n_bins is None:
+            # No binning - use original approach
+            numerator = np.sum(fft1 * np.conj(fft2), axis=0)
+            denominator = np.sqrt(
+                np.sum(np.abs(fft1) ** 2, axis=0) * np.sum(np.abs(fft2) ** 2, axis=0)
+            )
+
+            frc_curve = np.abs(numerator) / denominator
+            frequencies = raw_frequencies
+
+        else:
+            # Binning approach - similar to 2D FRC
+            max_freq = raw_frequencies[-1]
+            freq_bins = np.linspace(0, max_freq, n_bins + 1)
+            frc_curve, frequencies = [], []
+            for i in range(len(freq_bins) - 1):
+                mask = (raw_frequencies >= freq_bins[i]) & (raw_frequencies < freq_bins[i + 1])
+                if np.any(mask):
+                    fft1_bin = fft1[:, mask]
+                    fft2_bin = fft2[:, mask]
+
+                    # Compute FRC for this bin (sum over both lines and frequencies)
+                    # see van Heel, M. (2005). https://doi.org/10.1016/j.jsb.2005.05.009
+                    numerator = np.sum(fft1_bin * np.conj(fft2_bin))
+                    denominator = np.sqrt(
+                        np.sum(np.abs(fft1_bin) ** 2) * np.sum(np.abs(fft2_bin) ** 2)
+                    )
+                    frc_curve.append(np.abs(numerator) / denominator)
+                    frequencies.append((freq_bins[i] + freq_bins[i + 1]) / 2)
+    else:
+        # Compute standard 2D FRC
+        fft1 = np.fft.fft2(lines1)
+        fft2 = np.fft.fft2(lines2)
+
+        # Shift zero frequency to center
+        fft1 = np.fft.fftshift(fft1)
+        fft2 = np.fft.fftshift(fft2)
+
+        # Compute radial frequencies
+        shape = fft1.shape
+        center = [int(s // 2) for s in shape]
+        Y, X = np.ogrid[:shape[0], :shape[1]]
+        r = np.sqrt((Y - center[0]) ** 2 + (X - center[1]) ** 2).astype(np.int32)
+        if n_bins is None:
+            n_bins = min(shape) // 2
+        max_r = np.min(center)
+        bin_edges = np.linspace(0, max_r, n_bins + 1)
+        frc_curve, frequencies = [], []
+        for i in range(n_bins):
+            mask = (r >= bin_edges[i]) & (r < bin_edges[i + 1])
+            if np.any(mask):
+                num = np.sum(fft1[mask] * np.conj(fft2[mask]))
+                denom = np.sqrt(np.sum(np.abs(fft1[mask]) ** 2) * np.sum(np.abs(fft2[mask]) ** 2))
+                frc_val = np.abs(num) / denom if denom != 0 else 0
+                frc_curve.append(frc_val)
+                # Frequency in cycles per pixel
+                freq = (bin_edges[i] + bin_edges[i + 1]) / 2 / max_r * 0.5
+                frequencies.append(freq)
+    frc_curve, frequencies = np.array(frc_curve), np.array(frequencies)
+    resolution_dict = find_resolution(frequencies, frc_curve, thresholds)
+
+    return frequencies, frc_curve, resolution_dict
