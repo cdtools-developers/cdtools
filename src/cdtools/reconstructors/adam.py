@@ -72,14 +72,19 @@ class AdamReconstructor(Reconstructor):
 
         Parameters
         ----------
-        lr : float
-            Optional, The learning rate (alpha) to use. Default is 0.005. 0.05
-            is typically the highest possible value with any chance of being
-            stable.
+        lr : float or dictionary
+            Optional, The learning rate (alpha) to use. Default is 0.005 for all the 
+            parameters. 0.05 is typically the highest possible value with any chance of being
+            stable. And you can also assign different learning rates to different parameters
+            using a dictionary. Example: {'obj':0.005, 'probe':0.01}.
         betas : tuple
             Optional, the beta_1 and beta_2 to use. Default is (0.9, 0.999).
         amsgrad : bool
             Optional, whether to use the AMSGrad variant of this algorithm.
+        default_lr : float
+            Optional, The default learning rate for the parameters that have not 
+            been assigned a specific learning rate when you try to assign different
+            learning rates to different parameters.
         """
         for param_group in self.optimizer.param_groups:
             param_group['betas'] = betas
@@ -93,7 +98,6 @@ class AdamReconstructor(Reconstructor):
             else:
                 param_group['lr'] = lr
 
-            print(f"Found paramter {param_name}, learning rate : {param_group['lr']}")
         
     def optimize(self,
                  iterations: int,
@@ -130,12 +134,17 @@ class AdamReconstructor(Reconstructor):
             How many epochs of the algorithm to run.
         batch_size : int
             Optional, the size of the minibatches to use.
-        lr : float
-            Optional, The learning rate (alpha) to use. Default is 0.005. 0.05
-            is typically the highest possible value with any chance of being
-            stable.
+        lr : float or dictionary
+            Optional, The learning rate (alpha) to use. Default is 0.005 for all the 
+            parameters. 0.05 is typically the highest possible value with any chance of being
+            stable. And you can also assign different learning rates to different parameters
+            using a dictionary. Example: {'obj':0.005, 'probe':0.01}.
         betas : tuple
             Optional, the beta_1 and beta_2 to use. Default is (0.9, 0.999).
+        default_lr : float
+            Optional, The default learning rate for the parameters that have not 
+            been assigned a specific learning rate when you try to assign different
+            learning rates to different parameters.
         schedule : bool
             Optional, create a learning rate scheduler
             (torch.optim.lr_scheduler._LRScheduler).
