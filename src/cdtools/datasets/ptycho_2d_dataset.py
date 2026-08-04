@@ -250,7 +250,8 @@ class Ptycho2DDataset(CDataset):
         # once, but it avoids creating another self.patterns-sized array
         # as an intermediate step. This can be super important because
         # self.patterns can be more than half the available memory
-        nanomap_values = np.ones(self.translations.shape[0])
+        nanomap_values = t.ones(self.translations.shape[0],
+                                device=self.patterns.device)
 
         chunk_size = 10
         for i in range(0, self.translations.shape[0], chunk_size):

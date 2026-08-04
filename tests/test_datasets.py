@@ -7,6 +7,7 @@ import h5py
 import numpy as np
 import pytest
 import torch as t
+import matplotlib.pyplot as plt
 
 from cdtools.datasets import CDataset, Ptycho2DDataset
 from cdtools.tools import data as cdtdata
@@ -510,3 +511,32 @@ def test_Ptycho2DDataset_crop_translations(ptycho_cxi_1):
         assert t.allclose(copied_dataset.patterns, dataset.patterns[10:-10, :])
 
         assert t.allclose(copied_dataset.translations, dataset.translations[10:-10, :])
+
+# This isn't actually slow, but it will fail by default if there is no
+# gpu on the machine
+@pytest.mark.slow
+def test_Ptycho2DDataset_inspect(ptycho_cxi_1, reconstruction_device, show_plot):
+    cxi, expected = ptycho_cxi_1
+    dataset = Ptycho2DDataset.from_cxi(cxi)
+
+    # Test for failure in several cases
+
+    # First, no additional plots
+    dataset.inspect(plot_mean_pattern=False, plot_mask=False)
+    plt.close('all')
+    
+    # Then, with additional plots
+    dataset.inspect(plot_mean_pattern=True, plot_mask=True)
+    plt.close('all')
+
+    # Finally, if data is on a special device like the GPU
+    dataset.to(device=reconstruction_device)
+    dataset.get_as(device=reconstruction_device)    
+    dataset.inspect(plot_mean_pattern=True, plot_mask=True)
+
+    if show_plot:
+        plt.show()
+    plt.close('all')
+
+
+    
