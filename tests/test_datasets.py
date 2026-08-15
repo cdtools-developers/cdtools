@@ -510,3 +510,38 @@ def test_Ptycho2DDataset_crop_translations(ptycho_cxi_1):
         assert t.allclose(copied_dataset.patterns, dataset.patterns[10:-10, :])
 
         assert t.allclose(copied_dataset.translations, dataset.translations[10:-10, :])
+
+
+def test_Ptycho2DDataset_split(ptycho_cxi_1):
+    # Grab dataset
+    cxi, expected = ptycho_cxi_1
+    dataset = Ptycho2DDataset.from_cxi(cxi)
+
+    # Test: Split the dataset into two datasets, select randomly, default True
+    dataset_1, dataset_2 = dataset.split()
+
+    # This is using a fixed random selection, so we can check the beginning of this.
+    # from random_selection.py: random_selection = [0, 0, 1, 0, 0, 1, 0, ...]
+    assert len(dataset_1) + len(dataset_2) == len(dataset)
+
+    assert t.allclose(dataset_1.patterns[0], dataset.patterns[2])
+    assert t.allclose(dataset_1.patterns[1], dataset.patterns[5])
+    assert t.allclose(dataset_2.patterns[0], dataset.patterns[0])
+    assert t.allclose(dataset_2.patterns[1], dataset.patterns[1])
+    assert t.allclose(dataset_2.patterns[2], dataset.patterns[3])
+
+    # Test the translations
+    assert t.allclose(dataset_1.translations[0], dataset.translations[2])
+    assert t.allclose(dataset_1.translations[1], dataset.translations[5])
+    assert t.allclose(dataset_2.translations[0], dataset.translations[0])
+    assert t.allclose(dataset_2.translations[1], dataset.translations[1])
+    assert t.allclose(dataset_2.translations[2], dataset.translations[3])
+
+    # Test: Split the dataset into two datasets
+    dataset_1, dataset_2 = dataset.split(select_randomly=False)
+
+    assert len(dataset_1) + len(dataset_2) == len(dataset)
+    assert t.allclose(dataset_1.patterns, dataset.patterns[::2])
+    assert t.allclose(dataset_2.patterns, dataset.patterns[1::2])
+    assert t.allclose(dataset_1.translations, dataset.translations[::2])
+    assert t.allclose(dataset_2.translations, dataset.translations[1::2])
