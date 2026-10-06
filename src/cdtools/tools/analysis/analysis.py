@@ -1330,16 +1330,22 @@ def standardize_reconstruction_pair(
     results : dict
         A dictionary containing the synthesized results
     """
-   # We get the two half-data reconstructions
+    # We get the two half-data reconstructions
     obj_1, probe_1, weights_1 = half_1['obj'],half_1['probe'],half_1['weights']
     obj_2, probe_2, weights_2 = half_2['obj'],half_2['probe'],half_2['weights']
 
-
+    # The two object arrays can differ in size by a few pixels if the scanned
+    # fields of view differ slightly. We crop both to their common shape
+    n_rows = min(obj_1.shape[-2], obj_2.shape[-2])
+    n_cols = min(obj_1.shape[-1], obj_2.shape[-1])
+    obj_1 = obj_1[..., :n_rows, :n_cols]
+    obj_2 = obj_2[..., :n_rows, :n_cols]
+    
     if correct_phase_ramp:
         obj_1, probe_1 = remove_phase_ramp(
-            half_1['obj'], window, probe=half_1['probe'])
+            obj_1, window, probe=probe_1)
         obj_2, probe_2 = remove_phase_ramp(
-            half_2['obj'], window, probe=half_2['probe'])
+            obj_2, window, probe=probe_2)
 
     # TODO weights are not included
     if correct_amplitude_exponent:
