@@ -43,6 +43,7 @@ class CDataset(torchdata.Dataset):
             mask=None,
             qe_mask=None,
             background=None,
+            angle=None
     ):
 
         """The __init__ function allows construction from python objects.
@@ -89,6 +90,8 @@ class CDataset(torchdata.Dataset):
             self.background = t.tensor(background, dtype=t.float32)
         else:
             self.background = None
+
+        self.angle = angle
 
         self.get_as(device='cpu')
 

@@ -47,6 +47,7 @@ class FancyPtycho(CDIModel):
                  panel_plot_mode=True,
                  plot_level=2,
                  translations=None,
+                 obj_size=None,
                  ):
 
         super(FancyPtycho, self).__init__(panel_plot_mode=panel_plot_mode,
@@ -96,6 +97,10 @@ class FancyPtycho(CDIModel):
                 'angular_spectrum_propagator',
                 t.as_tensor(angular_spectrum_propagator, dtype=t.complex64)
             )
+        if obj_guess is None and obj_size is None:
+            raise ValueError("obj_size is required without obj_guess")
+        self.obj_size = (obj_size if obj_size is not None
+                         else np.shape(obj_guess)[-2:])
 
         if inv_angular_spectrum_propagator is None:
             self.inv_angular_spectrum_propagator = None
@@ -126,7 +131,8 @@ class FancyPtycho(CDIModel):
             self.qe_mask.requires_grad=False
             
         probe_guess = t.as_tensor(probe_guess, dtype=t.complex64)
-        obj_guess = t.as_tensor(obj_guess, dtype=t.complex64)
+        if obj_guess is not None:
+            obj_guess = t.as_tensor(obj_guess, dtype=t.complex64)
 
             
         # We rescale the probe here so it learns at the same rate as the
@@ -138,7 +144,8 @@ class FancyPtycho(CDIModel):
         self.register_buffer('probe_norm', probe_norm.to(dtype))
         
         self.probe = t.nn.Parameter(probe_guess / self.probe_norm)
-        self.obj = t.nn.Parameter(obj_guess)
+        self.register_parameter(
+            "obj", None if obj_guess is None else t.nn.Parameter(obj_guess))
 
         # NOTE: I think it makes sense to protect against obj_view_crop
         # being zero or below, because there is nothing else to show outside
@@ -268,8 +275,15 @@ class FancyPtycho(CDIModel):
                      near_field=False,
                      panel_plot_mode=True,
                      plot_level=2,
+                     external_object=False,
                      ):
+        """Construct a standard model, or opt into an external object.
 
+        With ``external_object=False`` the object is initialized and registered
+        as a trainable parameter, as in the original CDtools workflow. With
+        ``external_object=True`` no internal object is allocated; supply one
+        to each forward call and optimize it in the calling application.
+        """
         wavelength = dataset.wavelength
         det_basis = dataset.detector_geometry['basis']
         det_shape = dataset[0][1].shape
@@ -427,15 +441,17 @@ class FancyPtycho(CDIModel):
 
         probe = t.stack([probe, ] + probe_stack)
 
-        obj = (randomize_ang * (t.rand(obj_size)-0.5)).to(dtype=t.complex64)
-        if not exponentiate_obj:
-            obj = t.exp(1j * obj)
+        obj = None
+        if not external_object:
+            obj = (randomize_ang * (t.rand(obj_size)-0.5)).to(dtype=t.complex64)
+            if not exponentiate_obj:
+                obj = t.exp(1j * obj)
 
-        if n_obj_modes != 1:
-            obj = t.stack([obj,] + [0.05*t.ones_like(obj),]*(n_obj_modes-1))
+            if n_obj_modes != 1:
+                obj = t.stack([obj,] + [0.05*t.ones_like(obj),]*(n_obj_modes-1))
 
-        if phase_only:
-            obj.imag[:] = 0
+            if phase_only:
+                obj.imag[:] = 0
 
         pfc = (probe_fourier_crop if probe_fourier_crop else 0)
         if obj_view_crop is None:
@@ -511,6 +527,7 @@ class FancyPtycho(CDIModel):
             obj_basis,
             probe,
             obj,
+            obj_size=obj_size,
             surface_normal=surface_normal,
             min_translation=min_translation,
             translation_offsets=translation_offsets,
@@ -541,7 +558,12 @@ class FancyPtycho(CDIModel):
         )
 
 
-    def interaction(self, index, translations, *args):
+    def interaction(self, index, translations, *args, obj=None):
+        """Use self.obj by default, or pass an external object with obj=... ."""
+        if obj is None:
+            obj = self.obj
+        if obj is None:
+            raise ValueError("An external object is required for this model")
 
         # The *args is included so that this can work even when given, say,
         # a polarized ptycho dataset that might spit out more inputs.
@@ -622,11 +644,9 @@ class FancyPtycho(CDIModel):
             
         if self.exponentiate_obj:
             if self.phase_only:
-                obj = t.exp(1j*self.obj.real)
+                obj = t.exp(1j*obj.real)
             else:
-                obj = t.exp(1j*self.obj)
-        else:
-            obj = self.obj
+                obj = t.exp(1j*obj)
 
 
         # Now we actually do the interaction, using the sinc subpixel
@@ -1196,7 +1216,7 @@ class FancyPtycho(CDIModel):
     ]
     
     
-    def save_results(self, dataset=None):
+    def save_results(self, dataset=None, obj=None):
         # This will save out everything needed to recreate the object
         # in the same state, but it's not the best formatted. For example,
         # "background" stores the square root of the background, etc.
@@ -1212,11 +1232,16 @@ class FancyPtycho(CDIModel):
             original_translations = self.original_translations.detach().cpu().numpy()
         probe = self.probe.detach().cpu().numpy()
         probe = probe * self.probe_norm.detach().cpu().numpy()
-        obj = self.obj.detach().cpu().numpy()
         background = self.background.detach().cpu().numpy()**2
         weights = self.weights.detach().cpu().numpy()
         oversampling = self.oversampling.cpu().numpy()
         wavelength = self.wavelength.cpu().numpy()
+        angle = getattr(dataset, "angle", None)
+        if obj is None:
+            obj = self.obj
+        if obj is None:
+            raise ValueError("Pass obj when saving an external-object model")
+        obj = obj.detach().cpu().numpy()
 
         results = {
             'obj_basis': obj_basis,
@@ -1230,6 +1255,9 @@ class FancyPtycho(CDIModel):
             'weights': weights,
             'wavelength': wavelength,
         }
+
+        if angle is not None:
+            results["angle"] = angle
 
         return {**base_results, **results}
 

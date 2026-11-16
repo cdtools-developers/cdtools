@@ -95,7 +95,7 @@ class CDIModel(t.nn.Module):
         raise NotImplementedError()
 
 
-    def forward(self, *args):
+    def forward(self, *args, **kwargs):
         """The complete forward model
 
         This model relies on composing the interaction, forward propagator,
@@ -105,7 +105,7 @@ class CDIModel(t.nn.Module):
         The arguments to this function, for any given subclass, will be
         the same as the arguments to the interaction function.
         """
-        return self.measurement(self.forward_propagator(self.interaction(*args)))
+        return self.measurement(self.forward_propagator(self.interaction(*args, **kwargs)))
 
     def loss(self, sim_data, real_data):
         raise NotImplementedError()
